@@ -1,14 +1,15 @@
 "use client";
-import { Poppins } from "next/font/google";
-import "./globals.css";
-import "@radix-ui/themes/styles.css";
-import { Transition, Dialog, Menu, TransitionChild, DialogPanel, MenuButton, MenuItems, MenuItem } from "@headlessui/react";
-import { XMarkIcon, Cog6ToothIcon, Bars3Icon, MagnifyingGlassIcon, ChartPieIcon, DocumentDuplicateIcon } from "@heroicons/react/16/solid";
-import { ChevronDownIcon, CalendarIcon, HomeIcon, Clock, Building2, DollarSign } from "lucide-react";
-import { Fragment, useState } from "react";
 import DarkModeSwitch from "@/components/DarkModeSwitch";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { Dialog, DialogPanel, Menu, MenuButton, MenuItem, MenuItems, Transition, TransitionChild } from "@headlessui/react";
+import { Bars3Icon, ChartPieIcon, Cog6ToothIcon, DocumentDuplicateIcon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/16/solid";
 import { Theme } from "@radix-ui/themes";
+import "@radix-ui/themes/styles.css";
+import { Building2, CalendarIcon, ChevronDownIcon, Clock, DollarSign, HomeIcon } from "lucide-react";
+import { Poppins } from "next/font/google";
+import { Fragment, useEffect, useState } from "react";
+import "./globals.css";
+import { usePathname } from "next/navigation";
 
 const poppins = Poppins({
 	subsets: ["latin"],
@@ -40,6 +41,10 @@ export default function RootLayout({
 	children: React.ReactNode;
 }>) {
 	const [sidebarOpen, setSidebarOpen] = useState(false);
+	const [currentPath, setCurrentPath] = useState("");
+	useEffect(() => {
+		setCurrentPath(document.location.pathname);
+	}, []);
 	return (
 		<html lang="en" className="h-full bg-gray-100">
 			<body className="h-full">
@@ -95,7 +100,7 @@ export default function RootLayout({
 																			<a
 																				href={item.href}
 																				className={classNames(
-																					item.href == document.location.pathname
+																					item.href === currentPath
 																						? "bg-gray-800 text-white"
 																						: "text-gray-400 hover:bg-gray-800 hover:text-white",
 																					"group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
@@ -140,7 +145,7 @@ export default function RootLayout({
 															<a
 																href={item.href}
 																className={classNames(
-																	item.href == document.location.pathname
+																	item.href === currentPath
 																		? "bg-gray-800 text-white"
 																		: "text-gray-400 hover:bg-gray-800 hover:text-white",
 																	"group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
