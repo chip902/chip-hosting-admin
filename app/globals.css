@@ -54,7 +54,10 @@
 		@apply border-border;
 	}
 	body {
-		@apply bg-background text-foreground;
+		@apply bg-white text-black;
+	}
+	.dark body {
+		@apply bg-gray-900 text-white;
 	}
 }
 /* styles/globals.css */
@@ -88,6 +91,7 @@ html {
 		grid-template-columns: repeat(4, minmax(0, 1fr));
 	}
 }
+
 .flex {
 	display: flex;
 }
@@ -124,17 +128,23 @@ html {
 	background-color: #f7fafc;
 }
 
-.container {
-	max-width: 1200px;
+.relative {
+	overflow: visible !important;
 }
 
-@media (max-width: 768px) {
-	.w-64 {
-		width: 100%;
-		height: auto;
+@media (min-width: 1024px) {
+	.main-content {
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		padding-left: 18rem;
 	}
-
-	.h-screen {
-		height: auto;
+}
+@media (max-width: 1023px) {
+	.main-content {
+		display: flex;
+		flex-direction: column;
+		height: 100vh;
+		padding-left: 0;
 	}
 }
