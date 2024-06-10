@@ -20,32 +20,32 @@ model Customer {
   name        String?
   email       String    @unique
   dateCreated DateTime  @default(now())
-  projects    Project[]
-  invoices    Invoice[]
   defaultRate Float
+  invoices    Invoice[]
+  projects    Project[]
 }
 
 model Project {
   id          Int      @id @default(autoincrement())
   name        String
   description String?
-  customer    Customer @relation(fields: [customerId], references: [id])
   customerId  Int
-  users       User[]   @relation("ProjectUser")
-  tasks       Task[]
   dateCreated DateTime @default(now())
   rate        Float?
+  customer    Customer @relation(fields: [customerId], references: [id])
+  tasks       Task[]
+  users       User[]   @relation("ProjectUser")
 }
 
 model Task {
   id          Int         @id @default(autoincrement())
   name        String
   description String?
-  project     Project     @relation(fields: [projectId], references: [id])
   projectId   Int
-  timeEntries TimeEntry[]
   dateCreated DateTime    @default(now())
   rate        Float?
+  project     Project     @relation(fields: [projectId], references: [id])
+  timeEntries TimeEntry[]
 }
 
 model TimeEntry {
@@ -53,22 +53,22 @@ model TimeEntry {
   description   String?
   duration      Int
   date          DateTime     @default(now())
-  user          User         @relation(fields: [userId], references: [id])
   userId        Int
-  task          Task         @relation(fields: [taskId], references: [id])
   taskId        Int
-  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
   invoiceItemId Int?
+  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
+  task          Task         @relation(fields: [taskId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
 }
 
 model Invoice {
   id           Int           @id @default(autoincrement())
-  customer     Customer      @relation(fields: [customerId], references: [id])
   customerId   Int
   invoiceId    String        @unique
   dateCreated  DateTime      @default(now())
   dateDue      DateTime
   invoiceTerms String
+  customer     Customer      @relation(fields: [customerId], references: [id])
   items        InvoiceItem[]
 }
 
@@ -77,7 +77,7 @@ model InvoiceItem {
   description String
   quantity    Int
   unitPrice   Float
-  invoice     Invoice     @relation(fields: [invoiceId], references: [id])
   invoiceId   Int
+  invoice     Invoice     @relation(fields: [invoiceId], references: [id])
   timeEntries TimeEntry[]
 }

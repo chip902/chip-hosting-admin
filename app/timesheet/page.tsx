@@ -1,8 +1,8 @@
 "use client";
 import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
-import { useState, useEffect, useRef } from "react";
-import { format, addWeeks, subWeeks, startOfWeek, endOfWeek, eachDayOfInterval, isToday } from "date-fns";
+import { addWeeks, eachDayOfInterval, endOfWeek, format, isToday, startOfWeek, subWeeks } from "date-fns";
+import { useEffect, useRef, useState } from "react";
 
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(" ");
@@ -36,7 +36,7 @@ export default function Timesheet() {
 	const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
 	return (
-		<div className="main-content h-screen flex-col overflow-hidden">
+		<div className="h-screen flex-col">
 			<header className="flex flex-none items-center justify-between border-b border-gray-200 px-6 py-4 z-20">
 				<h1 className="text-base font-semibold leading-6 text-gray-900">
 					<time dateTime={format(currentWeek, "yyyy-MM")}>{format(currentWeek, "MMMM yyyy")}</time>

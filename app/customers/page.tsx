@@ -1,13 +1,16 @@
-import { Button, Flex, Table } from "@radix-ui/themes";
-import React from "react";
+"use client";
+import { Flex, Table } from "@radix-ui/themes";
+import AddCustomer from "./AddCustomer";
+import { Customer } from "@prisma/client";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
-export default function Customers() {
+const CustomerTable = () => {
+	const { data: customers } = useCustomers();
 	return (
-		<div className="main-content">
+		<>
 			<Flex justify="end" p="3">
-				<Button radius="medium" variant="solid">
-					Add Customer
-				</Button>
+				<AddCustomer />
 			</Flex>
 			<Table.Root variant="surface">
 				<Table.Header>
@@ -19,25 +22,25 @@ export default function Customers() {
 				</Table.Header>
 
 				<Table.Body>
-					<Table.Row>
-						<Table.RowHeaderCell>Danilo Sousa</Table.RowHeaderCell>
-						<Table.Cell>danilo@example.com</Table.Cell>
-						<Table.Cell>Developer</Table.Cell>
-					</Table.Row>
-
-					<Table.Row>
-						<Table.RowHeaderCell>Zahra Ambessa</Table.RowHeaderCell>
-						<Table.Cell>zahra@example.com</Table.Cell>
-						<Table.Cell>Admin</Table.Cell>
-					</Table.Row>
-
-					<Table.Row>
-						<Table.RowHeaderCell>Jasper Eriksson</Table.RowHeaderCell>
-						<Table.Cell>jasper@example.com</Table.Cell>
-						<Table.Cell>Developer</Table.Cell>
-					</Table.Row>
+					{customers?.map((customer) => (
+						<Table.Row key={customer.id}>
+							<Table.RowHeaderCell>{customer.name}</Table.RowHeaderCell>
+							<Table.Cell>{customer.email}</Table.Cell>
+							<Table.Cell>${customer.defaultRate}</Table.Cell>
+						</Table.Row>
+					))}
 				</Table.Body>
 			</Table.Root>
-		</div>
+		</>
 	);
-}
+};
+
+const useCustomers = () =>
+	useQuery<Customer[]>({
+		queryKey: ["customer"],
+		queryFn: () => axios.get("/api/customer").then((res) => res.data),
+		staleTime: 60 * 1000,
+		retry: 3,
+	});
+
+export default CustomerTable;

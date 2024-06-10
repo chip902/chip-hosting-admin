@@ -148,3 +148,9 @@ html {
 		padding-left: 0;
 	}
 }
+.FormLabel[data-invalid] {
+	color: red;
+}
+.FormLabel[data-valid] {
+	color: green;
+}

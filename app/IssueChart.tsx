@@ -1,8 +1,7 @@
 "use client";
 
-import { ResponsiveContainer, BarChart, XAxis, YAxis, Bar } from "recharts";
-import React from "react";
 import { Card } from "@/components/ui/card";
+import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
 
 const IssueChart = () => {
 	const data = [

@@ -14,7 +14,7 @@ function classNames(...classes: string[]) {
 export default function Home() {
 	return (
 		<>
-			<div className="container mr-auto px-4 main-content">
+			<div className="container mr-auto px-4">
 				<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 					{stats.map((stat) => (
 						<div key={stat.name} className="flex flex-col items-center p-6 bg-white shadow rounded-lg">
