@@ -38,7 +38,7 @@ const CustomerTable = () => {
 const useCustomers = () =>
 	useQuery<Customer[]>({
 		queryKey: ["customer"],
-		queryFn: () => axios.get("/api/customer").then((res) => res.data),
+		queryFn: () => axios.get("/api/customers").then((res) => res.data),
 		staleTime: 60 * 1000,
 		retry: 3,
 	});

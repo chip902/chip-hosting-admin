@@ -32,7 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 	const pathname = usePathname();
 
 	return (
-		<html lang="en" className="h-full bg-gray-100">
+		<html lang="en" className="h-full">
 			<body className={`h-full ${poppins.variable}`}>
 				<Theme>
 					<QueryClientProvider>
