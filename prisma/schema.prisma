@@ -26,26 +26,36 @@ model Customer {
 }
 
 model Project {
-  id          Int      @id @default(autoincrement())
-  name        String
-  description String?
-  customerId  Int
-  dateCreated DateTime @default(now())
-  rate        Float?
-  customer    Customer @relation(fields: [customerId], references: [id])
-  tasks       Task[]
-  users       User[]   @relation("ProjectUser")
+  id           Int            @id @default(autoincrement())
+  name         String
+  description  String?
+  customerId   Int
+  dateCreated  DateTime       @default(now())
+  rate         Float?
+  customer     Customer       @relation(fields: [customerId], references: [id])
+  tasks        Task[]         @relation("ProjectTasks")
+  users        User[]         @relation("ProjectUser")
+  ProjectTasks ProjectTasks[]
 }
 
 model Task {
-  id          Int         @id @default(autoincrement())
-  name        String
-  description String?
-  projectId   Int
-  dateCreated DateTime    @default(now())
-  rate        Float?
-  project     Project     @relation(fields: [projectId], references: [id])
-  timeEntries TimeEntry[]
+  id           Int            @id @default(autoincrement())
+  name         String
+  description  String?
+  dateCreated  DateTime       @default(now())
+  rate         Float?
+  projects     Project[]      @relation("ProjectTasks")
+  timeEntries  TimeEntry[]
+  ProjectTasks ProjectTasks[]
+}
+
+model ProjectTasks {
+  projectId Int
+  taskId    Int
+  project   Project @relation(fields: [projectId], references: [id])
+  task      Task    @relation(fields: [taskId], references: [id])
+
+  @@id([projectId, taskId])
 }
 
 model TimeEntry {

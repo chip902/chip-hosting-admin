@@ -1,4 +1,3 @@
-// app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { timeLogSchema } from "@/app/validationSchemas";
@@ -10,26 +9,31 @@ export async function POST(request: NextRequest) {
 		if (!validation.success) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
-		const newTimeLog = await prisma.timeEntry.create({
+
+		const { date, startTime, endTime, ...rest } = body;
+
+		const startDateTime = new Date(`${date}T${startTime}:00`);
+		const endDateTime = new Date(`${date}T${endTime}:00`);
+
+		const newEntry = await prisma.timeEntry.create({
 			data: {
-				description: body.description,
-				duration: body.duration,
-				date: body.date,
-				taskId: body.taskId,
-				userId: body.userId,
+				...rest,
+				date: startDateTime,
+				duration: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60), // duration in minutes
 			},
 		});
-		return NextResponse.json(newTimeLog, { status: 201 });
+
+		return NextResponse.json(newEntry, { status: 201 });
 	} catch (error) {
-		return NextResponse.json({ error: "Error logging time" }, { status: 500 });
+		return NextResponse.json({ error: "Error creating time entry" }, { status: 500 });
 	}
 }
 
 export async function GET() {
 	try {
-		const timeLogs = await prisma.timeEntry.findMany();
-		return NextResponse.json(timeLogs, { status: 200 });
+		const entries = await prisma.timeEntry.findMany();
+		return NextResponse.json(entries, { status: 200 });
 	} catch (error) {
-		return NextResponse.json({ error: "Error fetching time logs" }, { status: 500 });
+		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}
 }

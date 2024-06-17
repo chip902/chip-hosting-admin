@@ -7,8 +7,14 @@ export const customerSchema = z.object({
 });
 
 export const timeLogSchema = z.object({
-	taskId: z.number().min(1, "Task ID must be provided"),
-	userId: z.number().min(1, "User ID must be provided"),
-	duration: z.number().min(1, "Duration must be at least 1 minute"),
-	description: z.string().nullable(), // allow null values
+	customer: z.string().min(1, "Required"),
+	projectId: z.string().min(1, "Required"),
+	taskId: z.string().min(1, "Required"),
+	userId: z.string().min(1, "Required"),
+	duration: z.number().min(1, "Required"),
+	description: z.string().nullable().optional(),
+	date: z.string().min(1, "Required"),
+	startTime: z.string().min(1, "Required"),
+	endTime: z.string().min(1, "Required"),
+	repeatInterval: z.number().min(1).optional(),
 });
