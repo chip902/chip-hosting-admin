@@ -16,13 +16,14 @@ model User {
 }
 
 model Customer {
-  id          Int       @id @default(autoincrement())
+  id          Int         @id @default(autoincrement())
   name        String?
-  email       String    @unique
-  dateCreated DateTime  @default(now())
+  email       String      @unique
+  dateCreated DateTime    @default(now())
   defaultRate Float
   invoices    Invoice[]
   projects    Project[]
+  timeEntries TimeEntry[]
 }
 
 model Project {
@@ -36,6 +37,7 @@ model Project {
   tasks        Task[]         @relation("ProjectTasks")
   users        User[]         @relation("ProjectUser")
   ProjectTasks ProjectTasks[]
+  TimeEntry    TimeEntry[]
 }
 
 model Task {
@@ -65,10 +67,14 @@ model TimeEntry {
   date          DateTime     @default(now())
   userId        Int
   taskId        Int
+  customerId    Int
+  projectId     Int
   invoiceItemId Int?
   InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
   task          Task         @relation(fields: [taskId], references: [id])
   user          User         @relation(fields: [userId], references: [id])
+  customer      Customer     @relation(fields: [customerId], references: [id])
+  project       Project      @relation(fields: [projectId], references: [id])
 }
 
 model Invoice {

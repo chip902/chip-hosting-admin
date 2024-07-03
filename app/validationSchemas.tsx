@@ -7,14 +7,14 @@ export const customerSchema = z.object({
 });
 
 export const timeLogSchema = z.object({
-	customer: z.string().min(1, "Required"),
-	projectId: z.string().min(1, "Required"),
-	taskId: z.string().min(1, "Required"),
-	userId: z.string().min(1, "Required"),
-	duration: z.number().min(1, "Required"),
+	customerId: z.number().nonnegative("Customer ID must be a non-negative number"),
+	projectId: z.number().nonnegative("Project ID must be a non-negative number"),
+	taskId: z.number().nonnegative("Task ID must be a non-negative number"),
+	userId: z.number().nonnegative("User ID must be a non-negative number"),
+	duration: z.number().nonnegative("Duration must be a non-negative number"),
+	date: z.string().min(1, "Date is required"),
 	description: z.string().nullable().optional(),
-	date: z.string().min(1, "Required"),
-	startTime: z.string().min(1, "Required"),
-	endTime: z.string().min(1, "Required"),
-	repeatInterval: z.number().min(1).optional(),
+	startTime: z.string().optional(),
+	endTime: z.string().optional(),
+	repeatInterval: z.number().optional(),
 });

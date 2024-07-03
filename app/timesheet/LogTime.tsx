@@ -56,7 +56,7 @@ const LogTime = () => {
 		if (startTime && endTime) {
 			const start = new Date(`1970-01-01T${startTime}:00`);
 			const end = new Date(`1970-01-01T${endTime}:00`);
-			const diff = (end.getTime() - start.getTime()) / 60000; // Difference in minutes
+			const diff = (end.getTime() - start.getTime()) / 60000;
 			if (diff > 0) setValue("duration", diff);
 		}
 	}, [startTime, endTime, setValue]);
@@ -81,11 +81,11 @@ const LogTime = () => {
 			if (repeatInterval) {
 				let currentDate = new Date(logData.date);
 				for (let i = 0; i < repeatInterval; i++) {
-					logEntries.push({ ...logData, date: new Date(currentDate) });
+					logEntries.push({ ...logData, date: new Date(currentDate).toISOString().split("T")[0] });
 					currentDate.setDate(currentDate.getDate() + 1);
 				}
 			} else {
-				logEntries.push(logData);
+				logEntries.push({ ...logData, date: new Date(logData.date).toISOString().split("T")[0] });
 			}
 
 			await Promise.all(logEntries.map((entry) => axios.post("/api/timelog", entry)));
@@ -94,9 +94,16 @@ const LogTime = () => {
 			router.push("/timesheet");
 			router.refresh();
 		} catch (error) {
-			setSubmitting(false);
+			console.error("Failed to submit time log:", error);
 			setError("An unexpected error occurred");
+		} finally {
+			setSubmitting(false);
 		}
+	};
+
+	const handleSelectChange = <T extends keyof TimeLogSchema>(name: T, value: TimeLogSchema[T]) => {
+		// @ts-ignore
+		setValue(name, value, { shouldValidate: true });
 	};
 
 	return (
@@ -109,26 +116,26 @@ const LogTime = () => {
 					<Dialog.Title>Log Time</Dialog.Title>
 					<Form.Root onSubmit={handleSubmit(onSubmit)}>
 						<Grid columns={{ initial: "1", md: "2" }} gap="3" width="auto">
-							<Form.Field name="customer">
+							<Form.Field name="customerId">
 								<Form.Label>Customer</Form.Label>
 								<Form.Control asChild>
-									<Select.Root>
+									<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value))}>
 										<Select.Trigger placeholder="Select a Customer" />
 										<Select.Content>
 											{customers.map((customer) => (
-												<Select.Item key={customer.id} value={String(customer.id)}>
+												<Select.Item key={customer.id} value={customer.id.toString()}>
 													{customer.name}
 												</Select.Item>
 											))}
 										</Select.Content>
 									</Select.Root>
 								</Form.Control>
-								{errors.customer && <ErrorMessage>{errors.customer.message}</ErrorMessage>}
+								{errors.customerId && <ErrorMessage>{errors.customerId.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="projectId">
 								<Form.Label>Project</Form.Label>
 								<Form.Control asChild>
-									<Select.Root>
+									<Select.Root onValueChange={(value) => handleSelectChange("projectId", parseInt(value, 10))}>
 										<Select.Trigger placeholder="Select a Project" />
 										<Select.Content>
 											{projects.map((project) => (
@@ -144,7 +151,7 @@ const LogTime = () => {
 							<Form.Field name="taskId">
 								<Form.Label>Task</Form.Label>
 								<Form.Control asChild>
-									<Select.Root>
+									<Select.Root onValueChange={(value) => handleSelectChange("taskId", parseInt(value, 10))}>
 										<Select.Trigger placeholder="Select a Task" />
 										<Select.Content>
 											{tasks.map((task) => (
@@ -160,7 +167,7 @@ const LogTime = () => {
 							<Form.Field name="userId">
 								<Form.Label>Employee</Form.Label>
 								<Form.Control asChild>
-									<Select.Root>
+									<Select.Root onValueChange={(value) => handleSelectChange("userId", parseInt(value, 10))}>
 										<Select.Trigger placeholder="Select an Employee" />
 										<Select.Content>
 											{users.map((user) => (
@@ -214,7 +221,6 @@ const LogTime = () => {
 							<Form.Control asChild>
 								<TextField.Root placeholder="Number of days" {...register("repeatInterval", { valueAsNumber: true })} />
 							</Form.Control>
-
 							{errors.repeatInterval && <ErrorMessage>{errors.repeatInterval.message}</ErrorMessage>}
 						</Form.Field>
 						<Flex gap="3" mt="4">
