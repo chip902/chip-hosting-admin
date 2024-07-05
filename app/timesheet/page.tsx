@@ -273,21 +273,22 @@ export default function Timesheet() {
 					</Menu>
 				</div>
 			</header>
-			<div ref={container} className="flex flex-auto flex-col overflow-auto bg-white dark:bg-gray-900">
+			<div ref={container} className="flex flex-auto flex-col bg-white dark:bg-gray-900">
 				<div style={{ width: "100%" }} className="flex max-w-full flex-none flex-col">
-					<div className="sticky z-10 top-0 flex-none bg-white shadow ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
-						<div className="grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 dark:divide-gray-700 dark:border-gray-700">
+					<div className="sticky top-0 z-10 bg-white shadow ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
+						<div className="grid grid-cols-8 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 dark:divide-gray-700 dark:border-gray-700">
+							<div className="col-start-1 col-end-2 w-14"></div> {/* Empty space for the time column */}
 							{days.map((day, index) => (
-								<div key={index} className="flex items-center justify-center py-3">
+								<div key={index} className="flex items-center justify-center py-3 col-span-1">
 									<span
 										className={classNames(
-											isToday(day) ? "bg-indigo-600 text-white p-3 rounded-md" : "text-gray-900 dark:text-gray-300",
+											isToday(day) ? "bg-indigo-600 text-white p-3 rounded-xl" : "text-gray-900 dark:text-gray-300",
 											"flex items-baseline"
 										)}>
-										{format(day, "EEE")}
+										{format(day, "EEE")}{" "}
 										<span
 											className={classNames(
-												isToday(day) ? "rounded-full bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300",
+												isToday(day) ? "rounded-xl bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300",
 												"ml-1.5 flex h-8 w-8 items-center justify-center font-semibold"
 											)}>
 											{format(day, "d")}

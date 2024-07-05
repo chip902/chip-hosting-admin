@@ -40,7 +40,6 @@ html {
 .FormLabel[data-valid] {
 	color: green;
 }
-
 :root,
 .light,
 .light-theme {
@@ -188,9 +187,36 @@ html {
 .dark,
 .dark-theme,
 :is(.dark, .dark-theme) :where(.radix-themes:not(.light, .light-theme)) {
-	--color-background: #111;
+	--color-background: #111b03;
 }
-
 .grid-rows-24 {
 	grid-template-rows: repeat(24, minmax(4rem, 1fr));
+}
+
+.time-grid {
+	display: grid;
+	grid-template-columns: 3.5rem repeat(7, 1fr);
+	grid-auto-rows: minmax(4rem, 1fr);
+}
+
+.time-entry {
+	position: absolute;
+	overflow: hidden;
+	background-color: #3b82f6;
+	color: #fff;
+	padding: 0.5rem;
+	border-radius: 0.25rem;
+}
+
+.grid {
+	display: grid;
+	grid-template-columns: 3.5rem repeat(7, 1fr);
+}
+
+.time-column {
+	width: 3.5rem;
+}
+
+.day-column {
+	flex: 1;
 }

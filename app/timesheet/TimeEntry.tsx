@@ -23,7 +23,7 @@ type TimeEntryProps = {
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex }) => {
 	return (
 		<div
-			className="absolute bg-blue-500 text-white p-1 rounded-md"
+			className="absolute bg-blue-500 text-white p-1 rounded-xl"
 			style={{
 				gridColumnStart: dayIndex + 1,
 				gridColumnEnd: dayIndex + 2,
