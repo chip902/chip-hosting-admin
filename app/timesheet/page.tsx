@@ -55,7 +55,7 @@ export default function Timesheet() {
 
 	return (
 		<div className="h-screen flex-col dark:bg-gray-900">
-			<header className="flex flex-none items-center justify-between border-b border-gray-200 px-6 py-4 z-20 dark:border-gray-700">
+			<header className="flex flex-auto items-center justify-between border-b border-gray-200 px-6 py-4 z-20 dark:border-gray-700">
 				<h1 className="text-base font-semibold leading-6 text-gray-900 dark:text-white">
 					<time dateTime={format(currentWeek, "yyyy-MM")}>{format(currentWeek, "MMMM yyyy")}</time>
 				</h1>
@@ -274,25 +274,9 @@ export default function Timesheet() {
 				</div>
 			</header>
 			<div ref={container} className="flex flex-auto flex-col overflow-auto bg-white dark:bg-gray-900">
-				<div style={{ width: "165%" }} className="flex max-w-full flex-none flex-col sm:max-w-none md:max-w-full">
-					<div className="sticky z-10 top-0 flex-none bg-white shadow ring-1 ring-black ring-opacity-5 sm:pr-8 dark:bg-gray-800">
-						<div className="grid grid-cols-8 z-10 text-sm leading-6 text-gray-500 sm:hidden">
-							<div className="col-end-1 w-14" />
-							{days.map((day, index) => (
-								<button key={index} type="button" className="flex flex-col items-center pb-3 pt-2">
-									{format(day, "EEE")[0]}{" "}
-									<span
-										className={classNames(
-											isToday(day) ? "bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300",
-											"mt-1 flex h-8 w-8 items-center justify-center font-semibold"
-										)}>
-										{format(day, "d")}
-									</span>
-								</button>
-							))}
-						</div>
-						<div className="-mr-px hidden grid-cols-8 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 sm:grid dark:divide-gray-700 dark:border-gray-700">
-							<div className="col-end-1 w-14" />
+				<div style={{ width: "100%" }} className="flex max-w-full flex-none flex-col">
+					<div className="sticky z-10 top-0 flex-none bg-white shadow ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
+						<div className="grid grid-cols-7 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 dark:divide-gray-700 dark:border-gray-700">
 							{days.map((day, index) => (
 								<div key={index} className="flex items-center justify-center py-3">
 									<span
@@ -300,7 +284,7 @@ export default function Timesheet() {
 											isToday(day) ? "bg-indigo-600 text-white p-3 rounded-md" : "text-gray-900 dark:text-gray-300",
 											"flex items-baseline"
 										)}>
-										{format(day, "EEE")}{" "}
+										{format(day, "EEE")}
 										<span
 											className={classNames(
 												isToday(day) ? "rounded-full bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300",
