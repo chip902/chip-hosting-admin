@@ -1,7 +1,9 @@
+// app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { timeLogSchema } from "@/app/validationSchemas";
 
+// Create a new time entry
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
@@ -50,6 +52,7 @@ export async function POST(request: NextRequest) {
 	}
 }
 
+// Fetch all time entries
 export async function GET() {
 	try {
 		const entries = await prisma.timeEntry.findMany();
