@@ -193,12 +193,6 @@ html {
 	grid-template-rows: repeat(24, minmax(4rem, 1fr));
 }
 
-.time-grid {
-	display: grid;
-	grid-template-columns: 3.5rem repeat(7, 1fr);
-	grid-auto-rows: minmax(4rem, 1fr);
-}
-
 .time-entry {
 	position: absolute;
 	overflow: hidden;
@@ -206,11 +200,6 @@ html {
 	color: #fff;
 	padding: 0.5rem;
 	border-radius: 0.25rem;
-}
-
-.grid {
-	display: grid;
-	grid-template-columns: 3.5rem repeat(7, 1fr);
 }
 
 .time-column {

@@ -114,7 +114,7 @@ const LogTime = () => {
 				</Dialog.Trigger>
 				<Dialog.Content className="gap-3">
 					<Dialog.Title>Log Time</Dialog.Title>
-					<Form.Root onSubmit={handleSubmit(onSubmit)}>
+					<Form.Root className="logTime" onSubmit={handleSubmit(onSubmit)}>
 						<Grid columns={{ initial: "1", md: "2" }} gap="3" width="auto">
 							<Form.Field name="customerId">
 								<Form.Label>Customer</Form.Label>
@@ -190,21 +190,21 @@ const LogTime = () => {
 							<Form.Field name="date">
 								<Form.Label>Date</Form.Label>
 								<Form.Control asChild>
-									<input type="date" {...register("date")} />
+									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="date" {...register("date")} />
 								</Form.Control>
 								{errors.date && <ErrorMessage>{errors.date.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="startTime">
 								<Form.Label>Start Time</Form.Label>
 								<Form.Control asChild>
-									<input type="time" {...register("startTime")} />
+									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="time" {...register("startTime")} />
 								</Form.Control>
 								{errors.startTime && <ErrorMessage>{errors.startTime.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="endTime">
 								<Form.Label>End Time</Form.Label>
 								<Form.Control asChild>
-									<input type="time" {...register("endTime")} />
+									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="time" {...register("endTime")} />
 								</Form.Control>
 								{errors.endTime && <ErrorMessage>{errors.endTime.message}</ErrorMessage>}
 							</Form.Field>
@@ -212,14 +212,22 @@ const LogTime = () => {
 						<Form.Field name="description">
 							<Form.Label>Description</Form.Label>
 							<Form.Control asChild>
-								<TextArea placeholder="Description of work done..." {...register("description")} />
+								<TextArea
+									className="dark:text-white dark:bg-slate-500 rounded px-2"
+									placeholder="Description of work done..."
+									{...register("description")}
+								/>
 							</Form.Control>
 							{errors.description && <ErrorMessage>{errors.description.message}</ErrorMessage>}
 						</Form.Field>
 						<Form.Field name="repeatInterval">
 							<Form.Label>Repeat for (days)</Form.Label>
 							<Form.Control asChild>
-								<TextField.Root placeholder="Number of days" {...register("repeatInterval", { valueAsNumber: true })} />
+								<TextField.Root
+									className="dark:text-white dark:bg-slate-500 rounded px-2"
+									placeholder="Number of days"
+									{...register("repeatInterval", { valueAsNumber: false })}
+								/>
 							</Form.Control>
 							{errors.repeatInterval && <ErrorMessage>{errors.repeatInterval.message}</ErrorMessage>}
 						</Form.Field>

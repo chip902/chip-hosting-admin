@@ -277,7 +277,7 @@ export default function Timesheet() {
 				<div style={{ width: "100%" }} className="flex max-w-full flex-none flex-col">
 					<div className="sticky top-0 z-10 bg-white shadow ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
 						<div className="grid grid-cols-8 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 dark:divide-gray-700 dark:border-gray-700">
-							<div className="col-start-1 col-end-2 w-14"></div> {/* Empty space for the time column */}
+							<div className="col-start-1 col-end-2 w-14 hourColuumn"></div> {/* Empty space for the time column */}
 							{days.map((day, index) => (
 								<div key={index} className="flex items-center justify-center py-3 col-span-1">
 									<span
