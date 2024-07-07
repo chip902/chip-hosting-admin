@@ -55,7 +55,14 @@ export async function POST(request: NextRequest) {
 // Fetch all time entries
 export async function GET() {
 	try {
-		const entries = await prisma.timeEntry.findMany();
+		const entries = await prisma.timeEntry.findMany({
+			include: {
+				customer: true,
+				project: true,
+				task: true,
+				user: true,
+			},
+		});
 		return NextResponse.json(entries, { status: 200 });
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });

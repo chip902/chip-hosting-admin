@@ -2,30 +2,44 @@ import React from "react";
 import TimeEntryComponent from "./TimeEntry";
 import { timeLogSchema } from "../validationSchemas";
 import { z } from "zod";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
-type TimeLogSchema = z.infer<typeof timeLogSchema> & { id: number; invoiceItemId: number | null };
+type TimeLogSchema = z.infer<typeof timeLogSchema> & {
+	id: number;
+	date: Date | string | undefined;
+	repeatInterval: number | undefined;
+	invoiceItemId: number | null;
+	customer: {
+		id: number;
+		name: string;
+	};
+	project: {
+		id: number;
+		name: string;
+	};
+	task: {
+		id: number;
+		name: string;
+	};
+	user: {
+		id: number;
+		name: string;
+	};
+};
 
 interface TimeGridProps {
 	days: Date[];
 	timeEntries: TimeLogSchema[];
-	onUpdate?: (id: number, updatedData: Partial<TimeLogSchema>) => void;
-	onDelete?: (id: number) => void;
+	onUpdate: (id: number, updatedData: Partial<TimeLogSchema>) => Promise<void>;
+	onDelete: (id: number) => void;
 }
 
 const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps) => {
 	const handleUpdate = async (id: number, updatedData: Partial<TimeLogSchema>) => {
 		try {
-			if (updatedData.date && typeof updatedData.date !== "string") {
-				updatedData.date = updatedData.date[0];
-			}
-			const response = await fetch(`/api/timelog/${id}`, {
-				method: "PATCH",
-				headers: {
-					"Content-Type": "application/json",
-				},
-				body: JSON.stringify(updatedData),
-			});
-			if (!response.ok) {
+			const response = await axios.patch(`/api/timelog/${id}`, updatedData);
+			if (response.status !== 201) {
 				throw new Error("Failed to update the time entry");
 			}
 		} catch (error) {
@@ -79,7 +93,12 @@ const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps)
 							return (
 								<TimeEntryComponent
 									key={entry.id}
-									entry={{ ...entry, date: startDateTime.toISOString().split("T")[0], description: entry.description ?? "" }}
+									entry={{
+										...entry,
+										name: entry.customer.name,
+										date: new Date(entry.date),
+										description: entry.description ?? "",
+									}}
 									startSlot={startHour * 60 + startMinute}
 									endSlot={endHour * 60 + endMinute}
 									dayIndex={days.findIndex((day) => day.toDateString() === startDateTime.toDateString())}

@@ -1,15 +1,20 @@
 import React, { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
+import { Spinner, Text } from "@radix-ui/themes";
+import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import axios from "axios";
 
-type TimeEntryProps = {
+interface TimeEntryProps {
 	entry: {
 		id: number;
 		description: string | null;
-		duration: number;
-		date: string;
+		duration: number | undefined;
+		date: Date;
 		userId: number;
 		taskId: number;
 		customerId: number;
+		name: string;
 		projectId: number;
 		invoiceItemId: number | null;
 		startTime?: string;
@@ -21,32 +26,65 @@ type TimeEntryProps = {
 	dayIndex: number;
 	onUpdate: (id: number, updatedData: Partial<TimeEntryProps["entry"]>) => void;
 	onDelete: (id: number) => void;
-};
+}
 
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, onUpdate, onDelete }) => {
+const TimeEntryComponent = ({ entry, startSlot, endSlot, dayIndex, onUpdate, onDelete }: TimeEntryProps) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const [loading, isLoading] = useState(false);
+	const [isloading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
-		date: entry.date,
-		duration: entry.duration,
+		date: entry.date.toISOString().split("T")[0],
+		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
+		userId: entry.userId,
+		customerId: entry.customerId,
+		projectId: entry.projectId,
+		taskId: entry.taskId,
+		startTime: entry.startTime,
+		endTime: entry.endTime,
 	});
+	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
+	const queryClient = useQueryClient();
 
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
-		setFormState((prevState) => ({ ...prevState, [name]: value }));
+		setFormState((prevState) => ({
+			...prevState,
+			[name]: name === "duration" ? parseInt(value, 10) : value,
+		}));
 	};
 
-	const handleUpdate = () => {
-		isLoading(true);
-		onUpdate(entry.id, formState);
-		setIsOpen(false);
+	const handleUpdate = async () => {
+		setLoading(true);
+		const originalStartTime = entry.startTime ? new Date(`${entry.date}T${entry.startTime}:00`) : new Date();
+		const newEndTime = new Date(originalStartTime.getTime() + parseInt(formState.duration) * 60000);
+		const updatedFormState = {
+			...formState,
+			date: new Date(formState.date).toISOString(),
+			endTime: `${newEndTime.getHours().toString().padStart(2, "0")}:${newEndTime.getMinutes().toString().padStart(2, "0")}`,
+		};
+		try {
+			await axios.patch(`/api/timelog/${entry.id}`, updatedFormState);
+			queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+			queryClient.refetchQueries();
+		} catch (error) {
+			console.error("Failed to update time entry:", error);
+		} finally {
+			setIsOpen(false);
+			setLoading(false);
+		}
 	};
 
 	const handleDelete = () => {
-		isLoading(true);
-		onDelete(entry.id);
-		setIsOpen(false);
+		deleteTimeEntry(entry.id, {
+			onSuccess: () => {
+				setIsOpen(false);
+				onDelete(entry.id);
+			},
+			onError: (error) => {
+				console.error("Error deleting time entry:", error);
+			},
+		});
+		queryClient.refetchQueries();
 	};
 
 	return (
@@ -65,11 +103,15 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 					aria-expanded={isOpen}
 					aria-controls={`popover-${entry.id}`}
 					data-state={isOpen ? "open" : "closed"}>
-					<h4>{entry.duration / 60} Hours</h4>
-					{entry.description}
+					<Text>{entry.duration && entry.duration / 60} Hours</Text>
+					<br />
+					<Text>{entry.name}</Text>
+					<br />
+					<Text>{entry.description}</Text>
+					<br />
 				</div>
 			</Popover.Trigger>
-			<Popover.Content className="p-4 bg-gray-500 rounded shadow-lg">
+			<Popover.Content className="p-4 bg-gray-500 rounded shadow-lg z-20">
 				<form className="flex flex-col space-y-2">
 					<label>
 						Description:
@@ -92,11 +134,11 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 						/>
 					</label>
 					<div className="flex space-x-2">
-						<button type="button" onClick={handleUpdate} className="px-4 py-2 text-white bg-blue-500 rounded">
-							Update
+						<button type="button" onClick={handleUpdate} disabled={isloading} className="px-4 py-2 text-white bg-blue-500 rounded">
+							{isloading ? <Spinner /> : "Update"}
 						</button>
-						<button type="button" onClick={handleDelete} className="px-4 py-2 text-white bg-red-500 rounded">
-							Delete
+						<button type="button" onClick={handleDelete} disabled={isloading} className="px-4 py-2 text-white bg-red-500 rounded">
+							{isloading ? <Spinner /> : "Delete"}
 						</button>
 					</div>
 				</form>

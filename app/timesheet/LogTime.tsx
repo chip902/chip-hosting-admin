@@ -10,6 +10,7 @@ import { useForm } from "react-hook-form";
 import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
 import { Customer, Project, Task, User } from "@prisma/client";
+import useCreateTimeEntry from "../hooks/useCreateTimeEntry";
 
 type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
@@ -22,6 +23,7 @@ const LogTime = () => {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
 	const router = useRouter();
+	const createTimeEntry = useCreateTimeEntry();
 
 	const {
 		register,
@@ -78,14 +80,21 @@ const LogTime = () => {
 			const { repeatInterval, ...logData } = data;
 			const logEntries = [];
 
-			if (repeatInterval) {
-				let currentDate = new Date(logData.date);
-				for (let i = 0; i < repeatInterval; i++) {
-					logEntries.push({ ...logData, date: new Date(currentDate).toISOString().split("T")[0] });
+			const parsedRepeatInterval = repeatInterval ? parseInt(repeatInterval as unknown as string, 10) : undefined;
+
+			const logDataWithDate = {
+				...logData,
+				date: new Date(logData.date),
+			};
+
+			if (parsedRepeatInterval) {
+				let currentDate = new Date(logDataWithDate.date);
+				for (let i = 0; i < parsedRepeatInterval; i++) {
+					logEntries.push({ ...logDataWithDate, date: new Date(currentDate) });
 					currentDate.setDate(currentDate.getDate() + 1);
 				}
 			} else {
-				logEntries.push({ ...logData, date: new Date(logData.date).toISOString().split("T")[0] });
+				logEntries.push({ ...logDataWithDate, date: new Date(logDataWithDate.date) });
 			}
 
 			await Promise.all(logEntries.map((entry) => axios.post("/api/timelog", entry)));
@@ -226,7 +235,9 @@ const LogTime = () => {
 								<TextField.Root
 									className="dark:text-white dark:bg-slate-500 rounded px-2"
 									placeholder="Number of days"
-									{...register("repeatInterval", { valueAsNumber: false })}
+									{...register("repeatInterval", {
+										setValueAs: (v) => (v === "" ? undefined : parseInt(v, 10)),
+									})}
 								/>
 							</Form.Control>
 							{errors.repeatInterval && <ErrorMessage>{errors.repeatInterval.message}</ErrorMessage>}
