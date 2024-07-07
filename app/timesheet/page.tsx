@@ -1,5 +1,5 @@
 "use client";
-import { Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
+import { Button, Menu, MenuButton, MenuItem, MenuItems, Transition } from "@headlessui/react";
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { addWeeks, eachDayOfInterval, endOfWeek, format, isToday, startOfWeek, subWeeks } from "date-fns";
 import { useEffect, useRef, useState } from "react";
@@ -7,10 +7,12 @@ import axios from "axios";
 import LogTime from "./LogTime";
 import TimeGrid from "./TimeGrid";
 import classNames from "classnames";
+import { AlertDialog, Flex } from "@radix-ui/themes";
 
 export default function Timesheet() {
 	const [currentWeek, setCurrentWeek] = useState(new Date());
 	const [timeEntries, setTimeEntries] = useState([]);
+	const [loadingError, setLoadingError] = useState(false);
 	const container = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -31,6 +33,7 @@ export default function Timesheet() {
 				setTimeEntries(formattedEntries);
 			} catch (error) {
 				console.error("Error fetching time entries:", error);
+				setLoadingError(true);
 			}
 		};
 
@@ -52,6 +55,26 @@ export default function Timesheet() {
 	const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 }); // Start on Sunday
 	const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 	const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
+
+	if (loadingError) {
+		return (
+			<AlertDialog.Root defaultOpen={true}>
+				<AlertDialog.Content maxWidth="450px">
+					<AlertDialog.Title>Database Error</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						The Database connection cannot be established. Check your connection and try again.
+					</AlertDialog.Description>
+					<Flex gap="3" mt="4" justify="end">
+						<AlertDialog.Cancel>
+							<Button color="red" onClick={() => setLoadingError(false)}>
+								Dismiss
+							</Button>
+						</AlertDialog.Cancel>
+					</Flex>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
+		);
+	}
 
 	return (
 		<div className="h-screen flex-col dark:bg-gray-900">

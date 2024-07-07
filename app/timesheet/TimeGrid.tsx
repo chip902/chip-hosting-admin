@@ -31,8 +31,6 @@ type TimeLogSchema = z.infer<typeof timeLogSchema> & {
 interface TimeGridProps {
 	days: Date[];
 	timeEntries: TimeLogSchema[];
-	onUpdate: (id: number, updatedData: Partial<TimeLogSchema>) => Promise<void>;
-	onDelete: (id: number) => void;
 }
 
 const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps) => {
