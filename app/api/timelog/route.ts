@@ -2,6 +2,38 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { timeLogSchema } from "@/app/validationSchemas";
+import { parseISO } from "date-fns";
+
+export async function GET(request: NextRequest) {
+	const { searchParams } = new URL(request.url);
+	const startDate = searchParams.get("startDate");
+	const endDate = searchParams.get("endDate");
+
+	try {
+		const whereClause: {
+			date?: {
+				gte?: Date;
+				lte?: Date;
+			};
+		} = {};
+		if (startDate) whereClause.date = { gte: parseISO(startDate) };
+		if (endDate) whereClause.date = { ...whereClause.date, lte: parseISO(endDate) };
+
+		const entries = await prisma.timeEntry.findMany({
+			where: whereClause,
+			include: {
+				customer: true,
+				project: true,
+				task: true,
+				user: true,
+			},
+		});
+
+		return NextResponse.json(entries, { status: 201 });
+	} catch (error) {
+		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
+	}
+}
 
 // Create a new time entry
 export async function POST(request: NextRequest) {
@@ -49,22 +81,5 @@ export async function POST(request: NextRequest) {
 	} catch (error) {
 		console.error("Error creating time entry:", error);
 		return NextResponse.json({ error: "Error creating time entry" }, { status: 500 });
-	}
-}
-
-// Fetch all time entries
-export async function GET() {
-	try {
-		const entries = await prisma.timeEntry.findMany({
-			include: {
-				customer: true,
-				project: true,
-				task: true,
-				user: true,
-			},
-		});
-		return NextResponse.json(entries, { status: 200 });
-	} catch (error) {
-		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}
 }

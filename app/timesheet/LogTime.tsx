@@ -12,7 +12,7 @@ import ErrorMessage from "@/components/ErrorMessage";
 import { Customer, Project, Task, User } from "@prisma/client";
 import useCreateTimeEntry from "../hooks/useCreateTimeEntry";
 
-type TimeLogSchema = z.infer<typeof timeLogSchema>;
+export type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
 const LogTime = () => {
 	const [open, setOpen] = useState(false);

@@ -11,8 +11,10 @@ import { AlertDialog, Flex } from "@radix-ui/themes";
 
 export default function Timesheet() {
 	const [currentWeek, setCurrentWeek] = useState(new Date());
-	const [timeEntries, setTimeEntries] = useState([]);
 	const [loadingError, setLoadingError] = useState(false);
+	const [timeEntries, setTimeEntries] = useState([]);
+	const [startDate, setStartDate] = useState<string>();
+	const [endDate, setEndDate] = useState<string>();
 	const container = useRef<HTMLDivElement>(null);
 
 	useEffect(() => {
@@ -21,24 +23,32 @@ export default function Timesheet() {
 			container.current.scrollTop = (container.current.scrollHeight * currentMinute) / 1440;
 		}
 	}, []);
-
 	useEffect(() => {
-		const fetchTimeEntries = async () => {
-			try {
-				const response = await axios.get("/api/timelog");
-				const formattedEntries = response.data.map((entry: any) => ({
-					...entry,
-					date: new Date(entry.date).toISOString(),
-				}));
-				setTimeEntries(formattedEntries);
-			} catch (error) {
-				console.error("Error fetching time entries:", error);
-				setLoadingError(true);
-			}
-		};
+		const start = new Date();
+		start.setDate(start.getDate() - start.getDay()); // Start of the week (Sunday)
+		const end = new Date(start);
+		end.setDate(start.getDate() + 6); // End of the week (Saturday)
 
-		fetchTimeEntries();
-	}, []);
+		setStartDate(start.toISOString().split("T")[0]);
+		setEndDate(end.toISOString().split("T")[0]);
+	}, [currentWeek]);
+	// useEffect(() => {
+	// 	const fetchTimeEntries = async () => {
+	// 		try {
+	// 			const response = await axios.get("/api/timelog");
+	// 			const formattedEntries = response.data.map((entry: any) => ({
+	// 				...entry,
+	// 				date: new Date(entry.date).toISOString(),
+	// 			}));
+	// 			setTimeEntries(formattedEntries);
+	// 		} catch (error) {
+	// 			console.error("Error fetching time entries:", error);
+	// 			setLoadingError(true);
+	// 		}
+	// 	};
+
+	// 	fetchTimeEntries();
+	// }, []);
 
 	const handlePreviousWeek = () => {
 		setCurrentWeek(subWeeks(currentWeek, 1));
@@ -115,7 +125,6 @@ export default function Timesheet() {
 								Week view
 								<ChevronDownIcon className="-mr-1 h-5 w-5 text-gray-400 dark:text-gray-500" aria-hidden="true" />
 							</MenuButton>
-
 							<Transition
 								enter="transition ease-out duration-100"
 								enterFrom="transform opacity-0 scale-95"
@@ -300,7 +309,7 @@ export default function Timesheet() {
 				<div style={{ width: "100%" }} className="flex max-w-full flex-none flex-col">
 					<div className="sticky top-0 z-10 bg-white shadow ring-1 ring-black ring-opacity-5 dark:bg-gray-800">
 						<div className="grid grid-cols-8 divide-x divide-gray-100 border-r border-gray-100 text-sm leading-6 text-gray-500 dark:divide-gray-700 dark:border-gray-700">
-							<div className="col-start-1 col-end-2 w-14 hourColuumn"></div> {/* Empty space for the time column */}
+							<div className="col-start-1 col-end-2 w-14 hourColumn"></div> {/* Empty space for the time column */}
 							{days.map((day, index) => (
 								<div key={index} className="flex items-center justify-center py-3 col-span-1">
 									<span
@@ -321,7 +330,7 @@ export default function Timesheet() {
 							))}
 						</div>
 					</div>
-					<TimeGrid days={days} timeEntries={timeEntries} />
+					<TimeGrid startDate={weekStart.toISOString().split("T")[0]} endDate={weekEnd.toISOString().split("T")[0]} />
 				</div>
 			</div>
 		</div>

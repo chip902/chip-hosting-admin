@@ -1,90 +1,81 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
-import axios from "axios";
+import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
 
-interface TimeEntryProps {
-	entry: {
-		id: number;
-		description: string | null;
-		duration: number | undefined;
-		date: Date;
-		userId: number;
-		taskId: number;
-		customerId: number;
-		name: string;
-		projectId: number;
-		invoiceItemId: number | null;
-		startTime?: string;
-		endTime?: string;
-		repeatInterval?: number;
-	};
+export interface TimeEntry {
+	id: number;
+	description: string | null;
+	duration: number | undefined;
+	date: Date;
+	userId: number;
+	taskId: number;
+	customerId: number;
+	name: string;
+	projectId: number;
+	invoiceItemId: number | null;
+	startTime?: string;
+	endTime?: string;
+	repeatInterval?: number;
+}
+
+export interface TimeEntryProps {
+	entry: TimeEntry;
 	startSlot: number;
 	endSlot: number;
 	dayIndex: number;
-	onUpdate: (id: number, updatedData: Partial<TimeEntryProps["entry"]>) => void;
-	onDelete: (id: number) => void;
 }
 
-const TimeEntryComponent = ({ entry, startSlot, endSlot, dayIndex, onUpdate, onDelete }: TimeEntryProps) => {
+const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex }) => {
 	const [isOpen, setIsOpen] = useState(false);
-	const [isloading, setLoading] = useState(false);
+	const [isLoading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
-		date: entry.date.toISOString().split("T")[0],
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
-		userId: entry.userId,
-		customerId: entry.customerId,
-		projectId: entry.projectId,
-		taskId: entry.taskId,
-		startTime: entry.startTime,
-		endTime: entry.endTime,
 	});
+
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
-	const queryClient = useQueryClient();
+	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
+
+	useEffect(() => {
+		setFormState({
+			duration: entry.duration?.toString() || "",
+			description: entry.description || "",
+		});
+	}, [entry]);
 
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
-		setFormState((prevState) => ({
-			...prevState,
-			[name]: name === "duration" ? parseInt(value, 10) : value,
-		}));
+		setFormState((prevState) => ({ ...prevState, [name]: value }));
 	};
 
-	const handleUpdate = async () => {
+	const handleUpdate = () => {
 		setLoading(true);
-		const originalStartTime = entry.startTime ? new Date(`${entry.date}T${entry.startTime}:00`) : new Date();
-		const newEndTime = new Date(originalStartTime.getTime() + parseInt(formState.duration) * 60000);
-		const updatedFormState = {
-			...formState,
-			date: new Date(formState.date).toISOString(),
-			endTime: `${newEndTime.getHours().toString().padStart(2, "0")}:${newEndTime.getMinutes().toString().padStart(2, "0")}`,
-		};
-		try {
-			await axios.patch(`/api/timelog/${entry.id}`, updatedFormState);
-			queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
-			queryClient.refetchQueries();
-		} catch (error) {
-			console.error("Failed to update time entry:", error);
-		} finally {
-			setIsOpen(false);
-			setLoading(false);
-		}
+		updateTimeEntry(
+			{ id: entry.id, data: { duration: parseInt(formState.duration, 10), description: formState.description } },
+			{
+				onSuccess: () => {
+					setIsOpen(false);
+					setLoading(false);
+				},
+				onError: (error) => {
+					console.error("Failed to update time entry:", error);
+					setLoading(false);
+				},
+			}
+		);
 	};
 
 	const handleDelete = () => {
 		deleteTimeEntry(entry.id, {
 			onSuccess: () => {
 				setIsOpen(false);
-				onDelete(entry.id);
 			},
 			onError: (error) => {
 				console.error("Error deleting time entry:", error);
 			},
 		});
-		queryClient.refetchQueries();
 	};
 
 	return (
@@ -98,11 +89,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, dayIndex, onUpdate, onD
 						height: `${((endSlot - startSlot) / 1440) * 100}%`,
 						width: "90%",
 						left: "5%",
-					}}
-					aria-haspopup="dialog"
-					aria-expanded={isOpen}
-					aria-controls={`popover-${entry.id}`}
-					data-state={isOpen ? "open" : "closed"}>
+					}}>
 					<Text>{entry.duration && entry.duration / 60} Hours</Text>
 					<br />
 					<Text>{entry.name}</Text>
@@ -134,11 +121,11 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, dayIndex, onUpdate, onD
 						/>
 					</label>
 					<div className="flex space-x-2">
-						<button type="button" onClick={handleUpdate} disabled={isloading} className="px-4 py-2 text-white bg-blue-500 rounded">
-							{isloading ? <Spinner /> : "Update"}
+						<button type="button" onClick={handleUpdate} disabled={isLoading} className="px-4 py-2 text-white bg-blue-500 rounded">
+							{isLoading ? <Spinner /> : "Update"}
 						</button>
-						<button type="button" onClick={handleDelete} disabled={isloading} className="px-4 py-2 text-white bg-red-500 rounded">
-							{isloading ? <Spinner /> : "Delete"}
+						<button type="button" onClick={handleDelete} disabled={isLoading} className="px-4 py-2 text-white bg-red-500 rounded">
+							{isLoading ? <Spinner /> : "Delete"}
 						</button>
 					</div>
 				</form>

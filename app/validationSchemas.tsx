@@ -12,7 +12,7 @@ export const timeLogSchema = z.object({
 	taskId: z.number().nonnegative("Task ID must be a non-negative number"),
 	userId: z.number().nonnegative("User ID must be a non-negative number"),
 	duration: z.number().nonnegative("Duration must be a non-negative number"),
-	date: z.date(),
+	date: z.date() || z.string(),
 	description: z.string().nullable().optional(),
 	startTime: z.string().optional(),
 	endTime: z.string().optional(),

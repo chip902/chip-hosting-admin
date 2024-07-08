@@ -1,62 +1,47 @@
-import React from "react";
+import React, { useEffect } from "react";
 import TimeEntryComponent from "./TimeEntry";
-import { timeLogSchema } from "../validationSchemas";
-import { z } from "zod";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
-
-type TimeLogSchema = z.infer<typeof timeLogSchema> & {
-	id: number;
-	date: Date | string | undefined;
-	repeatInterval: number | undefined;
-	invoiceItemId: number | null;
-	customer: {
-		id: number;
-		name: string;
-	};
-	project: {
-		id: number;
-		name: string;
-	};
-	task: {
-		id: number;
-		name: string;
-	};
-	user: {
-		id: number;
-		name: string;
-	};
-};
+import { useGetTimeEntry, TimeEntryData } from "../hooks/useGetTimeEntry";
+import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 
 interface TimeGridProps {
-	days: Date[];
-	timeEntries: TimeLogSchema[];
+	startDate: string;
+	endDate: string;
 }
 
-const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps) => {
-	const handleUpdate = async (id: number, updatedData: Partial<TimeLogSchema>) => {
-		try {
-			const response = await axios.patch(`/api/timelog/${id}`, updatedData);
-			if (response.status !== 201) {
-				throw new Error("Failed to update the time entry");
-			}
-		} catch (error) {
-			console.error(error);
-		}
-	};
+const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
+	const { data: timeEntries, error, isLoading } = useGetTimeEntry(startDate, endDate);
 
-	const handleDelete = async (id: number) => {
-		try {
-			const response = await fetch(`/api/timelog/${id}`, {
-				method: "DELETE",
-			});
-			if (!response.ok) {
-				throw new Error("Failed to delete the time entry");
-			}
-		} catch (error) {
-			console.error(error);
-		}
-	};
+	if (isLoading) {
+		return (
+			<Skeleton>
+				<div className="relative w-full h-fit" />
+			</Skeleton>
+		);
+	}
+
+	if (error) {
+		return (
+			<AlertDialog.Root defaultOpen={true}>
+				<AlertDialog.Content maxWidth="450px">
+					<AlertDialog.Title>Database Error</AlertDialog.Title>
+					<AlertDialog.Description size="2">
+						The Database connection cannot be established. Check your connection and try again.
+					</AlertDialog.Description>
+					<Flex gap="3" mt="4" justify="end">
+						<AlertDialog.Cancel>
+							<Button color="red">Dismiss</Button>
+						</AlertDialog.Cancel>
+					</Flex>
+				</AlertDialog.Content>
+			</AlertDialog.Root>
+		);
+	}
+
+	const days = Array.from({ length: 7 }, (_, i) => {
+		const date = new Date(startDate);
+		date.setDate(date.getDate() + i);
+		return date;
+	});
 
 	return (
 		<div className="grid grid-cols-8">
@@ -79,15 +64,19 @@ const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps)
 						<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700"></div>
 					))}
 					{timeEntries
-						.filter((entry) => new Date(entry.date).toDateString() === day.toDateString())
-						.map((entry) => {
+						?.filter((entry: TimeEntryData) => {
+							const entryDate = new Date(entry.date).toISOString().split("T")[0];
+							const dayDate = day.toISOString().split("T")[0];
+							const isSameDay = entryDate === dayDate;
+							return isSameDay;
+						})
+						.map((entry: TimeEntryData) => {
 							const startDateTime = new Date(entry.date);
 							const startHour = startDateTime.getHours();
 							const startMinute = startDateTime.getMinutes();
-							const endDateTime = new Date(startDateTime.getTime() + entry.duration * 60000);
+							const endDateTime = new Date(startDateTime.getTime() + (entry.duration ?? 0) * 60000);
 							const endHour = endDateTime.getHours();
 							const endMinute = endDateTime.getMinutes();
-
 							return (
 								<TimeEntryComponent
 									key={entry.id}
@@ -99,9 +88,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({ days, timeEntries }: TimeGridProps)
 									}}
 									startSlot={startHour * 60 + startMinute}
 									endSlot={endHour * 60 + endMinute}
-									dayIndex={days.findIndex((day) => day.toDateString() === startDateTime.toDateString())}
-									onUpdate={handleUpdate}
-									onDelete={handleDelete}
+									dayIndex={days.findIndex((d) => d.toISOString().split("T")[0] === startDateTime.toISOString().split("T")[0])}
 								/>
 							);
 						})}
