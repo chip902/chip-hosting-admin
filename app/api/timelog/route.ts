@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { timeLogSchema } from "@/app/validationSchemas";
-import { parseISO } from "date-fns";
+import { format, isValid, parseISO } from "date-fns";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -46,8 +46,21 @@ export async function POST(request: NextRequest) {
 
 		const { date, startTime, endTime, customerId, projectId, taskId, userId, ...rest } = body;
 
-		const startDateTime = new Date(`${date}T${startTime}:00`);
-		const endDateTime = new Date(`${date}T${endTime}:00`);
+		// Parse and validate the date
+		const parsedDate = parseISO(date);
+		if (!isValid(parsedDate)) {
+			throw new Error("Invalid date format");
+		}
+
+		const formattedDate = format(parsedDate, "yyyy-MM-dd");
+
+		// Create DateTime strings for start and end times
+		const startDateTime = new Date(`${formattedDate}T${startTime}:00`);
+		const endDateTime = new Date(`${formattedDate}T${endTime}:00`);
+
+		if (!isValid(startDateTime) || !isValid(endDateTime)) {
+			throw new Error("Invalid start or end time");
+		}
 
 		const newEntry = await prisma.timeEntry.create({
 			data: {

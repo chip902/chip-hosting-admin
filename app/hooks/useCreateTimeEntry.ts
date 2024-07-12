@@ -11,6 +11,7 @@ const createTimeEntry = async (data: TimeLogSchema): Promise<void> => {
 	if (response.status !== 201) {
 		throw new Error("Error creating time entry");
 	}
+	return response.data;
 };
 
 const useCreateTimeEntry = () => {
@@ -21,6 +22,9 @@ const useCreateTimeEntry = () => {
 		onSuccess: () => {
 			queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
 			queryClient.refetchQueries;
+		},
+		onError: (error) => {
+			console.error("Error creating time entry:", error);
 		},
 	});
 };

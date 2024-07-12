@@ -65,8 +65,8 @@ const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
 					))}
 					{timeEntries
 						?.filter((entry: TimeEntryData) => {
-							const entryDate = new Date(entry.date).toISOString().split("T")[0];
-							const dayDate = day.toISOString().split("T")[0];
+							const entryDate = new Date(entry.date).toDateString();
+							const dayDate = day.toDateString();
 							const isSameDay = entryDate === dayDate;
 							return isSameDay;
 						})
@@ -88,7 +88,7 @@ const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
 									}}
 									startSlot={startHour * 60 + startMinute}
 									endSlot={endHour * 60 + endMinute}
-									dayIndex={days.findIndex((d) => d.toISOString().split("T")[0] === startDateTime.toISOString().split("T")[0])}
+									dayIndex={days.findIndex((d) => d.toDateString() === startDateTime.toDateString())}
 								/>
 							);
 						})}

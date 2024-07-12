@@ -23,7 +23,7 @@ const LogTime = () => {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
 	const router = useRouter();
-	const createTimeEntry = useCreateTimeEntry();
+	const { mutate: createTimeEntry } = useCreateTimeEntry();
 
 	const {
 		register,
@@ -33,6 +33,9 @@ const LogTime = () => {
 		formState: { errors },
 	} = useForm<TimeLogSchema>({
 		resolver: zodResolver(timeLogSchema),
+		defaultValues: {
+			date: new Date().toISOString().split("T")[0],
+		},
 	});
 
 	useEffect(() => {
@@ -81,7 +84,6 @@ const LogTime = () => {
 			const logEntries = [];
 
 			const parsedRepeatInterval = repeatInterval ? parseInt(repeatInterval as unknown as string, 10) : undefined;
-
 			const logDataWithDate = {
 				...logData,
 				date: new Date(logData.date),
@@ -97,16 +99,19 @@ const LogTime = () => {
 				logEntries.push({ ...logDataWithDate, date: new Date(logDataWithDate.date) });
 			}
 
-			await Promise.all(logEntries.map((entry) => axios.post("/api/timelog", entry)));
+			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
 
 			setOpen(false);
 			router.push("/timesheet");
 			router.refresh();
 		} catch (error) {
+			setSubmitting(false);
 			console.error("Failed to submit time log:", error);
 			setError("An unexpected error occurred");
 		} finally {
 			setSubmitting(false);
+			router.push("/timesheet");
+			router.refresh();
 		}
 	};
 

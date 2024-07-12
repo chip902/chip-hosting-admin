@@ -12,7 +12,12 @@ export const timeLogSchema = z.object({
 	taskId: z.number().nonnegative("Task ID must be a non-negative number"),
 	userId: z.number().nonnegative("User ID must be a non-negative number"),
 	duration: z.number().nonnegative("Duration must be a non-negative number"),
-	date: z.date() || z.string(),
+	date: z.union([
+		z.date(),
+		z.string().refine((val) => !isNaN(Date.parse(val)), {
+			message: "Expected date, received string",
+		}),
+	]),
 	description: z.string().nullable().optional(),
 	startTime: z.string().optional(),
 	endTime: z.string().optional(),
