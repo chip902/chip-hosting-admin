@@ -43,7 +43,7 @@ export const useGetTimeEntry = (startDate?: string, endDate?: string) => {
 	return useQuery<TimeEntryData[]>({
 		queryKey: ["timeEntries", startDate, endDate],
 		queryFn: () => fetchTimeEntries(startDate, endDate),
-		staleTime: 60 * 1000,
+		staleTime: 30 * 1000,
 		retry: 3,
 	});
 };
