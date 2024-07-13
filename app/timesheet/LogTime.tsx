@@ -126,12 +126,12 @@ const LogTime = () => {
 				<Dialog.Trigger>
 					<Button variant="solid">Log Time</Button>
 				</Dialog.Trigger>
-				<Dialog.Content className="gap-3">
+				<Dialog.Content className="gap-3 w-screen">
 					<Dialog.Title>Log Time</Dialog.Title>
 					<Form.Root className="logTime" onSubmit={handleSubmit(onSubmit)}>
 						<Grid columns={{ initial: "1", md: "2" }} gap="3" width="auto">
 							<Form.Field name="customerId">
-								<Form.Label>Customer</Form.Label>
+								<Form.Label className="px-3">Customer</Form.Label>
 								<Form.Control asChild>
 									<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value))}>
 										<Select.Trigger placeholder="Select a Customer" />
