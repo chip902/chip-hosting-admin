@@ -1,15 +1,15 @@
 "use client";
-import { Flex, Table } from "@radix-ui/themes";
+import { Box, Flex, Table } from "@radix-ui/themes";
 import AddCustomer from "./AddCustomer";
+import { useCustomers } from "../hooks/useCustomers";
+import EditCustomer from "./EditCustomer";
 import { Customer } from "@prisma/client";
-import axios from "axios";
-import { useQuery } from "@tanstack/react-query";
 
 const CustomerTable = () => {
 	const { data: customers } = useCustomers();
 	return (
 		<>
-			<Flex justify="end" p="3">
+			<Flex justify="end" p="3px" my="3">
 				<AddCustomer />
 			</Flex>
 			<Table.Root variant="surface">
@@ -18,29 +18,54 @@ const CustomerTable = () => {
 						<Table.ColumnHeaderCell>Customer name</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Primary Email</Table.ColumnHeaderCell>
 						<Table.ColumnHeaderCell>Default Rate</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell>Display Color</Table.ColumnHeaderCell>
+						<Table.ColumnHeaderCell />
 					</Table.Row>
 				</Table.Header>
 
 				<Table.Body>
-					{customers?.map((customer) => (
-						<Table.Row key={customer.id}>
-							<Table.RowHeaderCell>{customer.name}</Table.RowHeaderCell>
-							<Table.Cell>{customer.email}</Table.Cell>
-							<Table.Cell>${customer.defaultRate}</Table.Cell>
-						</Table.Row>
-					))}
+					{customers?.map((customer) => {
+						const customerData: Customer = {
+							id: customer.id,
+							name: customer.name ?? null,
+							email: customer.email,
+							dateCreated: new Date(customer.dateCreated),
+							defaultRate: customer.defaultRate,
+							color: customer.color ?? null,
+						};
+
+						return (
+							<Table.Row key={customerData.id}>
+								<Table.RowHeaderCell>{customerData.name}</Table.RowHeaderCell>
+								<Table.Cell>{customerData.email}</Table.Cell>
+								<Table.Cell>${customerData.defaultRate}</Table.Cell>
+								<Table.Cell>
+									<Flex>
+										<Flex align="center" gap="2">
+											<Box
+												style={{
+													backgroundColor: customer.color || "#fff",
+													width: "20px",
+													height: "20px",
+													borderRadius: "50%",
+													border: "1px solid #ddd",
+												}}
+											/>
+										</Flex>
+									</Flex>
+								</Table.Cell>
+								<Table.Cell>
+									<Flex justify="center">
+										<EditCustomer customer={customerData} />
+									</Flex>
+								</Table.Cell>
+							</Table.Row>
+						);
+					})}
 				</Table.Body>
 			</Table.Root>
 		</>
 	);
 };
-
-const useCustomers = () =>
-	useQuery<Customer[]>({
-		queryKey: ["customer"],
-		queryFn: () => axios.get("/api/customers").then((res) => res.data),
-		staleTime: 60 * 1000,
-		retry: 3,
-	});
 
 export default CustomerTable;

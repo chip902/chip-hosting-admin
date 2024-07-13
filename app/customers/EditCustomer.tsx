@@ -1,62 +1,113 @@
 "use client";
 import * as Form from "@radix-ui/react-form";
-import { Button, Dialog, Flex, Spinner, TextField } from "@radix-ui/themes";
+import { Button, Dialog, Flex, IconButton, Spinner, TextField } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { customerSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Customer } from "@prisma/client";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
+import { Cross1Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 
-const AddCustomer = ({ customer }: { customer?: Customer }) => {
+interface EditCustomerProps {
+	customer?: {
+		id: number;
+		name: string | null;
+		email: string;
+		dateCreated: Date;
+		defaultRate: number;
+		color: string | null;
+	};
+}
+
+const EditCustomer = ({ customer }: EditCustomerProps) => {
 	const router = useRouter();
+	const queryClient = useQueryClient();
 	const {
 		register,
 		handleSubmit,
+		setValue,
 		formState: { errors },
 	} = useForm<CustomerSchema>({
 		resolver: zodResolver(customerSchema),
+		defaultValues: {
+			id: customer?.id,
+			color: customer?.color || "",
+			email: customer?.email || "",
+			name: customer?.name || "",
+			defaultRate: customer?.defaultRate || 0,
+		},
 	});
 	const [error, setError] = useState("");
 	const [submitting, setSubmitting] = useState(false);
 
-	const onSubmit = async (data: CustomerSchema) => {
-		try {
-			setSubmitting(true);
+	useEffect(() => {
+		if (customer) {
+			setValue("id", customer.id || undefined);
+			setValue("name", customer.name || "");
+			setValue("email", customer.email || "");
+			setValue("defaultRate", customer.defaultRate || 0);
+			setValue("color", customer.color || "#000000");
+		}
+	}, [customer, setValue]);
+
+	const mutation = useMutation<void, Error, CustomerSchema>({
+		mutationFn: async (data: CustomerSchema) => {
 			const newData = {
 				...data,
-				rate: parseFloat(data.defaultRate.toString()),
+				defaultRate: parseFloat(data.defaultRate.toString()),
+				color: data.color,
+				name: data.name,
+				email: data.email,
 			};
 
 			if (customer) {
-				await axios.patch("/api/customers/" + customer.id, newData);
-			} else {
-				await axios.post("/api/customers", newData);
+				await axios.patch(`/api/customers/${customer.id}`, newData);
 			}
+		},
+		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ["customers"] });
 			setSubmitting(false);
 			router.push("/customers");
 			router.refresh();
-		} catch (error) {
+		},
+		onError: (error: Error) => {
 			console.error("Error occurred during submission:", error);
 			setSubmitting(false);
 			setError("An unexpected error occurred");
-		}
+		},
+	});
+
+	const onSubmit = (data: CustomerSchema) => {
+		setSubmitting(true);
+		mutation.mutate(data);
 	};
 
 	return (
 		<Flex direction="column" gap="2">
 			<Dialog.Root>
 				<Dialog.Trigger>
-					<Button variant="solid">Add Customer</Button>
+					<IconButton variant="ghost">
+						<DotsVerticalIcon />
+					</IconButton>
 				</Dialog.Trigger>
 
 				<Dialog.Content size="4">
-					<Dialog.Title>Add A New Customer</Dialog.Title>
+					<Dialog.Title>
+						<Flex justify="between">
+							Edit Customer
+							<Dialog.Close>
+								<IconButton variant="ghost" size="2">
+									<Cross1Icon />
+								</IconButton>
+							</Dialog.Close>
+						</Flex>
+					</Dialog.Title>
 					<Form.Root onSubmit={handleSubmit(onSubmit)}>
 						<Form.Field name="name">
 							<Form.Label>Customer Name</Form.Label>
@@ -94,7 +145,7 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 							</Dialog.Close>
 							<Dialog.Close>
 								<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
-									{submitting && <Spinner />} Add
+									{submitting && <Spinner />} Save
 								</Button>
 							</Dialog.Close>
 						</Flex>
@@ -105,4 +156,4 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 	);
 };
 
-export default AddCustomer;
+export default EditCustomer;

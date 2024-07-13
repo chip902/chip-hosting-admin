@@ -25,9 +25,10 @@ export interface TimeEntryProps {
 	startSlot: number;
 	endSlot: number;
 	dayIndex: number;
+	color: string;
 }
 
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex }) => {
+const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, color }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
@@ -82,20 +83,18 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Popover.Trigger asChild>
 				<div
-					className="absolute bg-blue-500 text-white p-1 rounded-xl cursor-pointer"
+					className="time-entry absolute bg-blue-500 text-white p-1 rounded-xl cursor-pointer"
 					style={{
 						gridColumn: `${dayIndex + 2} / ${dayIndex + 3}`,
 						top: `${(startSlot / 1440) * 100}%`,
 						height: `${((endSlot - startSlot) / 1440) * 100}%`,
 						width: "90%",
 						left: "5%",
+						backgroundColor: color,
 					}}>
 					<Text>{entry.duration && entry.duration / 60} Hours</Text>
 					<br />
 					<Text>{entry.name}</Text>
-					<br />
-					<Text>{entry.description}</Text>
-					<br />
 				</div>
 			</Popover.Trigger>
 			<Popover.Content className="p-4 bg-gray-500 rounded shadow-lg z-20">

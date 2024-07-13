@@ -1,9 +1,11 @@
 import { z } from "zod";
 
 export const customerSchema = z.object({
+	id: z.number().optional(),
 	name: z.string().min(1, "Please enter a complete name.").max(255),
-	email: z.string().email(),
-	rate: z.number().min(1, "Enter a rate bigger than $1 an hour"),
+	email: z.string().email().max(255),
+	defaultRate: z.number().positive(),
+	color: z.string().max(7).nullable().optional(),
 });
 
 export const timeLogSchema = z.object({

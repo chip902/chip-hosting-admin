@@ -14,6 +14,7 @@ export interface TimeEntryData {
 	customer: {
 		id: number;
 		name: string;
+		color: string;
 	};
 	project: {
 		id: number;

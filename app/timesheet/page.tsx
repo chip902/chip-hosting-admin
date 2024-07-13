@@ -32,23 +32,6 @@ export default function Timesheet() {
 		setStartDate(start.toISOString().split("T")[0]);
 		setEndDate(end.toISOString().split("T")[0]);
 	}, [currentWeek]);
-	// useEffect(() => {
-	// 	const fetchTimeEntries = async () => {
-	// 		try {
-	// 			const response = await axios.get("/api/timelog");
-	// 			const formattedEntries = response.data.map((entry: any) => ({
-	// 				...entry,
-	// 				date: new Date(entry.date).toISOString(),
-	// 			}));
-	// 			setTimeEntries(formattedEntries);
-	// 		} catch (error) {
-	// 			console.error("Error fetching time entries:", error);
-	// 			setLoadingError(true);
-	// 		}
-	// 	};
-
-	// 	fetchTimeEntries();
-	// }, []);
 
 	const handlePreviousWeek = () => {
 		setCurrentWeek(subWeeks(currentWeek, 1));

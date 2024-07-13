@@ -23,4 +23,5 @@ export interface Customer {
 	email: string;
 	dateCreated: string;
 	defaultRate: number;
+	color: string;
 }
