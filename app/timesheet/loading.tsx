@@ -1,12 +1,13 @@
 import { Flex, Skeleton } from "@radix-ui/themes";
-import React from "react";
 
-const LoadingTimeGrid = () => {
+const Loading = () => {
 	return (
-		<Flex direction="column" gap="5" maxWidth="350px">
-			<Skeleton />
+		<Flex direction="column" gap="4">
+			{[...Array(7)].map((_, dayIndex) => (
+				<Skeleton key={dayIndex} className="w-full h-16" />
+			))}
 		</Flex>
 	);
 };
 
-export default LoadingTimeGrid;
+export default Loading;

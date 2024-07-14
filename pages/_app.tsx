@@ -1,4 +1,5 @@
 import "@/app/globals.css";
+import "@radix-ui/themes/styles.css";
 import RootLayout from "@/app/layout";
 import { AppProps } from "next/app";
 

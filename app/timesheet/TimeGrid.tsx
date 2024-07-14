@@ -1,4 +1,5 @@
-import React, { useEffect } from "react";
+"use client";
+import React, { useEffect, useState } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import { useGetTimeEntry, TimeEntryData } from "../hooks/useGetTimeEntry";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
@@ -9,13 +10,29 @@ interface TimeGridProps {
 }
 
 const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
+	const [localLoading, setLocalLoading] = useState(true);
 	const { data: timeEntries, error, isLoading } = useGetTimeEntry(startDate, endDate);
 
-	if (isLoading) {
+	useEffect(() => {
+		setLocalLoading(true);
+	}, [startDate, endDate]);
+	useEffect(() => {
+		if (!isLoading) {
+			setLocalLoading(false);
+		}
+	}, [isLoading]);
+
+	if (localLoading || isLoading) {
 		return (
-			<Skeleton>
-				<div className="relative w-full h-fit" />
-			</Skeleton>
+			<div className="time-grid grid-skeleton">
+				{[...Array(168)].map((_, hour) => (
+					<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700">
+						<Skeleton className="grid-skeleton-item">
+							<div className="w-full h-full" />
+						</Skeleton>
+					</div>
+				))}
+			</div>
 		);
 	}
 

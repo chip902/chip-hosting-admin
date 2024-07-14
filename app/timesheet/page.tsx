@@ -3,7 +3,6 @@ import { Button, Menu, MenuButton, MenuItem, MenuItems, Transition } from "@head
 import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon, EllipsisHorizontalIcon } from "@heroicons/react/20/solid";
 import { addWeeks, eachDayOfInterval, endOfWeek, format, isToday, startOfWeek, subWeeks } from "date-fns";
 import { useEffect, useRef, useState } from "react";
-import axios from "axios";
 import LogTime from "./LogTime";
 import TimeGrid from "./TimeGrid";
 import classNames from "classnames";
@@ -12,7 +11,6 @@ import { AlertDialog, Flex } from "@radix-ui/themes";
 export default function Timesheet() {
 	const [currentWeek, setCurrentWeek] = useState(new Date());
 	const [loadingError, setLoadingError] = useState(false);
-	const [timeEntries, setTimeEntries] = useState([]);
 	const [startDate, setStartDate] = useState<string>();
 	const [endDate, setEndDate] = useState<string>();
 	const container = useRef<HTMLDivElement>(null);
