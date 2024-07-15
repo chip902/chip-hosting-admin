@@ -61,32 +61,34 @@ model ProjectTasks {
   @@id([projectId, taskId])
 }
 
+model Invoice {
+  id          Int           @id @default(autoincrement())
+  customerId  Int
+  totalAmount Float
+  dateCreated DateTime      @default(now())
+  timeEntries TimeEntry[]   @relation("InvoiceTimeEntries")
+  Customer    Customer      @relation(fields: [customerId], references: [id])
+  InvoiceItem InvoiceItem[]
+  pdfPath     String?
+}
+
 model TimeEntry {
   id            Int          @id @default(autoincrement())
   description   String?
   duration      Int
-  date          DateTime     @default(now())
+  date          DateTime
   userId        Int
   taskId        Int
   customerId    Int
   projectId     Int
-  invoiceItemId Int?
+  User          User         @relation(fields: [userId], references: [id])
+  Customer      Customer     @relation(fields: [customerId], references: [id])
+  Project       Project      @relation(fields: [projectId], references: [id])
+  Task          Task         @relation(fields: [taskId], references: [id])
   InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
-  task          Task         @relation(fields: [taskId], references: [id])
-  user          User         @relation(fields: [userId], references: [id])
-  customer      Customer     @relation(fields: [customerId], references: [id])
-  project       Project      @relation(fields: [projectId], references: [id])
-}
-
-model Invoice {
-  id           Int           @id @default(autoincrement())
-  customerId   Int
-  invoiceId    String        @unique
-  dateCreated  DateTime      @default(now())
-  dateDue      DateTime
-  invoiceTerms String
-  customer     Customer      @relation(fields: [customerId], references: [id])
-  items        InvoiceItem[]
+  invoiceItemId Int?
+  invoiceId     Int?
+  invoice       Invoice?     @relation(fields: [invoiceId], references: [id], name: "InvoiceTimeEntries", map: "TimeEntry_InvoiceTimeEntries_fkey")
 }
 
 model InvoiceItem {

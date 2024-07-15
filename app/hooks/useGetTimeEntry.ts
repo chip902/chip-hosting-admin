@@ -1,3 +1,4 @@
+import { Invoice, TimeEntry } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -30,19 +31,28 @@ export interface TimeEntryData {
 	};
 }
 
-const fetchTimeEntries = async (startDate?: string, endDate?: string) => {
-	const response = await axios
-		.get("/api/timelog", {
-			params: { startDate, endDate },
-		})
-		.then((res) => res.data);
-	return response;
+const fetchTimeEntries = async (userId: number, filters: { customerId?: number; startDate?: string; endDate?: string }): Promise<TimeEntryData[]> => {
+	const response = await axios.get("/api/timelog", {
+		params: {
+			userId,
+			...filters,
+		},
+	});
+	return response.data;
 };
+
+export const useGetTimeEntries = (userId: number, filters: { customerId?: number; startDate?: string; endDate?: string }) =>
+	useQuery<TimeEntryData[]>({
+		queryKey: ["time-entries", userId, filters],
+		queryFn: () => fetchTimeEntries(userId, filters),
+		staleTime: 60 * 1000,
+		retry: 3,
+	});
 
 export const useGetTimeEntry = (startDate?: string, endDate?: string) => {
 	return useQuery<TimeEntryData[]>({
 		queryKey: ["timeEntries", startDate, endDate],
-		queryFn: () => fetchTimeEntries(startDate, endDate),
+		queryFn: () => fetchTimeEntries(1, { startDate, endDate }),
 		staleTime: 30 * 1000,
 		retry: 3,
 	});

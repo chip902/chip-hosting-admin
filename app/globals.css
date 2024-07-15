@@ -115,3 +115,9 @@ html {
 	border: 1px solid #ccc;
 	background-color: #f3f4f0;
 }
+.time-input {
+	color: #fff;
+	background: #64748b;
+	padding: 6px;
+	border-radius: 8px;
+}

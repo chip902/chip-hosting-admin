@@ -204,21 +204,21 @@ const LogTime = () => {
 							<Form.Field name="date">
 								<Form.Label>Date</Form.Label>
 								<Form.Control asChild>
-									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="date" {...register("date")} />
+									<input className="time-input" type="date" {...register("date")} />
 								</Form.Control>
 								{errors.date && <ErrorMessage>{errors.date.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="startTime">
 								<Form.Label>Start Time</Form.Label>
 								<Form.Control asChild>
-									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="time" {...register("startTime")} />
+									<input className="time-input" type="time" {...register("startTime")} />
 								</Form.Control>
 								{errors.startTime && <ErrorMessage>{errors.startTime.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="endTime">
 								<Form.Label>End Time</Form.Label>
 								<Form.Control asChild>
-									<input className="dark:text-white dark:bg-slate-500 rounded px-2" type="time" {...register("endTime")} />
+									<input className="time-input" type="time" {...register("endTime")} />
 								</Form.Control>
 								{errors.endTime && <ErrorMessage>{errors.endTime.message}</ErrorMessage>}
 							</Form.Field>

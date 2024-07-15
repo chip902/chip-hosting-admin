@@ -25,3 +25,9 @@ export const timeLogSchema = z.object({
 	endTime: z.string().optional(),
 	repeatInterval: z.number().nullable().optional(),
 });
+
+export const filterSchema = z.object({
+	customerId: z.number().optional(),
+	startDate: z.string().optional(),
+	endDate: z.string().optional(),
+});
