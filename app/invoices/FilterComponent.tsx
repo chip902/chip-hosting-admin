@@ -29,11 +29,11 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	};
 
 	if (isLoading) {
-		return <div>Loading customers...</div>;
+		return <div>Loading Filter Items...</div>;
 	}
 
 	if (error) {
-		return <div>Error loading customers</div>;
+		return <div>Error fetching data from the database</div>;
 	}
 
 	return (

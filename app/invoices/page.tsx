@@ -11,7 +11,7 @@ interface InvoiceGeneratorProps {
 	userId: number;
 }
 
-const InvoiceGenerator: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
+const InvoiceGenerator = ({ userId }: InvoiceGeneratorProps) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [filters, setFilters] = useState<{ customerId?: number; startDate?: string; endDate?: string }>({});
