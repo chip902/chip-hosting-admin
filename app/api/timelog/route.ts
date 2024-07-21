@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
 	const endDate = searchParams.get("endDate");
 	const customerId = searchParams.get("customerId");
 	const isInvoiced = searchParams.get("isInvoiced");
+	const page = parseInt(searchParams.get("page") || "1", 10);
+	const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
 
 	try {
 		const whereClause: {
@@ -54,6 +56,8 @@ export async function GET(request: NextRequest) {
 					},
 				},
 			},
+			skip: (page - 1) * pageSize,
+			take: pageSize,
 		});
 		const totalEntries = await prisma.timeEntry.count({
 			where: whereClause,
