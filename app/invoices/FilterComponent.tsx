@@ -7,6 +7,7 @@ import { z } from "zod";
 import { useCustomers } from "../hooks/useCustomers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as Form from "@radix-ui/react-form";
+import { useEffect } from "react";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 
@@ -16,7 +17,7 @@ interface FilterComponentProps {
 
 const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const { data: customers, isLoading, error } = useCustomers();
-	const { register, setValue, handleSubmit, reset } = useForm<FilterFormSchema>({
+	const { register, setValue, handleSubmit, reset, watch } = useForm<FilterFormSchema>({
 		resolver: zodResolver(filterSchema),
 		defaultValues: {
 			customerId: undefined,
@@ -25,13 +26,23 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			isInvoiced: false,
 		},
 	});
-	const handleSelectChange = <T extends keyof FilterFormSchema>(name: T, value: FilterFormSchema[T]) => {
-		// @ts-ignore
-		setValue(name, value, { shouldValidate: true });
-	};
+
+	const customerId = watch("customerId");
+
 	const onSubmit = (data: FilterFormSchema) => {
 		onApplyFilters(data);
 	};
+
+	const handleReset = () => {
+		reset();
+		setValue("customerId", undefined);
+	};
+
+	useEffect(() => {
+		if (!customerId) {
+			setValue("customerId", undefined);
+		}
+	}, [customerId, setValue]);
 
 	if (isLoading) {
 		return <div>Loading Filter Items...</div>;
@@ -40,13 +51,14 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	if (error) {
 		return <div>Error fetching data from the database</div>;
 	}
-
 	return (
 		<Form.Root className="flex flex-row items-center gap-4" onSubmit={handleSubmit(onSubmit)}>
 			<Form.Field name="customerId" className="flex-1">
 				<Form.Label className="mr-2">Select Customer</Form.Label>
 				<Form.Control asChild>
-					<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value, 10))}>
+					<Select.Root
+						value={customerId ? customerId.toString() : ""}
+						onValueChange={(value) => setValue("customerId", value ? parseInt(value, 10) : undefined)}>
 						<Select.Trigger placeholder="Select Customer" />
 						<Select.Content>
 							{customers?.map((customer) => (
@@ -78,7 +90,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			</Form.Field>
 			<Flex gap="3">
 				<Button type="submit">Apply Filters</Button>
-				<Button type="button" onClick={() => reset()}>
+				<Button type="button" onClick={handleReset}>
 					Reset
 				</Button>
 			</Flex>
