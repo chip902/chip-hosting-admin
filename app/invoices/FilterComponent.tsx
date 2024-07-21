@@ -16,7 +16,7 @@ interface FilterComponentProps {
 
 const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const { data: customers, isLoading, error } = useCustomers();
-	const { register, handleSubmit, reset } = useForm<FilterFormSchema>({
+	const { register, setValue, handleSubmit, reset } = useForm<FilterFormSchema>({
 		resolver: zodResolver(filterSchema),
 		defaultValues: {
 			customerId: undefined,
@@ -25,7 +25,10 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			isInvoiced: false,
 		},
 	});
-
+	const handleSelectChange = <T extends keyof FilterFormSchema>(name: T, value: FilterFormSchema[T]) => {
+		// @ts-ignore
+		setValue(name, value, { shouldValidate: true });
+	};
 	const onSubmit = (data: FilterFormSchema) => {
 		onApplyFilters(data);
 	};
@@ -43,7 +46,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			<Form.Field name="customerId" className="flex-1">
 				<Form.Label className="mr-2">Select Customer</Form.Label>
 				<Form.Control asChild>
-					<Select.Root>
+					<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value, 10))}>
 						<Select.Trigger placeholder="Select Customer" />
 						<Select.Content>
 							{customers?.map((customer) => (

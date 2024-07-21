@@ -48,7 +48,7 @@ const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters
 		isInvoiced: filters.isInvoiced?.toString() ?? "false",
 	});
 
-	const response = await axios.get(`/api/timelog?${params.toString()}`);
+	const response = await axios.get(`/api/timelog?${params}`);
 	return response.data;
 };
 
