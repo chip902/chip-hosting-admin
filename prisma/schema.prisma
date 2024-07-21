@@ -89,6 +89,7 @@ model TimeEntry {
   invoiceItemId Int?
   invoiceId     Int?
   invoice       Invoice?     @relation(fields: [invoiceId], references: [id], name: "InvoiceTimeEntries", map: "TimeEntry_InvoiceTimeEntries_fkey")
+  isInvoiced    Boolean      @default(false)
 }
 
 model InvoiceItem {

@@ -1,6 +1,7 @@
+// FilterComponent.tsx
 "use client";
 import { useForm } from "react-hook-form";
-import { Flex, Button, Select, TextField } from "@radix-ui/themes";
+import { Flex, Button, Select } from "@radix-ui/themes";
 import { filterSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useCustomers } from "../hooks/useCustomers";
@@ -21,6 +22,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			customerId: undefined,
 			startDate: "",
 			endDate: "",
+			isInvoiced: false,
 		},
 	});
 
@@ -63,6 +65,12 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 				<Form.Label className="mr-2">End Date</Form.Label>
 				<Form.Control asChild>
 					<input className="time-input" type="date" {...register("endDate")} />
+				</Form.Control>
+			</Form.Field>
+			<Form.Field name="isInvoiced" className="flex-1">
+				<Form.Label className="mr-2">Already Invoiced</Form.Label>
+				<Form.Control asChild>
+					<input className="mr-2" type="checkbox" {...register("isInvoiced")} />
 				</Form.Control>
 			</Form.Field>
 			<Flex gap="3">

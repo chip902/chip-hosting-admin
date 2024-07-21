@@ -5,6 +5,7 @@ import { generateInvoicePdf, savePdf } from "@/app/utils/PdfService";
 export async function POST(request: NextRequest) {
 	try {
 		const { timeEntryIds } = await request.json();
+		console.log("Received timeEntryIds:", timeEntryIds);
 
 		const timeEntries = await prisma.timeEntry.findMany({
 			where: {
@@ -52,6 +53,7 @@ export async function POST(request: NextRequest) {
 		});
 
 		if (timeEntries.length === 0) {
+			console.log("No time entries found.");
 			return NextResponse.json({ error: "No time entries found" }, { status: 400 });
 		}
 
@@ -67,6 +69,8 @@ export async function POST(request: NextRequest) {
 				},
 			},
 		});
+
+		console.log("Created invoice:", invoice);
 
 		const transformedTimeEntries = timeEntries.map((entry) => ({
 			id: entry.id,
@@ -106,14 +110,28 @@ export async function POST(request: NextRequest) {
 			timeEntries: transformedTimeEntries,
 		};
 
+		console.log("Generating PDF with data:", pdfData);
+
 		const pdfBytes = await generateInvoicePdf(pdfData);
 
+		console.log("Saving PDF...");
+
 		const pdfPath = await savePdf(pdfBytes, invoice.id);
+
+		console.log("PDF saved at:", pdfPath);
 
 		await prisma.invoice.update({
 			where: { id: invoice.id },
 			data: { pdfPath },
 		});
+
+		// Mark time entries as invoiced
+		const updateResult = await prisma.timeEntry.updateMany({
+			where: { id: { in: timeEntryIds } },
+			data: { isInvoiced: true },
+		});
+
+		console.log("Time entries marked as invoiced:", updateResult);
 
 		return NextResponse.json(invoice, { status: 201 });
 	} catch (error) {

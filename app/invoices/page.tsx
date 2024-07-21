@@ -1,26 +1,39 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
-import { useGetTimeEntries } from "../hooks/useGetTimeEntry";
+import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import FilterComponent from "./FilterComponent";
+import PaginationComponent from "./PaginationComponent";
 
-interface InvoiceGeneratorProps {
-	userId: number;
-}
-
-const InvoiceGenerator = ({ userId }: InvoiceGeneratorProps) => {
+const InvoiceGenerator = () => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const [filters, setFilters] = useState<{ customerId?: number; startDate?: string; endDate?: string }>({});
-	const { data: timeEntries, error, isLoading } = useGetTimeEntries(userId, filters);
+	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; isInvoiced?: boolean }>({});
+	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10); // Define page size
+	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
+	const { data, error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, parsedCustomerId, filters.isInvoiced ?? false, page, pageSize);
+	const { entries: timeEntries, totalEntries } = data || { entries: [], totalEntries: 0 };
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const [isSelectAll, setIsSelectAll] = useState(false);
+
+	useEffect(() => {
+		const newSelectedEntries = isSelectAll ? timeEntries?.map((entry) => entry.id) || [] : [];
+		if (selectedEntries.length !== newSelectedEntries.length) {
+			setSelectedEntries(newSelectedEntries);
+		}
+	}, [isSelectAll, timeEntries]);
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
+	};
+
+	const handleSelectAll = () => {
+		setIsSelectAll(!isSelectAll);
 	};
 
 	const mutation = useMutation({
@@ -67,29 +80,35 @@ const InvoiceGenerator = ({ userId }: InvoiceGeneratorProps) => {
 					</AlertDialog.Content>
 				</AlertDialog.Root>
 			) : (
-				<Table.Root variant="surface">
-					<Table.Header>
-						<Table.Row>
-							<Table.ColumnHeaderCell>Select</Table.ColumnHeaderCell>
-							<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-							<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
-							<Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-						</Table.Row>
-					</Table.Header>
-
-					<Table.Body>
-						{timeEntries?.map((entry) => (
-							<Table.Row key={entry.id}>
-								<Table.Cell>
-									<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
-								</Table.Cell>
-								<Table.Cell>{entry.description}</Table.Cell>
-								<Table.Cell>{entry.duration} minutes</Table.Cell>
-								<Table.Cell>{new Date(entry.date).toLocaleDateString()}</Table.Cell>
+				<>
+					<Table.Root variant="surface">
+						<Table.Header>
+							<Table.Row>
+								<Table.ColumnHeaderCell>
+									<input type="checkbox" checked={isSelectAll} onChange={handleSelectAll} />
+								</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
 							</Table.Row>
-						))}
-					</Table.Body>
-				</Table.Root>
+						</Table.Header>
+
+						<Table.Body>
+							{timeEntries?.map((entry) => (
+								<Table.Row key={entry.id}>
+									<Table.Cell>
+										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
+									</Table.Cell>
+									<Table.Cell>{entry.description}</Table.Cell>
+									<Table.Cell>{entry.duration} minutes</Table.Cell>
+									<Table.Cell>{new Date(entry.date).toLocaleDateString()}</Table.Cell>
+								</Table.Row>
+							))}
+						</Table.Body>
+					</Table.Root>
+
+					<PaginationComponent totalItems={totalEntries} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
+				</>
 			)}
 
 			<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0}>

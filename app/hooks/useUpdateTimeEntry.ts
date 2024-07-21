@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { TimeLogSchema } from "../timesheet/TimeGrid";
+import TimeLogSchema from "../timesheet/TimeGrid";
 
-const updateTimeEntry = async ({ id, data }: { id: number; data: Partial<TimeLogSchema> }) => {
+const updateTimeEntry = async ({ id, data }: { id: number; data: typeof TimeLogSchema }) => {
 	const response = await axios.patch(`/api/timelog/${id}`, data);
 	if (response.status !== 200) {
 		throw new Error("Error updating time entry");

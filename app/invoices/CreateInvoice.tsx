@@ -1,10 +1,11 @@
 "use client";
 import { useState } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
-import { useGetTimeEntries } from "../hooks/useGetTimeEntry";
+import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries"; // Updated import
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
+import PaginationComponent from "./PaginationComponent"; // Import your pagination component
 
 interface InvoiceGeneratorProps {
 	userId: number;
@@ -13,7 +14,11 @@ interface InvoiceGeneratorProps {
 const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const { data: timeEntries, error, isLoading } = useGetTimeEntries(userId, {});
+	const [page, setPage] = useState(1);
+	const [filters, setFilters] = useState<{ customerId?: number; startDate?: string; endDate?: string; isInvoiced?: boolean }>({});
+	const { data, error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, filters.customerId, filters.isInvoiced ?? false, page);
+	const timeEntries = data?.entries || [];
+	const totalEntries = data?.totalEntries || 0;
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -81,7 +86,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 				</Table.Header>
 
 				<Table.Body>
-					{timeEntries?.map((entry) => (
+					{timeEntries.map((entry: TimeEntryData) => (
 						<Table.Row key={entry.id}>
 							<Table.Cell>
 								<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
@@ -93,6 +98,8 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 					))}
 				</Table.Body>
 			</Table.Root>
+
+			<PaginationComponent currentPage={page} totalItems={totalEntries} onPageChange={setPage} pageSize={10} />
 
 			<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0}>
 				{mutation.status === "pending" ? "Generating Invoice..." : "Generate Invoice"}

@@ -8,6 +8,8 @@ export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const startDate = searchParams.get("startDate");
 	const endDate = searchParams.get("endDate");
+	const customerId = searchParams.get("customerId");
+	const isInvoiced = searchParams.get("isInvoiced");
 
 	try {
 		const whereClause: {
@@ -15,21 +17,49 @@ export async function GET(request: NextRequest) {
 				gte?: Date;
 				lte?: Date;
 			};
+			customerId?: number;
+			isInvoiced?: boolean;
 		} = {};
-		if (startDate) whereClause.date = { gte: parseISO(startDate) };
+		if (startDate) whereClause.date = { ...whereClause.date, gte: parseISO(startDate) };
 		if (endDate) whereClause.date = { ...whereClause.date, lte: parseISO(endDate) };
+		if (customerId) whereClause.customerId = parseInt(customerId, 10);
+		if (isInvoiced !== undefined) whereClause.isInvoiced = isInvoiced === "true";
 
 		const entries = await prisma.timeEntry.findMany({
 			where: whereClause,
 			include: {
-				Customer: true,
-				Project: true,
-				Task: true,
-				User: true,
+				Customer: {
+					select: {
+						id: true,
+						name: true,
+						color: true,
+					},
+				},
+				Project: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+				Task: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+				User: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
 			},
 		});
+		const totalEntries = await prisma.timeEntry.count({
+			where: whereClause,
+		});
 
-		return NextResponse.json(entries, { status: 201 });
+		return NextResponse.json({ entries, totalEntries }, { status: 201 });
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}
@@ -67,22 +97,22 @@ export async function POST(request: NextRequest) {
 				...rest,
 				date: startDateTime,
 				duration: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60),
-				customer: {
+				Customer: {
 					connect: {
 						id: customerId,
 					},
 				},
-				project: {
+				Project: {
 					connect: {
 						id: projectId,
 					},
 				},
-				task: {
+				Task: {
 					connect: {
 						id: taskId,
 					},
 				},
-				user: {
+				User: {
 					connect: {
 						id: userId,
 					},

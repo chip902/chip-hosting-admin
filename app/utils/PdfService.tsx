@@ -45,6 +45,27 @@ interface PdfData {
 	}[];
 }
 
+const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) => {
+	const lines = [];
+	let line = "";
+	const words = text.split(" ");
+
+	for (let i = 0; i < words.length; i++) {
+		const testLine = line + words[i] + " ";
+		const width = font.widthOfTextAtSize(testLine, fontSize);
+
+		if (width > maxWidth && i > 0) {
+			lines.push(line.trim());
+			line = words[i] + " ";
+		} else {
+			line = testLine;
+		}
+	}
+
+	lines.push(line.trim());
+	return lines;
+};
+
 export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	const pdfDoc = await PDFDocument.create();
 	const page = pdfDoc.addPage([600, 750]);
@@ -101,7 +122,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	// Table Headers
 	const tableTopY = height - 220;
 	const tableX = 50;
-	const columnWidths = [200, 60, 60, 60];
+	const columnWidths = [250, 80, 80, 80];
 
 	page.drawText("Serviced Item Description", {
 		x: tableX,
@@ -135,45 +156,61 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		color: rgb(0, 0, 0),
 	});
 
-	// Table Rows
-	data.timeEntries.forEach((entry, index) => {
-		const rowY = tableTopY - 20 - index * 20;
+	const fontSize = 10;
+	const maxWidth = 250; // Adjust maxWidth for the description column
+	let currentY = tableTopY - 20;
 
-		page.drawText(entry.description || "", {
-			x: tableX,
-			y: rowY,
-			size: 10,
-			font: font,
-			color: rgb(0, 0, 0),
+	data.timeEntries.forEach((entry, index) => {
+		const lines = wrapText(entry.description || "", maxWidth, fontSize, font);
+
+		lines.forEach((line) => {
+			if (currentY - fontSize < 0) {
+				const newPage = pdfDoc.addPage([600, 750]);
+				currentY = newPage.getHeight() - fontSize;
+			}
+
+			page.drawText(line, {
+				x: tableX,
+				y: currentY,
+				size: fontSize,
+				font,
+				color: rgb(0, 0, 0),
+			});
+
+			currentY -= fontSize;
 		});
 
-		page.drawText(entry.duration.toString(), {
+		// Draw other columns: Hours, Rate, Amount
+		page.drawText(`${(entry.duration / 60).toFixed(2)}`, {
 			x: tableX + columnWidths[0],
-			y: rowY,
-			size: 10,
-			font: font,
+			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			size: fontSize,
+			font,
 			color: rgb(0, 0, 0),
 		});
 
 		page.drawText(`$${data.customer.defaultRate.toFixed(2)}`, {
 			x: tableX + columnWidths[0] + columnWidths[1],
-			y: rowY,
-			size: 10,
-			font: font,
+			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			size: fontSize,
+			font,
 			color: rgb(0, 0, 0),
 		});
 
-		page.drawText(`$${((entry.duration * data.customer.defaultRate) / 60).toFixed(2)}`, {
+		const amount = (entry.duration / 60) * data.customer.defaultRate;
+		page.drawText(`$${amount.toFixed(2)}`, {
 			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
-			y: rowY,
-			size: 10,
-			font: font,
+			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			size: fontSize,
+			font,
 			color: rgb(0, 0, 0),
 		});
+
+		currentY -= fontSize; // Add some space between entries
 	});
 
 	// Total Amount
-	const totalY = tableTopY - 20 - data.timeEntries.length * 20 - 20;
+	const totalY = currentY - 20;
 	page.drawText(`Total: $${data.totalAmount.toFixed(2)}`, {
 		x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
 		y: totalY,

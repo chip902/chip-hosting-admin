@@ -94,13 +94,13 @@ const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
 							const endDateTime = new Date(startDateTime.getTime() + (entry.duration ?? 0) * 60000);
 							const endHour = endDateTime.getHours();
 							const endMinute = endDateTime.getMinutes();
-							const color = entry.customer.color || "#000000";
+							const color = entry.Customer.color || "#000000";
 							return (
 								<TimeEntryComponent
 									key={entry.id}
 									entry={{
 										...entry,
-										name: entry.customer.name,
+										name: entry.Customer.name,
 										date: new Date(entry.date),
 										description: entry.description ?? "",
 									}}
