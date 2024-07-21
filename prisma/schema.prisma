@@ -23,7 +23,6 @@ model Customer {
   defaultRate Float
   color       String?
   shortName   String?
-  shortname   String?
   invoices    Invoice[]
   projects    Project[]
   timeEntries TimeEntry[]

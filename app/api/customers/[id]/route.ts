@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 		const newCustomer = await prisma.customer.create({
 			data: {
 				name: body.name,
-				shortname: body.shortname,
+				shortName: body.shortName,
 				email: body.email,
 				defaultRate: body.defaultRate,
 				color: body.color,
@@ -78,9 +78,7 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
 	try {
 		const body = await request.json();
-		console.log("Received body:", body); // Log received body
 		const validation = customerSchema.safeParse(body);
-		console.log("Validation result:", validation);
 		if (!validation.success) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
@@ -95,7 +93,7 @@ export async function PATCH(request: NextRequest) {
 			where: { id: id },
 			data: {
 				name: data.name,
-				shortname: data.shortname,
+				shortName: data.shortName,
 				email: data.email,
 				defaultRate: data.defaultRate,
 				color: data.color,

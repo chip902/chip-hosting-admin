@@ -18,7 +18,7 @@ interface EditCustomerProps {
 	customer?: {
 		id: number;
 		name: string | null;
-		shortname: string | null;
+		shortName: string | null;
 		email: string;
 		dateCreated: Date;
 		defaultRate: number;
@@ -41,7 +41,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 			color: customer?.color || "",
 			email: customer?.email || "",
 			name: customer?.name || "",
-			shortname: customer?.shortname || "",
+			shortname: customer?.shortName || "",
 			defaultRate: customer?.defaultRate || 0,
 		},
 	});
@@ -52,7 +52,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 		if (customer) {
 			setValue("id", customer.id || undefined);
 			setValue("name", customer.name || "");
-			setValue("shortname", customer.shortname || "");
+			setValue("shortname", customer.shortName || "");
 			setValue("email", customer.email || "");
 			setValue("defaultRate", customer.defaultRate || 0);
 			setValue("color", customer.color || "#000000");
