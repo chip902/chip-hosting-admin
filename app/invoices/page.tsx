@@ -22,7 +22,7 @@ const InvoiceGenerator = () => {
 	const [isSelectAll, setIsSelectAll] = useState(false);
 
 	useEffect(() => {
-		const newSelectedEntries = isSelectAll ? timeEntries?.map((entry) => entry.id) || [] : [];
+		const newSelectedEntries = isSelectAll ? timeEntries?.map((entry: { id: number }) => entry.id) || [] : [];
 		if (selectedEntries.length !== newSelectedEntries.length) {
 			setSelectedEntries(newSelectedEntries);
 		}
@@ -94,7 +94,7 @@ const InvoiceGenerator = () => {
 						</Table.Header>
 
 						<Table.Body>
-							{timeEntries?.map((entry) => (
+							{timeEntries?.map((entry: { id: number; description: string; duration: number; date: string }) => (
 								<Table.Row key={entry.id}>
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />

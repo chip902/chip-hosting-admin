@@ -36,6 +36,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const handleReset = () => {
 		reset();
 		setValue("customerId", undefined);
+		handleSubmit(onSubmit)();
 	};
 
 	useEffect(() => {
@@ -61,7 +62,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 						onValueChange={(value) => setValue("customerId", value ? parseInt(value, 10) : undefined)}>
 						<Select.Trigger placeholder="Select Customer" />
 						<Select.Content>
-							{customers?.map((customer) => (
+							{customers?.map((customer: { id: number; name: string }) => (
 								<Select.Item key={customer.id} value={customer.id.toString()}>
 									{customer.name}
 								</Select.Item>
