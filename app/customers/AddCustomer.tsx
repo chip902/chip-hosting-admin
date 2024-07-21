@@ -69,9 +69,9 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 							<Form.Field name="shortName" className="flex-1">
 								<Form.Label className="mr-2">Short Name</Form.Label>
 								<Form.Control asChild>
-									<TextField.Root placeholder="Invoice Code" {...register("shortName")} />
+									<TextField.Root placeholder="Invoice Code" {...register("shortname")} />
 								</Form.Control>
-								{errors.shortName && <ErrorMessage>{errors.shortName.message}</ErrorMessage>}
+								{errors.shortname && <ErrorMessage>{errors.shortname.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="email">
 								<Form.Label>Customer Email</Form.Label>

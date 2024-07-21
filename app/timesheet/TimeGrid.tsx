@@ -1,8 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import TimeEntryComponent from "./TimeEntry";
-import { useGetTimeEntry, TimeEntryData } from "../hooks/useGetTimeEntry";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
+import { useGetTimeEntries, TimeEntryData } from "../hooks/useGetTimeEntries";
 
 interface TimeGridProps {
 	startDate: string;
@@ -11,7 +11,8 @@ interface TimeGridProps {
 
 const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
 	const [localLoading, setLocalLoading] = useState(true);
-	const { data: timeEntries, error, isLoading } = useGetTimeEntry(startDate, endDate);
+	const { data, error, isLoading } = useGetTimeEntries(startDate, endDate);
+	const timeEntries = data?.entries || [];
 
 	useEffect(() => {
 		setLocalLoading(true);

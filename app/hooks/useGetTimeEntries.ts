@@ -16,6 +16,8 @@ export interface TimeEntryData {
 		id: number;
 		name: string;
 		color: string;
+		shortname: string | undefined;
+		shortName: string | undefined;
 	};
 	Project: {
 		id: number;

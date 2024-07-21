@@ -28,6 +28,7 @@ const CustomerTable = () => {
 						const customerData: Customer = {
 							id: customer.id,
 							name: customer.name ?? null,
+							shortname: customer.shortname,
 							shortName: customer.shortName,
 							email: customer.email,
 							dateCreated: new Date(customer.dateCreated),

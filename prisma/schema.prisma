@@ -18,11 +18,12 @@ model User {
 model Customer {
   id          Int         @id @default(autoincrement())
   name        String      @db.VarChar(255)
-  shortName   String?     @db.VarChar(32)
   email       String      @db.VarChar(255)
+  dateCreated DateTime    @default(now())
   defaultRate Float
   color       String?
-  dateCreated DateTime    @default(now())
+  shortName   String?
+  shortname   String?
   invoices    Invoice[]
   projects    Project[]
   timeEntries TimeEntry[]
@@ -36,10 +37,10 @@ model Project {
   dateCreated  DateTime       @default(now())
   rate         Float?
   customer     Customer       @relation(fields: [customerId], references: [id])
-  tasks        Task[]         @relation("ProjectTasks")
-  users        User[]         @relation("ProjectUser")
   ProjectTasks ProjectTasks[]
   TimeEntry    TimeEntry[]
+  tasks        Task[]         @relation("ProjectTasks")
+  users        User[]         @relation("ProjectUser")
 }
 
 model Task {
@@ -48,9 +49,9 @@ model Task {
   description  String?
   dateCreated  DateTime       @default(now())
   rate         Float?
-  projects     Project[]      @relation("ProjectTasks")
-  timeEntries  TimeEntry[]
   ProjectTasks ProjectTasks[]
+  timeEntries  TimeEntry[]
+  projects     Project[]      @relation("ProjectTasks")
 }
 
 model ProjectTasks {
@@ -67,10 +68,10 @@ model Invoice {
   customerId  Int
   totalAmount Float
   dateCreated DateTime      @default(now())
-  timeEntries TimeEntry[]   @relation("InvoiceTimeEntries")
+  pdfPath     String?
   Customer    Customer      @relation(fields: [customerId], references: [id])
   InvoiceItem InvoiceItem[]
-  pdfPath     String?
+  timeEntries TimeEntry[]   @relation("InvoiceTimeEntries")
 }
 
 model TimeEntry {
@@ -80,17 +81,17 @@ model TimeEntry {
   date          DateTime
   userId        Int
   taskId        Int
+  invoiceItemId Int?
   customerId    Int
   projectId     Int
-  User          User         @relation(fields: [userId], references: [id])
+  invoiceId     Int?
+  isInvoiced    Boolean      @default(false)
+  invoice       Invoice?     @relation("InvoiceTimeEntries", fields: [invoiceId], references: [id], map: "TimeEntry_InvoiceTimeEntries_fkey")
   Customer      Customer     @relation(fields: [customerId], references: [id])
+  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
   Project       Project      @relation(fields: [projectId], references: [id])
   Task          Task         @relation(fields: [taskId], references: [id])
-  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
-  invoiceItemId Int?
-  invoiceId     Int?
-  invoice       Invoice?     @relation(fields: [invoiceId], references: [id], name: "InvoiceTimeEntries", map: "TimeEntry_InvoiceTimeEntries_fkey")
-  isInvoiced    Boolean      @default(false)
+  User          User         @relation(fields: [userId], references: [id])
 }
 
 model InvoiceItem {

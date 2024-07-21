@@ -18,7 +18,7 @@ interface EditCustomerProps {
 	customer?: {
 		id: number;
 		name: string | null;
-		shortName: string | null;
+		shortname: string | null;
 		email: string;
 		dateCreated: Date;
 		defaultRate: number;
@@ -41,7 +41,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 			color: customer?.color || "",
 			email: customer?.email || "",
 			name: customer?.name || "",
-			shortName: customer?.shortName || "",
+			shortname: customer?.shortname || "",
 			defaultRate: customer?.defaultRate || 0,
 		},
 	});
@@ -52,7 +52,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 		if (customer) {
 			setValue("id", customer.id || undefined);
 			setValue("name", customer.name || "");
-			setValue("shortName", customer.shortName || "");
+			setValue("shortname", customer.shortname || "");
 			setValue("email", customer.email || "");
 			setValue("defaultRate", customer.defaultRate || 0);
 			setValue("color", customer.color || "#000000");
@@ -66,7 +66,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 				defaultRate: parseFloat(data.defaultRate.toString()),
 				color: data.color,
 				name: data.name,
-				shortName: data.shortName,
+				shortname: data.shortname,
 				email: data.email,
 			};
 
@@ -123,9 +123,9 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 						<Form.Field name="shortName" className="flex-1">
 							<Form.Label className="mr-2">Short Name</Form.Label>
 							<Form.Control asChild>
-								<TextField.Root placeholder="Invoice Code" {...register("shortName")} />
+								<TextField.Root placeholder="Invoice Code" {...register("shortname")} />
 							</Form.Control>
-							{errors.shortName && <ErrorMessage>{errors.shortName.message}</ErrorMessage>}
+							{errors.shortname && <ErrorMessage>{errors.shortname.message}</ErrorMessage>}
 						</Form.Field>
 						<Form.Field name="email">
 							<Form.Label>Customer Email</Form.Label>

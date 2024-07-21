@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
 		const newCustomer = await prisma.customer.create({
 			data: {
 				name: body.name,
-				shortName: body.shortName,
+				shortname: body.shortname,
 				email: body.email,
 				defaultRate: body.defaultRate,
 				color: body.color,
@@ -95,7 +95,7 @@ export async function PATCH(request: NextRequest) {
 			where: { id: id },
 			data: {
 				name: data.name,
-				shortName: data.shortName,
+				shortname: data.shortname,
 				email: data.email,
 				defaultRate: data.defaultRate,
 				color: data.color,

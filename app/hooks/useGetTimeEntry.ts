@@ -12,10 +12,12 @@ export interface TimeEntryData {
 	projectId: number;
 	invoiceItemId: number | null;
 	isInvoiced: boolean;
+	shortname: string;
 	Customer: {
 		id: number;
 		name: string;
 		color: string;
+		shortname: string;
 	};
 	Project: {
 		id: number;
