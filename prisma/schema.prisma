@@ -18,6 +18,7 @@ model User {
 model Customer {
   id          Int         @id @default(autoincrement())
   name        String      @db.VarChar(255)
+  shortName   String?     @db.VarChar(32)
   email       String      @db.VarChar(255)
   defaultRate Float
   color       String?

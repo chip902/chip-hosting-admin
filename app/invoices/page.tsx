@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
-import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
+import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
@@ -94,7 +94,7 @@ const InvoiceGenerator = () => {
 						</Table.Header>
 
 						<Table.Body>
-							{timeEntries?.map((entry: { id: number; description: string; duration: number; date: string }) => (
+							{timeEntries?.map((entry: TimeEntryData) => (
 								<Table.Row key={entry.id}>
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />

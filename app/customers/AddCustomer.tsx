@@ -58,13 +58,20 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 				<Dialog.Content size="4">
 					<Dialog.Title>Add A New Customer</Dialog.Title>
 					<Form.Root onSubmit={handleSubmit(onSubmit)}>
-						<Flex>
+						<Flex className="flex flex-col">
 							<Form.Field name="name">
 								<Form.Label>Customer Name</Form.Label>
 								<Form.Control asChild>
 									<TextField.Root placeholder="Customer Name" {...register("name")} />
 								</Form.Control>
 								{errors.name && <ErrorMessage>{errors.name.message}</ErrorMessage>}
+							</Form.Field>
+							<Form.Field name="shortName" className="flex-1">
+								<Form.Label className="mr-2">Short Name</Form.Label>
+								<Form.Control asChild>
+									<TextField.Root placeholder="Invoice Code" {...register("shortName")} />
+								</Form.Control>
+								{errors.shortName && <ErrorMessage>{errors.shortName.message}</ErrorMessage>}
 							</Form.Field>
 							<Form.Field name="email">
 								<Form.Label>Customer Email</Form.Label>

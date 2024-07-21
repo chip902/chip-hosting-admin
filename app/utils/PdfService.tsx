@@ -8,6 +8,7 @@ interface PdfData {
 	customer: {
 		id: number;
 		name: string;
+		shortName: string;
 		email: string;
 		defaultRate: number;
 		color: string | null;
@@ -87,7 +88,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		height: logoDims.height,
 	});
 
-	page.drawText(`Invoice No. AFA-${data.id}`, {
+	page.drawText(`Invoice No. ${data.customer.shortName}-${data.id}`, {
 		x: 50,
 		y: height - 120,
 		size: 15,
