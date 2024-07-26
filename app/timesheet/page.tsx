@@ -6,21 +6,34 @@ import { useEffect, useRef, useState } from "react";
 import LogTime from "./LogTime";
 import TimeGrid from "./TimeGrid";
 import classNames from "classnames";
-import { AlertDialog, Flex } from "@radix-ui/themes";
+import { AlertDialog, Flex, Skeleton } from "@radix-ui/themes";
+import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 
 export default function Timesheet() {
 	const [currentWeek, setCurrentWeek] = useState(new Date());
+	const [localLoading, setLocalLoading] = useState(true);
 	const [loadingError, setLoadingError] = useState(false);
 	const [startDate, setStartDate] = useState<string>();
 	const [endDate, setEndDate] = useState<string>();
+	const { data, error, isLoading } = useGetTimeEntries(startDate, endDate);
 	const container = useRef<HTMLDivElement>(null);
 
+	useEffect(() => {
+		setLocalLoading(true);
+	}, [startDate, endDate]);
+	useEffect(() => {
+		if (!isLoading) {
+			setLocalLoading(false);
+		}
+	}, [isLoading]);
+	// Scroll to the current hour
 	useEffect(() => {
 		const currentMinute = new Date().getHours() * 60;
 		if (container.current) {
 			container.current.scrollTop = (container.current.scrollHeight * currentMinute) / 1440;
 		}
-	}, []);
+	}, [container]);
+
 	useEffect(() => {
 		const start = new Date();
 		start.setDate(start.getDate() - start.getDay()); // Start of the week (Sunday)
@@ -43,11 +56,25 @@ export default function Timesheet() {
 		setCurrentWeek(new Date());
 	};
 
-	const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 }); // Start on Sunday
+	if (localLoading || isLoading) {
+		return (
+			<div className="time-grid grid-skeleton">
+				{[...Array(168)].map((_, hour) => (
+					<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700">
+						<Skeleton className="grid-skeleton-item">
+							<div className="w-full h-full" />
+						</Skeleton>
+					</div>
+				))}
+			</div>
+		);
+	}
+
+	const weekStart = startOfWeek(currentWeek, { weekStartsOn: 0 });
 	const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 0 });
 	const days = eachDayOfInterval({ start: weekStart, end: weekEnd });
 
-	if (loadingError) {
+	if (loadingError || error) {
 		return (
 			<AlertDialog.Root defaultOpen={true}>
 				<AlertDialog.Content maxWidth="450px">
