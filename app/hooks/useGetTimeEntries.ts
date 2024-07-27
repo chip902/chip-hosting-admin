@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { formatISO } from "date-fns";
 
 export interface TimeEntryData {
 	id: number;
@@ -67,7 +68,13 @@ export const useGetTimeEntries = (
 		totalEntries: number;
 	}>({
 		queryKey: ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize],
-		queryFn: () => fetchTimeEntries(page, pageSize, { startDate, endDate, customerId, isInvoiced }),
+		queryFn: () =>
+			fetchTimeEntries(page, pageSize, {
+				startDate: startDate ? formatISO(startDate) : undefined,
+				endDate: endDate ? formatISO(endDate) : undefined,
+				customerId,
+				isInvoiced,
+			}),
 		staleTime: 30 * 1000,
 		retry: 3,
 	});

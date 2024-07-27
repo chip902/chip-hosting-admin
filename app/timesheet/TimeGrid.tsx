@@ -3,7 +3,8 @@ import React, { useEffect, useState } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries, TimeEntryData } from "../hooks/useGetTimeEntries";
-
+import { toZonedTime } from "date-fns-tz";
+import { formatISO } from "date-fns";
 interface TimeGridProps {
 	startDate: string;
 	endDate: string;
@@ -83,8 +84,8 @@ const TimeGrid: React.FC<TimeGridProps> = ({ startDate, endDate }) => {
 					))}
 					{timeEntries
 						?.filter((entry: TimeEntryData) => {
-							const entryDate = new Date(entry.date).toDateString();
-							const dayDate = day.toDateString();
+							const entryDate = toZonedTime(new Date(entry.date), "America/New_York").toDateString();
+							const dayDate = toZonedTime(day, "America/New_York").toDateString();
 							const isSameDay = entryDate === dayDate;
 							return isSameDay;
 						})

@@ -20,8 +20,10 @@ export async function GET(request: NextRequest) {
 				lte?: Date;
 			};
 			customerId?: number;
-			isInvoiced?: boolean;
-		} = {};
+			isInvoiced: boolean;
+		} = {
+			isInvoiced: false,
+		};
 		if (startDate) whereClause.date = { ...whereClause.date, gte: parseISO(startDate) };
 		if (endDate) whereClause.date = { ...whereClause.date, lte: parseISO(endDate) };
 		if (customerId) whereClause.customerId = parseInt(customerId, 10);
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
 			where: whereClause,
 		});
 
-		return NextResponse.json({ entries, totalEntries }, { status: 201 });
+		return NextResponse.json({ entries, totalEntries }, { status: 200 });
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}

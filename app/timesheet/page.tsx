@@ -26,6 +26,7 @@ export default function Timesheet() {
 			setLocalLoading(false);
 		}
 	}, [isLoading]);
+
 	// Scroll to the current hour
 	useEffect(() => {
 		const currentMinute = new Date().getHours() * 60;
