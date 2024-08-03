@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import { formatISO } from "date-fns";
+import { useEffect } from "react";
 
 export interface TimeEntryData {
 	id: number;
@@ -42,17 +42,23 @@ interface Filters {
 }
 
 const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters) => {
-	const params = new URLSearchParams({
-		page: page.toString(),
-		pageSize: pageSize.toString(),
-		...(filters.startDate && { startDate: filters.startDate }),
-		...(filters.endDate && { endDate: filters.endDate }),
-		...(filters.customerId && { customerId: filters.customerId.toString() }),
-		isInvoiced: filters.isInvoiced?.toString() ?? "false",
-	});
+	try {
+		const params = new URLSearchParams({
+			page: page.toString(),
+			pageSize: pageSize.toString(),
+			...(filters.startDate && { startDate: filters.startDate }),
+			...(filters.endDate && { endDate: filters.endDate }),
+			...(filters.customerId && { customerId: filters.customerId.toString() }),
+			isInvoiced: filters.isInvoiced?.toString() ?? "false",
+		});
 
-	const response = await axios.get(`/api/timelog?${params}`);
-	return response.data;
+		const response = await axios.get(`/api/timelog?${params.toString()}`);
+
+		return response.data;
+	} catch (error) {
+		console.error("Error fetching time entries:", error);
+		throw new Error("Error fetching time entries");
+	}
 };
 
 export const useGetTimeEntries = (
@@ -63,19 +69,28 @@ export const useGetTimeEntries = (
 	page: number = 1,
 	pageSize: number = 10
 ) => {
-	return useQuery<{
+	const queryClient = useQueryClient();
+	const queryKey = ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize].filter((key) => key !== undefined);
+	const query = useQuery<{
 		entries: TimeEntryData[];
 		totalEntries: number;
 	}>({
-		queryKey: ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize],
+		queryKey,
 		queryFn: () =>
 			fetchTimeEntries(page, pageSize, {
-				startDate: startDate ? formatISO(startDate) : undefined,
-				endDate: endDate ? formatISO(endDate) : undefined,
+				startDate,
+				endDate,
 				customerId,
 				isInvoiced,
 			}),
-		staleTime: 30 * 1000,
+		refetchOnWindowFocus: true,
 		retry: 3,
 	});
+
+	// Invalidate the query when filters change
+	useEffect(() => {
+		queryClient.invalidateQueries({ queryKey });
+	}, [startDate, endDate, customerId, isInvoiced, page, pageSize, queryClient]);
+
+	return query;
 };

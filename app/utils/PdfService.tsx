@@ -26,6 +26,7 @@ interface PdfData {
 		customer: {
 			id: number;
 			name: string;
+			shortName: string | null;
 			email: string;
 			defaultRate: number;
 			color: string | null;

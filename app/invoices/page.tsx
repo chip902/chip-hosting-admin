@@ -42,8 +42,8 @@ const InvoiceGenerator = () => {
 			return response.data;
 		},
 		onSuccess: () => {
-			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			setSelectedEntries([]);
+			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			router.push("/invoices");
 			router.refresh();
 		},
@@ -87,9 +87,10 @@ const InvoiceGenerator = () => {
 								<Table.ColumnHeaderCell>
 									<input type="checkbox" checked={isSelectAll} onChange={handleSelectAll} />
 								</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
 								<Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Customer</Table.ColumnHeaderCell>
+								<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
 							</Table.Row>
 						</Table.Header>
 
@@ -99,9 +100,10 @@ const InvoiceGenerator = () => {
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
 									</Table.Cell>
-									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.duration} minutes</Table.Cell>
 									<Table.Cell>{new Date(entry.date).toLocaleDateString()}</Table.Cell>
+									<Table.Cell>{entry.description}</Table.Cell>
+									<Table.Cell>{entry.Customer.name}</Table.Cell>
+									<Table.Cell>{entry.duration} minutes</Table.Cell>
 								</Table.Row>
 							))}
 						</Table.Body>

@@ -28,6 +28,7 @@ export async function POST(request: NextRequest) {
 						email: true,
 						defaultRate: true,
 						color: true,
+						shortName: true,
 					},
 				},
 				Task: {
@@ -87,6 +88,7 @@ export async function POST(request: NextRequest) {
 				email: entry.Customer.email,
 				defaultRate: entry.Customer.defaultRate,
 				color: entry.Customer.color,
+				shortName: entry.Customer.shortName || "",
 			},
 			task: {
 				id: entry.Task.id,
@@ -105,7 +107,10 @@ export async function POST(request: NextRequest) {
 
 		const pdfData = {
 			id: invoice.id,
-			customer,
+			customer: {
+				...customer,
+				shortName: customer.shortName || "",
+			},
 			totalAmount,
 			timeEntries: transformedTimeEntries,
 		};
