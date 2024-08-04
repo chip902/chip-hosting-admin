@@ -1,8 +1,9 @@
 // app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
+import { parseISO, formatISO, isValid } from "date-fns";
+import { toZonedTime } from "date-fns-tz";
 import { timeLogSchema } from "@/app/validationSchemas";
-import { format, isValid, parseISO } from "date-fns";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -24,8 +25,8 @@ export async function GET(request: NextRequest) {
 		} = {
 			isInvoiced: false,
 		};
-		if (startDate) whereClause.date = { ...whereClause.date, gte: parseISO(startDate) };
-		if (endDate) whereClause.date = { ...whereClause.date, lte: parseISO(endDate) };
+		if (startDate) whereClause.date = { ...whereClause.date, gte: toZonedTime(startDate, "Etc/UTC") };
+		if (endDate) whereClause.date = { ...whereClause.date, lte: toZonedTime(endDate, "Etc/UTC") };
 		if (customerId) whereClause.customerId = parseInt(customerId, 10);
 		if (isInvoiced !== undefined) whereClause.isInvoiced = isInvoiced === "true";
 
@@ -66,7 +67,14 @@ export async function GET(request: NextRequest) {
 			where: whereClause,
 		});
 
-		return NextResponse.json({ entries, totalEntries }, { status: 200 });
+		// Adjust the dates to the user's timezone
+		const timeZone = "America/New_York"; // Change to the relevant timezone
+		const adjustedEntries = entries.map((entry) => ({
+			...entry,
+			date: toZonedTime(entry.date, timeZone),
+		}));
+
+		return NextResponse.json({ entries: adjustedEntries, totalEntries }, { status: 200 });
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}
@@ -89,11 +97,11 @@ export async function POST(request: NextRequest) {
 			throw new Error("Invalid date format");
 		}
 
-		const formattedDate = format(parsedDate, "yyyy-MM-dd");
+		const formattedDate = formatISO(parsedDate);
 
 		// Create DateTime strings for start and end times
-		const startDateTime = new Date(`${formattedDate}T${startTime}:00`);
-		const endDateTime = new Date(`${formattedDate}T${endTime}:00`);
+		const startDateTime = toZonedTime(`${formattedDate}T${startTime}:00`, "America/New_York");
+		const endDateTime = toZonedTime(`${formattedDate}T${endTime}:00`, "America/New_York");
 
 		if (!isValid(startDateTime) || !isValid(endDateTime)) {
 			throw new Error("Invalid start or end time");

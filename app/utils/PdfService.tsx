@@ -54,7 +54,7 @@ const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) =
 
 	for (let i = 0; i < words.length; i++) {
 		const testLine = line + words[i] + " ";
-		const width = font.widthOfTextAtSize(testLine, fontSize);
+		const width = font.widthOfTextAtSize(testLine.replace(/\n/g, ""), fontSize); // Remove newlines
 
 		if (width > maxWidth && i > 0) {
 			lines.push(line.trim());
@@ -70,9 +70,6 @@ const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) =
 
 export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	const pdfDoc = await PDFDocument.create();
-	const page = pdfDoc.addPage([600, 750]);
-	const { width, height } = page.getSize();
-
 	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 
 	// Embed the logo image
@@ -81,98 +78,141 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	const logoImage = await pdfDoc.embedPng(logoBytes);
 	const logoDims = logoImage.scale(0.5); // Adjust the scale as needed
 
-	// Draw the logo image
-	page.drawImage(logoImage, {
-		x: 50,
-		y: height - 100, // Adjust the Y position as needed
-		width: logoDims.width,
-		height: logoDims.height,
-	});
+	const createPage = (isFirstPage = false) => {
+		const page = pdfDoc.addPage([600, 750]);
+		const { width, height } = page.getSize();
 
-	page.drawText(`Invoice No. ${data.customer.shortName}-${data.id}`, {
-		x: 50,
-		y: height - 120,
-		size: 15,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+		if (isFirstPage) {
+			// Draw the logo image on the first page
+			page.drawImage(logoImage, {
+				x: 50,
+				y: height - 100, // Adjust the Y position as needed
+				width: logoDims.width,
+				height: logoDims.height,
+			});
 
-	page.drawText(`Bill To: ${data.customer.name}`, {
-		x: 50,
-		y: height - 150,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+			page.drawText("Chip Hosting Solutions, LLC", {
+				x: 50,
+				y: height - 150,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
+			page.drawText("PO Box 397", {
+				x: 50,
+				y: height - 165,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
+			page.drawText("Pound Ridge, NY 10576", {
+				x: 50,
+				y: height - 180,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
+			page.drawText("Payment Terms: Net 30 days", {
+				x: 50,
+				y: height - 195,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
 
-	page.drawText(`Date: ${new Date().toLocaleDateString()}`, {
-		x: 50,
-		y: height - 170,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+			page.drawText(`Invoice No. ${data.customer.shortName}-${data.id}`, {
+				x: 50,
+				y: height - 220,
+				size: 15,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
 
-	page.drawText(`Project: ${data.timeEntries[0].project.name}`, {
-		x: 50,
-		y: height - 190,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+			page.drawText(`Bill To: ${data.customer.name}`, {
+				x: 50,
+				y: height - 240,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
 
-	// Table Headers
-	const tableTopY = height - 220;
-	const tableX = 50;
-	const columnWidths = [250, 80, 80, 80];
+			page.drawText(`Date: ${new Date().toLocaleDateString()}`, {
+				x: 50,
+				y: height - 260,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
 
-	page.drawText("Serviced Item Description", {
-		x: tableX,
-		y: tableTopY,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+			page.drawText(`Project: ${data.timeEntries[0].project.name}`, {
+				x: 50,
+				y: height - 280,
+				size: 12,
+				font: font,
+				color: rgb(0, 0, 0),
+			});
+		}
 
-	page.drawText("Hours", {
-		x: tableX + columnWidths[0],
-		y: tableTopY,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+		// Table Headers
+		const tableTopY = isFirstPage ? height - 310 : height - 70;
+		const tableX = 50;
+		const columnWidths = [250, 80, 80, 80];
 
-	page.drawText("Rate", {
-		x: tableX + columnWidths[0] + columnWidths[1],
-		y: tableTopY,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+		page.drawText("Serviced Item Description", {
+			x: tableX,
+			y: tableTopY,
+			size: 12,
+			font: font,
+			color: rgb(0, 0, 0),
+		});
 
-	page.drawText("Amount", {
-		x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
-		y: tableTopY,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
-	});
+		page.drawText("Hours", {
+			x: tableX + columnWidths[0],
+			y: tableTopY,
+			size: 12,
+			font: font,
+			color: rgb(0, 0, 0),
+		});
+
+		page.drawText("Rate", {
+			x: tableX + columnWidths[0] + columnWidths[1],
+			y: tableTopY,
+			size: 12,
+			font: font,
+			color: rgb(0, 0, 0),
+		});
+
+		page.drawText("Amount", {
+			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
+			y: tableTopY,
+			size: 12,
+			font: font,
+			color: rgb(0, 0, 0),
+		});
+
+		return { page, tableTopY: tableTopY - 20 };
+	};
+
+	const { page: firstPage, tableTopY: firstTableTopY } = createPage(true);
+
+	let currentY = firstTableTopY;
+	let currentPage = firstPage;
 
 	const fontSize = 10;
 	const maxWidth = 250; // Adjust maxWidth for the description column
-	let currentY = tableTopY - 20;
 
 	data.timeEntries.forEach((entry, index) => {
 		const lines = wrapText(entry.description || "", maxWidth, fontSize, font);
 
 		lines.forEach((line) => {
 			if (currentY - fontSize < 0) {
-				const newPage = pdfDoc.addPage([600, 750]);
-				currentY = newPage.getHeight() - fontSize;
+				const { page, tableTopY } = createPage();
+				currentPage = page;
+				currentY = tableTopY;
 			}
 
-			page.drawText(line, {
-				x: tableX,
+			currentPage.drawText(line, {
+				x: 50,
 				y: currentY,
 				size: fontSize,
 				font,
@@ -183,16 +223,16 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		});
 
 		// Draw other columns: Hours, Rate, Amount
-		page.drawText(`${(entry.duration / 60).toFixed(2)}`, {
-			x: tableX + columnWidths[0],
+		currentPage.drawText(`${(entry.duration / 60).toFixed(2)}`, {
+			x: 300,
 			y: currentY + fontSize * lines.length, // Align with the first line of the description
 			size: fontSize,
 			font,
 			color: rgb(0, 0, 0),
 		});
 
-		page.drawText(`$${data.customer.defaultRate.toFixed(2)}`, {
-			x: tableX + columnWidths[0] + columnWidths[1],
+		currentPage.drawText(`$${data.customer.defaultRate.toFixed(2)}`, {
+			x: 380,
 			y: currentY + fontSize * lines.length, // Align with the first line of the description
 			size: fontSize,
 			font,
@@ -200,8 +240,8 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		});
 
 		const amount = (entry.duration / 60) * data.customer.defaultRate;
-		page.drawText(`$${amount.toFixed(2)}`, {
-			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
+		currentPage.drawText(`$${amount.toFixed(2)}`, {
+			x: 460,
 			y: currentY + fontSize * lines.length, // Align with the first line of the description
 			size: fontSize,
 			font,
@@ -211,10 +251,16 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		currentY -= fontSize; // Add some space between entries
 	});
 
-	// Total Amount
+	// Total Amount on the last page
+	if (currentY - 20 < 0) {
+		const { page, tableTopY } = createPage();
+		currentPage = page;
+		currentY = tableTopY;
+	}
+
 	const totalY = currentY - 20;
-	page.drawText(`Total: $${data.totalAmount.toFixed(2)}`, {
-		x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
+	currentPage.drawText(`Total: $${data.totalAmount.toFixed(2)}`, {
+		x: 380,
 		y: totalY,
 		size: 12,
 		font: font,

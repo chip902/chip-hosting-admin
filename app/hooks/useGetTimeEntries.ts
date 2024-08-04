@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
+import { format } from "date-fns";
 
 export interface TimeEntryData {
 	id: number;
@@ -52,8 +53,8 @@ const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters
 			isInvoiced: filters.isInvoiced?.toString() ?? "false",
 		});
 
+		console.log("Fetching time entries with params:", params.toString());
 		const response = await axios.get(`/api/timelog?${params.toString()}`);
-
 		return response.data;
 	} catch (error) {
 		console.error("Error fetching time entries:", error);
@@ -62,15 +63,19 @@ const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters
 };
 
 export const useGetTimeEntries = (
-	startDate?: string,
-	endDate?: string,
+	startDate?: Date,
+	endDate?: Date,
 	customerId?: number,
 	isInvoiced: boolean = false,
 	page: number = 1,
 	pageSize: number = 10
 ) => {
 	const queryClient = useQueryClient();
-	const queryKey = ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize].filter((key) => key !== undefined);
+	const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
+	const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
+
+	const queryKey = ["time-entries", formattedStartDate, formattedEndDate, customerId, isInvoiced, page, pageSize].filter((key) => key !== undefined);
+
 	const query = useQuery<{
 		entries: TimeEntryData[];
 		totalEntries: number;
@@ -78,8 +83,8 @@ export const useGetTimeEntries = (
 		queryKey,
 		queryFn: () =>
 			fetchTimeEntries(page, pageSize, {
-				startDate,
-				endDate,
+				startDate: formattedStartDate,
+				endDate: formattedEndDate,
 				customerId,
 				isInvoiced,
 			}),
@@ -89,8 +94,9 @@ export const useGetTimeEntries = (
 
 	// Invalidate the query when filters change
 	useEffect(() => {
+		console.log("Invalidating query with key:", queryKey);
 		queryClient.invalidateQueries({ queryKey });
-	}, [startDate, endDate, customerId, isInvoiced, page, pageSize, queryClient]);
+	}, [formattedStartDate, formattedEndDate, customerId, isInvoiced, page, pageSize, queryClient]);
 
 	return query;
 };
