@@ -34,3 +34,32 @@ export const filterSchema = z.object({
 	startDate: z.string().optional(),
 	endDate: z.string().optional(),
 });
+
+export const bookingSchema = z.object({
+	id: z.number().optional(),
+	name: z.string().min(1),
+	email: z.string().email(),
+	date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+		message: "Invalid date",
+	}),
+	startTime: z.string().refine(
+		(val) => {
+			const timeParts = val.split(":");
+			return timeParts.length === 2 && !isNaN(Number(timeParts[0])) && !isNaN(Number(timeParts[1]));
+		},
+		{
+			message: "Invalid start time",
+		}
+	),
+	endTime: z.string().refine(
+		(val) => {
+			const timeParts = val.split(":");
+			return timeParts.length === 2 && !isNaN(Number(timeParts[0])) && !isNaN(Number(timeParts[1]));
+		},
+		{
+			message: "Invalid end time",
+		}
+	),
+	createdAt: z.string().nullable().optional(),
+	updatedAt: z.string().nullable().optional(),
+});

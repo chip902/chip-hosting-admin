@@ -102,3 +102,14 @@ model InvoiceItem {
   invoice     Invoice     @relation(fields: [invoiceId], references: [id])
   timeEntries TimeEntry[]
 }
+
+model Booking {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  date      DateTime
+  startTime DateTime
+  endTime   DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

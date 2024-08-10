@@ -6,12 +6,24 @@ import { z } from "zod";
 type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
 const createTimeEntry = async (data: TimeLogSchema): Promise<void> => {
-	const response = await axios.post(`/api/timelog`, data);
+	try {
+		// Log data before sending it to the backend for debugging purposes
+		console.log("Data being sent to the backend:", data);
 
-	if (response.status !== 201) {
-		throw new Error("Error creating time entry");
+		const response = await axios.post(`/api/timelog`, data);
+
+		if (response.status !== 201) {
+			throw new Error("Error creating time entry");
+		}
+
+		return response.data;
+	} catch (error) {
+		// Log error details from the backend for more context
+		if (axios.isAxiosError(error) && error.response) {
+			console.error("Backend responded with:", error.response.data);
+		}
+		throw error;
 	}
-	return response.data;
 };
 
 const useCreateTimeEntry = () => {

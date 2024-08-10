@@ -4,7 +4,6 @@ import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
 import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
-import { toZonedTime } from "date-fns-tz";
 
 interface TimeGridProps {
 	filters: {
@@ -56,8 +55,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 		return date;
 	});
 
-	const timeZone = "America/New_York";
-
 	return (
 		<div className="relative flex flex-col bg-white dark:bg-gray-900">
 			<div className="relative">
@@ -84,17 +81,19 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 								))}
 								{data?.entries
 									?.filter((entry: TimeEntryData) => {
-										const entryDate = toZonedTime(new Date(entry.date), timeZone);
+										const entryDate = new Date(entry.date); // entry.date is UTC
 										const dayDate = new Date(day);
 										return entryDate.toDateString() === dayDate.toDateString();
 									})
 									.map((entry: TimeEntryData) => {
-										const startDateTime = toZonedTime(new Date(entry.date), timeZone);
-										const startHour = startDateTime.getHours();
-										const startMinute = startDateTime.getMinutes();
+										const startDateTime = new Date(entry.date); // Assuming entry.date is UTC
+										const startHour = startDateTime.getUTCHours();
+										const startMinute = startDateTime.getUTCMinutes();
+
 										const endDateTime = new Date(startDateTime.getTime() + (entry.duration ?? 0) * 60000);
-										const endHour = endDateTime.getHours();
-										const endMinute = endDateTime.getMinutes();
+										const endHour = endDateTime.getUTCHours();
+										const endMinute = endDateTime.getUTCMinutes();
+
 										const color = entry.Customer.color || "#000000";
 										return (
 											<TimeEntryComponent

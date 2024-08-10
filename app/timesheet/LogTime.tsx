@@ -86,18 +86,56 @@ const LogTime = () => {
 			const parsedRepeatInterval = repeatInterval ? parseInt(repeatInterval as unknown as string, 10) : undefined;
 			const logDataWithDate = {
 				...logData,
-				date: new Date(logData.date),
+				date: new Date(logData.date), // Ensure the date is correctly parsed
 			};
 
 			if (parsedRepeatInterval) {
 				let currentDate = new Date(logDataWithDate.date);
 				for (let i = 0; i < parsedRepeatInterval; i++) {
-					logEntries.push({ ...logDataWithDate, date: new Date(currentDate) });
+					const newEntry = {
+						...logDataWithDate,
+						date: new Date(currentDate),
+						startTime: logDataWithDate.startTime,
+						endTime: logDataWithDate.endTime,
+					};
+
+					// Combine date with startTime and endTime to form full DateTime objects
+					const start = new Date(`${newEntry.date.toISOString().split("T")[0]}T${newEntry.startTime}:00Z`);
+					const end = new Date(`${newEntry.date.toISOString().split("T")[0]}T${newEntry.endTime}:00Z`);
+
+					// Log for debugging
+					console.log("Start time:", start);
+					console.log("End time:", end);
+
+					if (start >= end) {
+						throw new Error("Invalid start or end time");
+					}
+
+					logEntries.push(newEntry);
 					currentDate.setDate(currentDate.getDate() + 1);
 				}
 			} else {
-				logEntries.push({ ...logDataWithDate, date: new Date(logDataWithDate.date) });
+				const start = new Date(`${logDataWithDate.date.toISOString().split("T")[0]}T${logDataWithDate.startTime}:00Z`);
+				const end = new Date(`${logDataWithDate.date.toISOString().split("T")[0]}T${logDataWithDate.endTime}:00Z`);
+
+				// Log for debugging
+				console.log("Single entry - Start time:", start);
+				console.log("Single entry - End time:", end);
+
+				if (start >= end) {
+					throw new Error("Invalid start or end time");
+				}
+
+				logEntries.push({
+					...logDataWithDate,
+					date: new Date(logDataWithDate.date),
+					startTime: logDataWithDate.startTime,
+					endTime: logDataWithDate.endTime,
+				});
 			}
+
+			// Log the entries to be submitted for further debugging
+			console.log("Log Entries to be submitted:", logEntries);
 
 			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
 
@@ -128,7 +166,7 @@ const LogTime = () => {
 				</Dialog.Trigger>
 				<Dialog.Content className="gap-3 w-screen">
 					<Dialog.Title>Log Time</Dialog.Title>
-					<Form.Root className="logTime" onSubmit={handleSubmit(onSubmit)}>
+					<Form.Root className="logTime flex-auto" onSubmit={handleSubmit(onSubmit)}>
 						<Grid columns={{ initial: "1", md: "2" }} gap="3" width="auto">
 							<Form.Field name="customerId">
 								<Form.Label className="px-3">Customer</Form.Label>

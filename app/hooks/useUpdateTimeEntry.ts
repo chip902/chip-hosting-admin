@@ -1,6 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import TimeLogSchema from "../timesheet/LogTime";
 
 const updateTimeEntry = async ({ id, data }: { id: number; data: object }) => {
 	const response = await axios.patch(`/api/timelog/${id}`, data);

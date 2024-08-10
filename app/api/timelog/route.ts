@@ -84,6 +84,10 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
+
+		// Log the raw inputs before any parsing
+		console.log("Raw inputs:", body);
+
 		const validation = timeLogSchema.safeParse(body);
 		if (!validation.success) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
@@ -91,20 +95,28 @@ export async function POST(request: NextRequest) {
 
 		const { date, startTime, endTime, customerId, projectId, taskId, userId, ...rest } = body;
 
-		// Parse and validate the date
+		// Parse and log the date
 		const parsedDate = parseISO(date);
+		console.log("Parsed date:", parsedDate);
+
 		if (!isValid(parsedDate)) {
 			throw new Error("Invalid date format");
 		}
 
-		const formattedDate = formatISO(parsedDate);
+		// Combine date and time directly into a Date object
+		const startDateTime = new Date(`${date.split("T")[0]}T${startTime}:00Z`);
+		const endDateTime = new Date(`${date.split("T")[0]}T${endTime}:00Z`);
 
-		// Create DateTime strings for start and end times
-		const startDateTime = toZonedTime(`${formattedDate}T${startTime}:00`, "America/New_York");
-		const endDateTime = toZonedTime(`${formattedDate}T${endTime}:00`, "America/New_York");
+		// Log the directly combined DateTime values
+		console.log("Direct Start DateTime:", startDateTime);
+		console.log("Direct End DateTime:", endDateTime);
 
 		if (!isValid(startDateTime) || !isValid(endDateTime)) {
 			throw new Error("Invalid start or end time");
+		}
+
+		if (startDateTime >= endDateTime) {
+			throw new Error("Start time must be before end time");
 		}
 
 		const newEntry = await prisma.timeEntry.create({
