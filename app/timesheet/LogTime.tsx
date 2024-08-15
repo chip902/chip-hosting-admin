@@ -86,7 +86,7 @@ const LogTime = () => {
 			const parsedRepeatInterval = repeatInterval ? parseInt(repeatInterval as unknown as string, 10) : undefined;
 			const logDataWithDate = {
 				...logData,
-				date: new Date(logData.date), // Ensure the date is correctly parsed
+				date: new Date(logData.date),
 			};
 
 			if (parsedRepeatInterval) {
@@ -99,33 +99,10 @@ const LogTime = () => {
 						endTime: logDataWithDate.endTime,
 					};
 
-					// Combine date with startTime and endTime to form full DateTime objects
-					const start = new Date(`${newEntry.date.toISOString().split("T")[0]}T${newEntry.startTime}:00Z`);
-					const end = new Date(`${newEntry.date.toISOString().split("T")[0]}T${newEntry.endTime}:00Z`);
-
-					// Log for debugging
-					console.log("Start time:", start);
-					console.log("End time:", end);
-
-					if (start >= end) {
-						throw new Error("Invalid start or end time");
-					}
-
 					logEntries.push(newEntry);
 					currentDate.setDate(currentDate.getDate() + 1);
 				}
 			} else {
-				const start = new Date(`${logDataWithDate.date.toISOString().split("T")[0]}T${logDataWithDate.startTime}:00Z`);
-				const end = new Date(`${logDataWithDate.date.toISOString().split("T")[0]}T${logDataWithDate.endTime}:00Z`);
-
-				// Log for debugging
-				console.log("Single entry - Start time:", start);
-				console.log("Single entry - End time:", end);
-
-				if (start >= end) {
-					throw new Error("Invalid start or end time");
-				}
-
 				logEntries.push({
 					...logDataWithDate,
 					date: new Date(logDataWithDate.date),
@@ -133,9 +110,6 @@ const LogTime = () => {
 					endTime: logDataWithDate.endTime,
 				});
 			}
-
-			// Log the entries to be submitted for further debugging
-			console.log("Log Entries to be submitted:", logEntries);
 
 			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
 
@@ -164,15 +138,15 @@ const LogTime = () => {
 				<Dialog.Trigger>
 					<Button variant="solid">Log Time</Button>
 				</Dialog.Trigger>
-				<Dialog.Content className="gap-3 w-screen">
-					<Dialog.Title>Log Time</Dialog.Title>
-					<Form.Root className="logTime flex-auto" onSubmit={handleSubmit(onSubmit)}>
-						<Grid columns={{ initial: "1", md: "2" }} gap="3" width="auto">
+				<Dialog.Content className="w-full max-w-xl p-6 gap-3">
+					<Dialog.Title className="text-lg font-semibold">Log Time</Dialog.Title>
+					<Form.Root className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
+						<Grid columns={{ initial: "1", md: "2" }} gap="4">
 							<Form.Field name="customerId">
-								<Form.Label className="px-3">Customer</Form.Label>
+								<Form.Label>Customer</Form.Label>
 								<Form.Control asChild>
 									<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value))}>
-										<Select.Trigger placeholder="Select a Customer" />
+										<Select.Trigger className="w-full" placeholder="Select a Customer" />
 										<Select.Content>
 											{customers.map((customer) => (
 												<Select.Item key={customer.id} value={customer.id.toString()}>
@@ -188,7 +162,7 @@ const LogTime = () => {
 								<Form.Label>Project</Form.Label>
 								<Form.Control asChild>
 									<Select.Root onValueChange={(value) => handleSelectChange("projectId", parseInt(value, 10))}>
-										<Select.Trigger placeholder="Select a Project" />
+										<Select.Trigger className="w-full" placeholder="Select a Project" />
 										<Select.Content>
 											{projects.map((project) => (
 												<Select.Item key={project.id} value={project.id.toString()}>
@@ -204,7 +178,7 @@ const LogTime = () => {
 								<Form.Label>Task</Form.Label>
 								<Form.Control asChild>
 									<Select.Root onValueChange={(value) => handleSelectChange("taskId", parseInt(value, 10))}>
-										<Select.Trigger placeholder="Select a Task" />
+										<Select.Trigger className="w-full" placeholder="Select a Task" />
 										<Select.Content>
 											{tasks.map((task) => (
 												<Select.Item key={task.id} value={String(task.id)}>
@@ -220,7 +194,7 @@ const LogTime = () => {
 								<Form.Label>Employee</Form.Label>
 								<Form.Control asChild>
 									<Select.Root onValueChange={(value) => handleSelectChange("userId", parseInt(value, 10))}>
-										<Select.Trigger placeholder="Select an Employee" />
+										<Select.Trigger className="w-full" placeholder="Select an Employee" />
 										<Select.Content>
 											{users.map((user) => (
 												<Select.Item key={user.id} value={String(user.id)}>
@@ -235,7 +209,7 @@ const LogTime = () => {
 							<Form.Field name="duration">
 								<Form.Label>Duration</Form.Label>
 								<Form.Control asChild>
-									<TextField.Root placeholder="Time spent in minutes" {...register("duration", { valueAsNumber: true })} />
+									<TextField.Root className="w-full" placeholder="Time spent in minutes" {...register("duration", { valueAsNumber: true })} />
 								</Form.Control>
 								{errors.duration && <ErrorMessage>{errors.duration.message}</ErrorMessage>}
 							</Form.Field>

@@ -1,4 +1,3 @@
-// app/utils/PdfService.tsx
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import path from "path";
@@ -54,7 +53,7 @@ const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) =
 
 	for (let i = 0; i < words.length; i++) {
 		const testLine = line + words[i] + " ";
-		const width = font.widthOfTextAtSize(testLine.replace(/\n/g, ""), fontSize); // Remove newlines
+		const width = font.widthOfTextAtSize(testLine.replace(/\n/g, ""), fontSize);
 
 		if (width > maxWidth && i > 0) {
 			lines.push(line.trim());
@@ -71,22 +70,22 @@ const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) =
 export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	const pdfDoc = await PDFDocument.create();
 	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+	// Sort timeEntries by date in ascending order
+	data.timeEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-	// Embed the logo image
 	const logoPath = path.resolve(process.cwd(), "public", "CHS_Logo.png");
 	const logoBytes = fs.readFileSync(logoPath);
 	const logoImage = await pdfDoc.embedPng(logoBytes);
-	const logoDims = logoImage.scale(0.5); // Adjust the scale as needed
+	const logoDims = logoImage.scale(0.5);
 
 	const createPage = (isFirstPage = false) => {
 		const page = pdfDoc.addPage([600, 750]);
 		const { width, height } = page.getSize();
 
 		if (isFirstPage) {
-			// Draw the logo image on the first page
 			page.drawImage(logoImage, {
 				x: 50,
-				y: height - 100, // Adjust the Y position as needed
+				y: height - 100,
 				width: logoDims.width,
 				height: logoDims.height,
 			});
@@ -156,10 +155,18 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		// Table Headers
 		const tableTopY = isFirstPage ? height - 310 : height - 70;
 		const tableX = 50;
-		const columnWidths = [250, 80, 80, 80];
+		const columnWidths = [80, 170, 80, 80, 80];
+
+		page.drawText("Date", {
+			x: tableX + 10, // Add padding
+			y: tableTopY,
+			size: 12,
+			font: font,
+			color: rgb(0, 0, 0),
+		});
 
 		page.drawText("Serviced Item Description", {
-			x: tableX,
+			x: tableX + columnWidths[0] + 10, // Add padding
 			y: tableTopY,
 			size: 12,
 			font: font,
@@ -167,7 +174,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		});
 
 		page.drawText("Hours", {
-			x: tableX + columnWidths[0],
+			x: tableX + columnWidths[0] + columnWidths[1] + 10, // Add padding
 			y: tableTopY,
 			size: 12,
 			font: font,
@@ -175,7 +182,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		});
 
 		page.drawText("Rate", {
-			x: tableX + columnWidths[0] + columnWidths[1],
+			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, // Add padding
 			y: tableTopY,
 			size: 12,
 			font: font,
@@ -183,7 +190,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 		});
 
 		page.drawText("Amount", {
-			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2],
+			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3] + 10, // Add padding
 			y: tableTopY,
 			size: 12,
 			font: font,
@@ -199,41 +206,53 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 	let currentPage = firstPage;
 
 	const fontSize = 10;
-	const maxWidth = 250; // Adjust maxWidth for the description column
+	const maxWidth = 160; // Adjust maxWidth for the description column
 
-	data.timeEntries.forEach((entry, index) => {
+	data.timeEntries.forEach((entry) => {
+		const formattedDate = new Date(entry.date).toLocaleDateString(); // Format date as MM/DD/YYYY
 		const lines = wrapText(entry.description || "", maxWidth, fontSize, font);
 
-		lines.forEach((line) => {
-			if (currentY - fontSize < 0) {
-				const { page, tableTopY } = createPage();
-				currentPage = page;
-				currentY = tableTopY;
-			}
+		if (currentY - (fontSize * lines.length + 20) < 0) {
+			// Check if there's enough space
+			const { page, tableTopY } = createPage();
+			currentPage = page;
+			currentY = tableTopY;
+		}
 
+		// Draw the Date column
+		currentPage.drawText(formattedDate, {
+			x: 50 + 10, // Add padding
+			y: currentY,
+			size: fontSize,
+			font,
+			color: rgb(0, 0, 0),
+		});
+
+		// Draw the Serviced Item Description column
+		lines.forEach((line, index) => {
 			currentPage.drawText(line, {
-				x: 50,
-				y: currentY,
+				x: 130 + 10, // Add padding
+				y: currentY - fontSize * index,
 				size: fontSize,
 				font,
 				color: rgb(0, 0, 0),
 			});
-
-			currentY -= fontSize;
 		});
 
 		// Draw other columns: Hours, Rate, Amount
+		const lineOffset = fontSize * (lines.length - 1); // Offset for the lines of text
+
 		currentPage.drawText(`${(entry.duration / 60).toFixed(2)}`, {
-			x: 300,
-			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			x: 300 + 10, // Add padding
+			y: currentY - lineOffset,
 			size: fontSize,
 			font,
 			color: rgb(0, 0, 0),
 		});
 
 		currentPage.drawText(`$${data.customer.defaultRate.toFixed(2)}`, {
-			x: 380,
-			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			x: 380 + 10, // Add padding
+			y: currentY - lineOffset,
 			size: fontSize,
 			font,
 			color: rgb(0, 0, 0),
@@ -241,14 +260,14 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 
 		const amount = (entry.duration / 60) * data.customer.defaultRate;
 		currentPage.drawText(`$${amount.toFixed(2)}`, {
-			x: 460,
-			y: currentY + fontSize * lines.length, // Align with the first line of the description
+			x: 460 + 10, // Add padding
+			y: currentY - lineOffset,
 			size: fontSize,
 			font,
 			color: rgb(0, 0, 0),
 		});
 
-		currentY -= fontSize; // Add some space between entries
+		currentY -= fontSize * (lines.length + 2); // Add space between entries
 	});
 
 	// Total Amount on the last page
@@ -260,7 +279,7 @@ export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
 
 	const totalY = currentY - 20;
 	currentPage.drawText(`Total: $${data.totalAmount.toFixed(2)}`, {
-		x: 380,
+		x: 460 + 10, // Add padding
 		y: totalY,
 		size: 12,
 		font: font,
