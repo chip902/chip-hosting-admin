@@ -35,6 +35,15 @@ export const filterSchema = z.object({
 	endDate: z.string().optional(),
 });
 
+export const projectSchema = z.object({
+	id: z.number(),
+	customerId: z.number().optional(),
+	dateCreated: z.string().nullable().optional(),
+	rate: z.number().optional(),
+	description: z.string().optional(),
+	name: z.string(),
+});
+
 export const bookingSchema = z.object({
 	id: z.number().optional(),
 	name: z.string().min(1),
