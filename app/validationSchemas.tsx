@@ -39,7 +39,18 @@ export const projectSchema = z.object({
 	id: z.number(),
 	customerId: z.number().optional(),
 	dateCreated: z.string().nullable().optional(),
-	rate: z.number().optional(),
+	rate: z
+		.union([z.string(), z.number()])
+		.refine((value) => typeof value === "string" || typeof value === "number", {
+			message: "Rate must be a string or number",
+		})
+		.transform((value) => {
+			if (typeof value === "string") {
+				return value ? parseFloat(value) : undefined;
+			}
+			return value;
+		})
+		.optional(),
 	description: z.string().optional(),
 	name: z.string(),
 });

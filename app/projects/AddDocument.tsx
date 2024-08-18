@@ -1,12 +1,13 @@
+// app/projects/AddDocument.tsx
 "use client";
 import * as Form from "@radix-ui/react-form";
-import { Button, Dialog, Flex, Spinner, TextField } from "@radix-ui/themes";
+import { Button, Dialog, Flex, Select, Spinner, TextField } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { projectSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { Project } from "@prisma/client";
+import { useEffect, useState } from "react";
+import { Customer, Project } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
@@ -14,10 +15,23 @@ import ErrorMessage from "@/components/ErrorMessage";
 type ProjectSchema = z.infer<typeof projectSchema>;
 
 const AddDocument = ({ project }: { project?: Project }) => {
+	const [customers, setCustomers] = useState<Customer[]>([]);
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const response = await axios.get("/api/data");
+				setCustomers(response.data.customers);
+			} catch (error) {
+				console.error("Error fetching data:", error);
+			}
+		};
+		fetchData();
+	}, []);
 	const router = useRouter();
 	const {
 		register,
 		handleSubmit,
+		setValue,
 		formState: { errors },
 	} = useForm<ProjectSchema>({
 		resolver: zodResolver(projectSchema),
@@ -26,15 +40,16 @@ const AddDocument = ({ project }: { project?: Project }) => {
 	const [submitting, setSubmitting] = useState(false);
 
 	const onSubmit = async (data: ProjectSchema) => {
+		console.log("Form submitted", data);
 		try {
 			setSubmitting(true);
 			const newData = {
 				...data,
-				rate: data.rate,
+				rate: data.rate ? parseFloat(data.rate as unknown as string) : undefined,
 			};
 
-			if (data) {
-				await axios.patch("/api/projects/" + data.id, newData);
+			if (project) {
+				await axios.patch("/api/projects/" + project.id, newData);
 			} else {
 				await axios.post("/api/projects", newData);
 			}
@@ -46,6 +61,10 @@ const AddDocument = ({ project }: { project?: Project }) => {
 			setSubmitting(false);
 			setError("An unexpected error occurred");
 		}
+	};
+	const handleSelectChange = <T extends keyof ProjectSchema>(name: T, value: ProjectSchema[T]) => {
+		// @ts-ignore
+		setValue(name, value, { shouldValidate: true });
 	};
 
 	return (
@@ -73,6 +92,22 @@ const AddDocument = ({ project }: { project?: Project }) => {
 								</Form.Control>
 								{errors.description && <ErrorMessage>{errors.description.message}</ErrorMessage>}
 							</Form.Field>
+							<Form.Field name="customerId">
+								<Form.Label>Customer</Form.Label>
+								<Form.Control asChild>
+									<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value))}>
+										<Select.Trigger className="w-full" placeholder="Select a Customer" />
+										<Select.Content>
+											{customers.map((customer) => (
+												<Select.Item key={customer.id} value={customer.id.toString()}>
+													{customer.name}
+												</Select.Item>
+											))}
+										</Select.Content>
+									</Select.Root>
+								</Form.Control>
+								{errors.customerId && <ErrorMessage>{errors.customerId.message}</ErrorMessage>}
+							</Form.Field>
 							<Form.Field name="rate">
 								<Form.Label>Project Rate</Form.Label>
 								<Form.Control asChild>
@@ -86,11 +121,9 @@ const AddDocument = ({ project }: { project?: Project }) => {
 										Cancel
 									</Button>
 								</Dialog.Close>
-								<Dialog.Close>
-									<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
-										{submitting && <Spinner />} Add
-									</Button>
-								</Dialog.Close>
+								<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
+									{submitting && <Spinner />} Add
+								</Button>
 							</Flex>
 						</Flex>
 					</Form.Root>

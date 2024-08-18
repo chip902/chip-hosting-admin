@@ -1,3 +1,4 @@
+// app/api/projects/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { projectSchema } from "@/app/validationSchemas";
