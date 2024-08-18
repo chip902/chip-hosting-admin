@@ -1,3 +1,4 @@
+// app/hooks/useCustomers.ts
 import { Customer } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -12,5 +13,7 @@ export const useCustomers = () =>
 		queryKey: ["customers"],
 		queryFn: fetchCustomers,
 		staleTime: 60 * 1000,
+		refetchOnMount: true,
+		refetchOnWindowFocus: true,
 		retry: 3,
 	});

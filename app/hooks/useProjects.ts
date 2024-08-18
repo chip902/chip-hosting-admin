@@ -1,3 +1,4 @@
+// app/hooks/useProjects.ts
 import { Project } from "@prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
@@ -9,8 +10,10 @@ const fetchProjects = async (): Promise<Project[]> => {
 
 export const useProjects = () =>
 	useQuery<Project[]>({
-		queryKey: ["customers"],
+		queryKey: ["projects"],
 		queryFn: fetchProjects,
 		staleTime: 60 * 1000,
+		refetchOnMount: true,
+		refetchOnWindowFocus: true,
 		retry: 3,
 	});

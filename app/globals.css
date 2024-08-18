@@ -22,17 +22,20 @@ html {
 .container {
 	max-width: 1200px;
 }
+
 .time-input {
 	background-color: var(--primary-color);
 	color: var(--text-color);
-	width: full;
+	width: 100%; /* Ensure full width */
 	border-radius: 0.25rem;
 }
 
+/* Remove height: 100vh */
 .main-content {
 	display: flex;
 	flex-direction: column;
-	height: 100vh;
+	/* height: auto to allow natural content flow */
+	height: auto;
 }
 
 @media (min-width: 1024px) {
@@ -73,12 +76,14 @@ html {
 	height: 80px;
 }
 
+/* Adjust time-grid container */
 .time-grid {
 	display: grid;
 	grid-template-rows: repeat(24, 80px);
 	grid-template-columns: repeat(8, 1fr);
 	position: relative;
-	overflow-y: scroll;
+	/* Remove overflow-y: scroll to allow proper sticky behavior */
+	overflow-y: visible;
 }
 
 .time-entry {

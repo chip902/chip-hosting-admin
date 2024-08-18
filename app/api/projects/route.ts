@@ -9,17 +9,17 @@ export async function POST(request: NextRequest) {
 		if (!validation.success) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
-		const newProject = await prisma.customer.create({
+		const newProject = await prisma.project.create({
 			data: {
 				name: body.name,
-				email: body.email,
-				defaultRate: body.rate,
-				color: body.color,
+				description: body.description,
+				rate: body.rate,
+				customerId: body.customerId,
 			},
 		});
 		return NextResponse.json(newProject, { status: 201 });
 	} catch (error) {
-		return NextResponse.json({ error: "Error creating customer" }, { status: 500 });
+		return NextResponse.json({ error: "Error creating project" }, { status: 500 });
 	}
 }
 
@@ -41,7 +41,7 @@ export async function PATCH(request: NextRequest) {
 		});
 		return NextResponse.json(updatedProject, { status: 200 });
 	} catch (error) {
-		return NextResponse.json({ error: "Error updating customer" }, { status: 500 });
+		return NextResponse.json({ error: "Error updating project" }, { status: 500 });
 	}
 }
 

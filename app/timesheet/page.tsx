@@ -1,15 +1,23 @@
+// app/timesheet/Page.tsx
 "use client";
 import { useState } from "react";
+import { format, isToday, startOfWeek } from "date-fns";
 import { Flex, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
-import TimeGrid from "./TimeGrid";
 import TimeToolBar from "./TimeToolBar";
-import { startOfWeek } from "date-fns";
+import TimeGrid from "./TimeGrid";
 
 interface Filters {
 	startDate?: Date;
 	endDate?: Date;
 	customerId?: number;
+}
+
+interface TimeEntry {
+	id: number;
+	day: Date;
+	startTime: number; // For simplicity, using hours as integer (e.g., 9 for 9:00 AM)
+	duration: number; // In hours
 }
 
 const Page: React.FC = () => {
@@ -18,6 +26,8 @@ const Page: React.FC = () => {
 		endDate: undefined,
 		customerId: undefined,
 	});
+
+	const days = Array.from({ length: 7 }, (_, i) => new Date(new Date().setDate(new Date().getDate() + i)));
 
 	const { error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, filters.customerId);
 
