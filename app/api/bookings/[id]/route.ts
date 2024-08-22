@@ -1,30 +1,43 @@
-import { NextApiRequest, NextApiResponse } from "next";
+import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export default async (req: NextApiRequest, res: NextApiResponse) => {
-	const { id } = req.query;
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+	const { id } = params;
 
-	if (req.method === "GET") {
-		try {
-			const booking = await prisma.booking.findUnique({
-				where: { id: Number(id) },
-			});
-			res.status(200).json(booking);
-		} catch (error) {
-			res.status(500).json({ error: "Failed to fetch booking" });
-		}
-	} else if (req.method === "DELETE") {
-		try {
-			await prisma.booking.delete({
-				where: { id: Number(id) },
-			});
-			res.status(204).end();
-		} catch (error) {
-			res.status(500).json({ error: "Failed to delete booking" });
-		}
-	} else {
-		res.status(405).json({ error: "Method not allowed" });
+	if (!id) {
+		return NextResponse.json({ error: "Invalid or missing id" }, { status: 400 });
 	}
-};
+
+	try {
+		const booking = await prisma.booking.findUnique({
+			where: { id: Number(id) },
+		});
+
+		if (!booking) {
+			return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+		}
+
+		return NextResponse.json(booking, { status: 200 });
+	} catch (error) {
+		return NextResponse.json({ error: "Failed to fetch booking" }, { status: 500 });
+	}
+}
+
+export async function DELETE(request: Request, { params }: { params: { id: string } }) {
+	const { id } = params;
+
+	if (!id) {
+		return NextResponse.json({ error: "Invalid or missing id" }, { status: 400 });
+	}
+
+	try {
+		await prisma.booking.delete({
+			where: { id: Number(id) },
+		});
+		return new Response(null, { status: 204 });
+	} catch (error) {
+		return NextResponse.json({ error: "Failed to delete booking" }, { status: 500 });
+	}
+}

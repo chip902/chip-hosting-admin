@@ -1,11 +1,11 @@
 "use client";
 import { useState } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
-import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries"; // Updated import
+import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
-import PaginationComponent from "./PaginationComponent"; // Import your pagination component
+import PaginationComponent from "./PaginationComponent";
 
 interface InvoiceGeneratorProps {
 	userId: number;
@@ -16,7 +16,13 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
 	const [filters, setFilters] = useState<{ customerId?: number; startDate?: string; endDate?: string; isInvoiced?: boolean }>({});
-	const { data, error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, filters.customerId, filters.isInvoiced ?? false, page);
+	const { data, error, isLoading } = useGetTimeEntries(
+		filters.startDate ? new Date(filters.startDate) : undefined,
+		filters.endDate ? new Date(filters.endDate) : undefined,
+		filters.customerId,
+		filters.isInvoiced ?? false,
+		page
+	);
 	const timeEntries = data?.entries || [];
 	const totalEntries = data?.totalEntries || 0;
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
@@ -44,6 +50,10 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 	});
 
 	const handleGenerateInvoice = () => {
+		if (selectedEntries.length === 0) {
+			setErrorMessage("Please select at least one time entry to generate an invoice.");
+			return;
+		}
 		mutation.mutate();
 	};
 
@@ -105,7 +115,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 				{mutation.status === "pending" ? "Generating Invoice..." : "Generate Invoice"}
 			</Button>
 
-			{errorMessage && <div className="text-red-500">{errorMessage}</div>}
+			{errorMessage && <div className="text-red-500 mt-2">{errorMessage}</div>}
 		</Flex>
 	);
 };

@@ -16,7 +16,9 @@ const InvoiceGenerator = () => {
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10); // Define page size
 	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
-	const { data, error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, parsedCustomerId, filters.isInvoiced ?? false, page, pageSize);
+	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
+	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
+	const { data, error, isLoading } = useGetTimeEntries(parsedStartDate, parsedEndDate, parsedCustomerId, filters.isInvoiced ?? false, page, pageSize);
 	const { entries: timeEntries, totalEntries } = data || { entries: [], totalEntries: 0 };
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);

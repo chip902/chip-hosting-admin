@@ -2,6 +2,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
 import { format } from "date-fns";
+import { mockTimeEntries } from "../data/mockData";
 
 export interface TimeEntryData {
 	id: number;
@@ -43,6 +44,28 @@ interface Filters {
 }
 
 const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters) => {
+	if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
+		// Use mock data instead of making a real API call
+		const filteredEntries = mockTimeEntries.filter((entry) => {
+			const matchesCustomer = filters.customerId ? entry.customerId === filters.customerId : true;
+			const matchesStartDate = filters.startDate ? new Date(entry.date) >= new Date(filters.startDate) : true;
+			const matchesEndDate = filters.endDate ? new Date(entry.date) <= new Date(filters.endDate) : true;
+			const matchesInvoiced = filters.isInvoiced !== undefined ? entry.isInvoiced === filters.isInvoiced : true;
+			return matchesCustomer && matchesStartDate && matchesEndDate && matchesInvoiced;
+		});
+
+		// Simulate pagination
+		const startIndex = (page - 1) * pageSize;
+		const endIndex = startIndex + pageSize;
+		const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
+
+		return {
+			entries: paginatedEntries,
+			totalEntries: filteredEntries.length,
+		};
+	}
+
+	// Default to real API logic if not in demo mode
 	try {
 		const params = new URLSearchParams({
 			page: page.toString(),
