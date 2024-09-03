@@ -1,7 +1,7 @@
 // app/timesheet/Page.tsx
 "use client";
 import { useState } from "react";
-import { format, isToday, startOfWeek } from "date-fns";
+import { endOfWeek, format, isToday, startOfWeek } from "date-fns";
 import { Flex, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import TimeToolBar from "./TimeToolBar";
@@ -13,17 +13,10 @@ interface Filters {
 	customerId?: number;
 }
 
-interface TimeEntry {
-	id: number;
-	day: Date;
-	startTime: number; // For simplicity, using hours as integer (e.g., 9 for 9:00 AM)
-	duration: number; // In hours
-}
-
 const Page: React.FC = () => {
 	const [filters, setFilters] = useState<Filters>({
 		startDate: startOfWeek(new Date(), { weekStartsOn: 0 }),
-		endDate: undefined,
+		endDate: endOfWeek(new Date(), { weekStartsOn: 0 }),
 		customerId: undefined,
 	});
 

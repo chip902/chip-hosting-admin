@@ -1,18 +1,15 @@
 // app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
-import { parseISO, formatISO, isValid } from "date-fns";
-import { toZonedTime } from "date-fns-tz";
+import { parseISO, isValid } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const startDate = searchParams.get("startDate");
-	const endDate = searchParams.get("endDate");
+	const endDate = searchParams.get("endDate") || new Date().toISOString(); // Set default to current date if null
 	const customerId = searchParams.get("customerId");
 	const isInvoiced = searchParams.get("isInvoiced");
-	const page = parseInt(searchParams.get("page") || "1", 10);
-	const pageSize = parseInt(searchParams.get("pageSize") || "10", 10);
 
 	try {
 		const whereClause: {
@@ -25,57 +22,45 @@ export async function GET(request: NextRequest) {
 		} = {
 			isInvoiced: false,
 		};
-		if (startDate) whereClause.date = { ...whereClause.date, gte: toZonedTime(startDate, "Etc/UTC") };
-		if (endDate) whereClause.date = { ...whereClause.date, lte: toZonedTime(endDate, "Etc/UTC") };
+
+		// Only parse if startDate is not null
+		const parsedStartDate = startDate ? parseISO(startDate) : new Date();
+		if (isValid(parsedStartDate)) {
+			whereClause.date = { gte: parsedStartDate };
+		}
+
+		// Parse endDate safely with default value
+		const parsedEndDate = parseISO(endDate);
+		// Adjust to include the entire day of endDate
+		const endOfDay = new Date(parsedEndDate.setUTCHours(23, 59, 59, 999));
+		if (isValid(parsedEndDate)) {
+			if (whereClause.date) {
+				whereClause.date.lte = endOfDay;
+			} else {
+				whereClause.date = { lte: endOfDay };
+			}
+		}
+
 		if (customerId) whereClause.customerId = parseInt(customerId, 10);
 		if (isInvoiced !== undefined) whereClause.isInvoiced = isInvoiced === "true";
 
-		const entries = await prisma.timeEntry.findMany({
+		const timeEntries = await prisma.timeEntry.findMany({
 			where: whereClause,
 			include: {
-				Customer: {
-					select: {
-						id: true,
-						name: true,
-						color: true,
-						shortName: true,
-					},
-				},
-				Project: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-				Task: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-				User: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				Customer: true,
+				Project: true,
+				Task: true,
+				User: true,
 			},
-			skip: (page - 1) * pageSize,
-			take: pageSize,
 		});
+
 		const totalEntries = await prisma.timeEntry.count({
 			where: whereClause,
 		});
 
-		// Adjust the dates to the user's timezone
-		const timeZone = "America/New_York"; // Change to the relevant timezone
-		const adjustedEntries = entries.map((entry) => ({
-			...entry,
-			date: toZonedTime(entry.date, timeZone),
-		}));
-
-		return NextResponse.json({ entries: adjustedEntries, totalEntries }, { status: 200 });
+		return NextResponse.json({ entries: timeEntries, totalEntries }, { status: 200 });
 	} catch (error) {
+		console.error("Error fetching time entries:", error);
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}
 }
@@ -125,28 +110,19 @@ export async function POST(request: NextRequest) {
 				date: startDateTime,
 				duration: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60),
 				Customer: {
-					connect: {
-						id: customerId,
-					},
+					connect: { id: parseInt(customerId, 10) },
 				},
 				Project: {
-					connect: {
-						id: projectId,
-					},
+					connect: { id: parseInt(projectId, 10) },
 				},
 				Task: {
-					connect: {
-						id: taskId,
-					},
+					connect: { id: parseInt(taskId, 10) },
 				},
 				User: {
-					connect: {
-						id: userId,
-					},
+					connect: { id: parseInt(userId, 10) },
 				},
 			},
 		});
-
 		return NextResponse.json(newEntry, { status: 201 });
 	} catch (error) {
 		console.error("Error creating time entry:", error);

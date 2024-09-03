@@ -1,3 +1,4 @@
+// app/hooks/useGetTimeEntries.ts
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
@@ -18,7 +19,7 @@ export interface TimeEntryData {
 	Customer: {
 		id: number;
 		name: string;
-		color: string;
+		color?: string;
 		shortname: string | undefined;
 		shortName: string | undefined;
 	};
@@ -60,28 +61,47 @@ const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters
 		const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
 
 		return {
+			length: filteredEntries.length,
 			entries: paginatedEntries,
 			totalEntries: filteredEntries.length,
 		};
-	}
+	} else {
+		// Default to real API logic if not in demo mode
+		try {
+			const params = new URLSearchParams({
+				page: page.toString(),
+				pageSize: pageSize.toString(),
+				...(filters.startDate && { startDate: filters.startDate }),
+				...(filters.endDate && { endDate: filters.endDate }),
+				...(filters.customerId && { customerId: filters.customerId.toString() }),
+				isInvoiced: filters.isInvoiced?.toString() ?? "false",
+			});
 
-	// Default to real API logic if not in demo mode
-	try {
-		const params = new URLSearchParams({
-			page: page.toString(),
-			pageSize: pageSize.toString(),
-			...(filters.startDate && { startDate: filters.startDate }),
-			...(filters.endDate && { endDate: filters.endDate }),
-			...(filters.customerId && { customerId: filters.customerId.toString() }),
-			isInvoiced: filters.isInvoiced?.toString() ?? "false",
-		});
+			console.log("Fetching time entries with params:", params.toString());
+			const response = await axios.get(`/api/timelog?${params.toString()}`);
 
-		console.log("Fetching time entries with params:", params.toString());
-		const response = await axios.get(`/api/timelog?${params.toString()}`);
-		return response.data;
-	} catch (error) {
-		console.error("Error fetching time entries:", error);
-		throw new Error("Error fetching time entries");
+			// Log and check if the response structure matches TimeEntryData[]
+			console.log("Response data: ", response.data);
+
+			if (!response.data || !Array.isArray(response.data.entries)) {
+				throw new Error("Invalid response format");
+			}
+
+			return {
+				length: response.data.entries.length,
+				entries: response.data.entries.map((entry: any) => ({
+					...entry,
+					Customer: entry.Customer || { id: 0, name: "Unknown", color: "#000000", shortname: "", shortName: "" },
+					Project: entry.Project || { id: 0, name: "Unknown" },
+					Task: entry.Task || { id: 0, name: "Unknown" },
+					User: entry.User || { id: 0, name: "Unknown" },
+				})),
+				totalEntries: response.data.totalEntries,
+			};
+		} catch (error) {
+			console.error("Error fetching time entries:", error);
+			throw new Error("Error fetching time entries");
+		}
 	}
 };
 
@@ -97,9 +117,10 @@ export const useGetTimeEntries = (
 	const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
 	const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
 
-	const queryKey = ["time-entries", formattedStartDate, formattedEndDate, customerId, isInvoiced, page, pageSize].filter((key) => key !== undefined);
+	const queryKey = ["time-entries", formattedStartDate, formattedEndDate, customerId, isInvoiced].filter((key) => key !== undefined);
 
 	const query = useQuery<{
+		length: any;
 		entries: TimeEntryData[];
 		totalEntries: number;
 	}>({
