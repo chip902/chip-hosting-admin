@@ -10,6 +10,8 @@ export async function GET(request: NextRequest) {
 	const endDate = searchParams.get("endDate") || new Date().toISOString(); // Set default to current date if null
 	const customerId = searchParams.get("customerId");
 	const isInvoiced = searchParams.get("isInvoiced");
+	const page = parseInt(searchParams.get("page") || "1", 10); // Default to page 1
+	const pageSize = parseInt(searchParams.get("pageSize") || "10", 10); // Default to 10 entries per page
 
 	try {
 		let whereClause: {
@@ -57,6 +59,11 @@ export async function GET(request: NextRequest) {
 				Project: true,
 				Task: true,
 				User: true,
+			},
+			skip: (page - 1) * pageSize, // Offset for pagination
+			take: pageSize, // Limit the number of results
+			orderBy: {
+				date: "desc", // Sort by date descending by default
 			},
 		});
 

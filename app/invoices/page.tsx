@@ -29,6 +29,8 @@ const InvoiceGenerator = () => {
 		isInvoiced: filters.isInvoiced ?? undefined, // No filter by default for invoiced status
 		pageSize: pageSize,
 		page: page,
+		sortBy: "date",
+		sortOrder: "desc",
 	});
 
 	const timeEntries = data?.entries || [];
@@ -73,7 +75,6 @@ const InvoiceGenerator = () => {
 		mutation.mutate();
 	};
 
-	console.log("DEBUG timeEntries: ", timeEntries);
 	const timeZone = "America/New_York";
 
 	return (
@@ -119,7 +120,7 @@ const InvoiceGenerator = () => {
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
 									</Table.Cell>
-									<Table.Cell>{entry.date}</Table.Cell>
+									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
 									<Table.Cell>{entry.description}</Table.Cell>
 									<Table.Cell>{entry.Customer.name}</Table.Cell>
 									<Table.Cell>{entry.duration} minutes</Table.Cell>
@@ -128,7 +129,7 @@ const InvoiceGenerator = () => {
 						</Table.Body>
 					</Table.Root>
 					<div className="flex justify-between pl-5">
-						<PaginationComponent totalItems={timeEntries.length} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
+						<PaginationComponent totalItems={data?.totalEntries ?? 0} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
 						<DropdownMenu.Root>
 							<DropdownMenu.Trigger>
 								<Button variant="soft" size="2">

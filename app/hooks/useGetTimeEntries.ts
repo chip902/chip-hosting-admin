@@ -28,6 +28,8 @@ interface QueryParams {
 	isInvoiced?: boolean;
 	pageSize: number;
 	page: number;
+	sortBy?: string;
+	sortOrder?: "asc" | "desc";
 }
 
 interface TimeEntryResponse {
@@ -36,7 +38,7 @@ interface TimeEntryResponse {
 	totalEntries: number;
 }
 
-export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced }: QueryParams) => {
+export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced, sortBy = "date", sortOrder = "desc" }: QueryParams) => {
 	const queryClient = useQueryClient();
 
 	// Ensure queryKey only contains relevant values
@@ -48,7 +50,9 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 		endDate ? endDate.toISOString() : undefined, // Convert dates to ISO strings
 		customerId !== undefined ? customerId : undefined, // Include customerId only if it's defined
 		isInvoiced,
-	].filter((key) => key !== undefined); // Remove any undefined keys from the queryKey
+		sortBy,
+		sortOrder,
+	].filter((key) => key !== undefined);
 
 	const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
 	const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
@@ -63,6 +67,8 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 				...(formattedEndDate && { endDate: formattedEndDate }),
 				...(customerId !== undefined ? { customerId: customerId.toString() } : {}),
 				isInvoiced: isInvoiced?.toString() ?? "false",
+				sortBy,
+				sortOrder,
 			};
 			const queryString = new URLSearchParams(params).toString();
 			console.log("Request URL to Endpoint: ", `/api/timelog?${queryString}`);
