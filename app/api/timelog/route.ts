@@ -12,37 +12,43 @@ export async function GET(request: NextRequest) {
 	const isInvoiced = searchParams.get("isInvoiced");
 
 	try {
-		const whereClause: {
-			date?: {
-				gte?: Date;
-				lte?: Date;
-			};
+		let whereClause: {
+			date?: {};
 			customerId?: number;
-			isInvoiced: boolean;
-		} = {
-			isInvoiced: false,
-		};
+			isInvoiced?: boolean;
+		} = {};
 
-		// Only parse if startDate is not null
-		const parsedStartDate = startDate ? parseISO(startDate) : new Date();
-		if (isValid(parsedStartDate)) {
-			whereClause.date = { gte: parsedStartDate };
-		}
+		// Initialize additional fields in the 'where' clause with their respective types.
 
-		// Parse endDate safely with default value
-		const parsedEndDate = parseISO(endDate);
-		// Adjust to include the entire day of endDate
-		const endOfDay = new Date(parsedEndDate.setUTCHours(23, 59, 59, 999));
-		if (isValid(parsedEndDate)) {
-			if (whereClause.date) {
-				whereClause.date.lte = endOfDay;
-			} else {
-				whereClause.date = { lte: endOfDay };
+		if (startDate) {
+			const parsedStartDate = parseISO(startDate);
+			if (!isValid(parsedStartDate)) {
+				throw new Error("Invalid start date");
 			}
+			whereClause.date = { ...whereClause.date, gte: parsedStartDate };
 		}
 
-		if (customerId) whereClause.customerId = parseInt(customerId, 10);
-		if (isInvoiced !== undefined) whereClause.isInvoiced = isInvoiced === "true";
+		if (endDate) {
+			let parsedEndDate;
+			try {
+				parsedEndDate = parseISO(endDate);
+				const endOfDay = new Date(parsedEndDate.setUTCHours(23, 59, 59, 999));
+
+				if (!isValid(endOfDay)) {
+					throw new Error("Invalid end date");
+				}
+			} catch (error) {
+				console.error("Error while parsing and setting the end date", error);
+				parsedEndDate = new Date(); // You might want to handle this situation differently
+			}
+			whereClause.date = { ...whereClause.date, lte: parsedEndDate };
+		} else {
+			const nowDate = new Date(); // Using 'new' with 'Date' creates a new instance of the current date and time.
+			whereClause.date = { ...whereClause.date, lte: nowDate };
+		}
+
+		if (customerId !== null && customerId !== undefined) whereClause.customerId = parseInt(customerId, 10); // Convert string to number
+		if (isInvoiced !== null && isInvoiced !== undefined) whereClause.isInvoiced = Boolean(Number(isInvoiced)); // Convert string to boolean
 
 		const timeEntries = await prisma.timeEntry.findMany({
 			where: whereClause,

@@ -3,7 +3,7 @@ import React, { useEffect, useRef } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
-import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
+import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 
 interface TimeGridProps {
 	filters: {
@@ -16,7 +16,13 @@ interface TimeGridProps {
 const TimeGrid = ({ filters }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
-	const { data, error, isLoading } = useGetTimeEntries(startDate, endDate, customerId);
+	const { data, error, isLoading } = useGetTimeEntries({
+		pageSize: 20,
+		page: 1,
+		startDate: startDate ? new Date(startDate) : undefined,
+		endDate: endDate ? new Date(endDate) : undefined,
+		customerId: customerId !== null && customerId !== undefined ? customerId : undefined,
+	});
 
 	useEffect(() => {
 		// Scroll to current hour on load
@@ -59,11 +65,10 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 		<div className="relative flex flex-col h-screen bg-white dark:bg-gray-900">
 			{/* Sticky Header */}
 			<TimeGridHeader days={days} />
-			<div className="flex-1 overflow-y-auto">
+			<div className="flex-1 overflow-y-auto" ref={container}>
 				{/* Time Grid */}
 				<div className="grid grid-cols-8">
 					{/* Hour Labels Column */}
-
 					<div className="col-start-1 col-end-2">
 						<div className="grid grid-rows-24">
 							{[...Array(24)].map((_, hour) => (
@@ -77,19 +82,21 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 						</div>
 					</div>
 
+					{/* Time Entries Column */}
 					{days.map((day, dayIndex) => (
 						<div key={dayIndex} className="relative col-span-1 border-l border-gray-100 dark:border-gray-700 grid grid-rows-24">
 							{[...Array(24)].map((_, hour) => (
 								<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700"></div>
 							))}
-							{data?.entries
-								?.filter((entry: TimeEntryData) => {
-									const entryDate = new Date(entry.date); // entry.date is UTC
-									const dayDate = new Date(day);
-									return entryDate.toDateString() === dayDate.toDateString();
+
+							{/* Iterate over Time Entries */}
+							{(data?.entries || [])
+								.filter((entry) => {
+									const entryDate = new Date(entry.date);
+									return entryDate.toDateString() === day.toDateString();
 								})
-								.map((entry: TimeEntryData) => {
-									const startDateTime = new Date(entry.date); // Assuming entry.date is UTC
+								.map((entry) => {
+									const startDateTime = new Date(entry.date);
 									const startHour = startDateTime.getUTCHours();
 									const startMinute = startDateTime.getUTCMinutes();
 
@@ -97,7 +104,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 									const endHour = endDateTime.getUTCHours();
 									const endMinute = endDateTime.getUTCMinutes();
 
-									// Check if Customer exists
 									const customerName = entry.Customer?.name || "Unknown Customer";
 									const color = entry.Customer?.color || "#000000";
 
@@ -107,12 +113,13 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 											entry={{
 												...entry,
 												name: customerName,
+												customerId: entry.customerid,
 												date: new Date(entry.date),
 												description: entry.description ?? "",
 											}}
 											startSlot={startHour * 60 + startMinute}
 											endSlot={endHour * 60 + endMinute}
-											dayIndex={days.findIndex((d) => d.toDateString() === startDateTime.toDateString())}
+											dayIndex={dayIndex}
 											color={color}
 										/>
 									);

@@ -12,20 +12,33 @@ import { toZonedTime, format } from "date-fns-tz";
 const InvoiceGenerator = () => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+
+	// Default filters are set to undefined to fetch all entries
 	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; isInvoiced?: boolean }>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10); // Define page size
-	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
-	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
-	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
-	const { data, error, isLoading } = useGetTimeEntries(parsedStartDate, parsedEndDate, parsedCustomerId, filters.isInvoiced ?? false, page, pageSize);
-	const { entries: timeEntries, totalEntries } = data || { entries: [], totalEntries: 0 };
+	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined; // Default to undefined
+	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined; // Default to undefined
+	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined; // Default to undefined
+
+	// Call useGetTimeEntries with undefined filters initially to fetch all entries
+	const { data, error, isLoading } = useGetTimeEntries({
+		startDate: parsedStartDate,
+		endDate: parsedEndDate,
+		customerId: parsedCustomerId,
+		isInvoiced: filters.isInvoiced ?? undefined, // No filter by default for invoiced status
+		pageSize: pageSize,
+		page: page,
+	});
+
+	const timeEntries = data?.entries || [];
+
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
 
 	useEffect(() => {
-		const newSelectedEntries = isSelectAll ? timeEntries?.map((entry: { id: number }) => entry.id) || [] : [];
+		const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
 		if (selectedEntries.length !== newSelectedEntries.length) {
 			setSelectedEntries(newSelectedEntries);
 		}
@@ -60,10 +73,12 @@ const InvoiceGenerator = () => {
 		mutation.mutate();
 	};
 
+	console.log("DEBUG timeEntries: ", timeEntries);
 	const timeZone = "America/New_York";
 
 	return (
 		<Flex direction="column" gap="4">
+			{/* FilterComponent allows applying filters */}
 			<FilterComponent onApplyFilters={setFilters} />
 
 			{isLoading ? (
@@ -99,26 +114,21 @@ const InvoiceGenerator = () => {
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{timeEntries?.map((entry: TimeEntryData) => {
-								const localDate = toZonedTime(new Date(entry.date), timeZone);
-								const formattedDate = format(localDate, "MM/dd/yyyy");
-
-								return (
-									<Table.Row key={entry.id}>
-										<Table.Cell>
-											<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
-										</Table.Cell>
-										<Table.Cell>{formattedDate}</Table.Cell>
-										<Table.Cell>{entry.description}</Table.Cell>
-										<Table.Cell>{entry.Customer.name}</Table.Cell>
-										<Table.Cell>{entry.duration} minutes</Table.Cell>
-									</Table.Row>
-								);
-							})}
+							{timeEntries?.map((entry: TimeEntryData) => (
+								<Table.Row key={entry.id}>
+									<Table.Cell>
+										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
+									</Table.Cell>
+									<Table.Cell>{entry.date}</Table.Cell>
+									<Table.Cell>{entry.description}</Table.Cell>
+									<Table.Cell>{entry.Customer.name}</Table.Cell>
+									<Table.Cell>{entry.duration} minutes</Table.Cell>
+								</Table.Row>
+							))}
 						</Table.Body>
 					</Table.Root>
 					<div className="flex justify-between pl-5">
-						<PaginationComponent totalItems={totalEntries} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
+						<PaginationComponent totalItems={timeEntries.length} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
 						<DropdownMenu.Root>
 							<DropdownMenu.Trigger>
 								<Button variant="soft" size="2">

@@ -50,7 +50,7 @@ export const useGetTimeEntry = (startDate?: string, endDate?: string, customerId
 		totalEntries: number;
 	}>({
 		queryKey: ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize],
-		queryFn: () => fetchTimeEntry(1, { startDate, endDate, customerId }, isInvoiced),
+		queryFn: () => fetchTimeEntry(0, { startDate, endDate, customerId }, isInvoiced),
 		refetchOnWindowFocus: true,
 		retry: 3,
 	});

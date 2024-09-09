@@ -3,7 +3,6 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
 import { format } from "date-fns";
-import { mockTimeEntries } from "../data/mockData";
 
 export interface TimeEntryData {
 	id: number;
@@ -12,135 +11,106 @@ export interface TimeEntryData {
 	date: string;
 	userId: number;
 	taskId: number;
-	customerId: number;
+	customerid: number;
 	projectId: number;
 	invoiceItemId: number | null;
 	isInvoiced: boolean;
-	Customer: {
-		id: number;
-		name: string;
-		color?: string;
-		shortname: string | undefined;
-		shortName: string | undefined;
-	};
-	Project: {
-		id: number;
-		name: string;
-	};
-	Task: {
-		id: number;
-		name: string;
-	};
-	User: {
-		id: number;
-		name: string;
-	};
+	Customer: { id: number; name: string; color: string };
+	Project: { id: number; name: string };
+	Task: { id: number; name: string };
+	User: { id: number; name: string };
 }
 
-interface Filters {
-	startDate?: string;
-	endDate?: string;
+interface QueryParams {
 	customerId?: number;
+	startDate?: Date;
+	endDate?: Date;
 	isInvoiced?: boolean;
+	pageSize: number;
+	page: number;
 }
 
-const fetchTimeEntries = async (page: number, pageSize: number, filters: Filters) => {
-	if (process.env.NEXT_PUBLIC_USE_MOCK_DATA === "true") {
-		// Use mock data instead of making a real API call
-		const filteredEntries = mockTimeEntries.filter((entry) => {
-			const matchesCustomer = filters.customerId ? entry.customerId === filters.customerId : true;
-			const matchesStartDate = filters.startDate ? new Date(entry.date) >= new Date(filters.startDate) : true;
-			const matchesEndDate = filters.endDate ? new Date(entry.date) <= new Date(filters.endDate) : true;
-			const matchesInvoiced = filters.isInvoiced !== undefined ? entry.isInvoiced === filters.isInvoiced : true;
-			return matchesCustomer && matchesStartDate && matchesEndDate && matchesInvoiced;
-		});
+interface TimeEntryResponse {
+	length: number;
+	entries: TimeEntryData[];
+	totalEntries: number;
+}
 
-		// Simulate pagination
-		const startIndex = (page - 1) * pageSize;
-		const endIndex = startIndex + pageSize;
-		const paginatedEntries = filteredEntries.slice(startIndex, endIndex);
-
-		return {
-			length: filteredEntries.length,
-			entries: paginatedEntries,
-			totalEntries: filteredEntries.length,
-		};
-	} else {
-		// Default to real API logic if not in demo mode
-		try {
-			const params = new URLSearchParams({
-				page: page.toString(),
-				pageSize: pageSize.toString(),
-				...(filters.startDate && { startDate: filters.startDate }),
-				...(filters.endDate && { endDate: filters.endDate }),
-				...(filters.customerId && { customerId: filters.customerId.toString() }),
-				isInvoiced: filters.isInvoiced?.toString() ?? "false",
-			});
-
-			console.log("Fetching time entries with params:", params.toString());
-			const response = await axios.get(`/api/timelog?${params.toString()}`);
-
-			// Log and check if the response structure matches TimeEntryData[]
-			console.log("Response data: ", response.data);
-
-			if (!response.data || !Array.isArray(response.data.entries)) {
-				throw new Error("Invalid response format");
-			}
-
-			return {
-				length: response.data.entries.length,
-				entries: response.data.entries.map((entry: any) => ({
-					...entry,
-					Customer: entry.Customer || { id: 0, name: "Unknown", color: "#000000", shortname: "", shortName: "" },
-					Project: entry.Project || { id: 0, name: "Unknown" },
-					Task: entry.Task || { id: 0, name: "Unknown" },
-					User: entry.User || { id: 0, name: "Unknown" },
-				})),
-				totalEntries: response.data.totalEntries,
-			};
-		} catch (error) {
-			console.error("Error fetching time entries:", error);
-			throw new Error("Error fetching time entries");
-		}
-	}
-};
-
-export const useGetTimeEntries = (
-	startDate?: Date,
-	endDate?: Date,
-	customerId?: number,
-	isInvoiced: boolean = false,
-	page: number = 1,
-	pageSize: number = 10
-) => {
+export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced }: QueryParams) => {
 	const queryClient = useQueryClient();
+
+	// Ensure queryKey only contains relevant values
+	const queryKey = [
+		"timeEntries",
+		page,
+		pageSize,
+		startDate ? startDate.toISOString() : undefined, // Convert dates to ISO strings
+		endDate ? endDate.toISOString() : undefined, // Convert dates to ISO strings
+		customerId !== undefined ? customerId : undefined, // Include customerId only if it's defined
+		isInvoiced,
+	].filter((key) => key !== undefined); // Remove any undefined keys from the queryKey
+
 	const formattedStartDate = startDate ? format(startDate, "yyyy-MM-dd") : undefined;
 	const formattedEndDate = endDate ? format(endDate, "yyyy-MM-dd") : undefined;
 
-	const queryKey = ["time-entries", formattedStartDate, formattedEndDate, customerId, isInvoiced].filter((key) => key !== undefined);
-
-	const query = useQuery<{
-		length: any;
-		entries: TimeEntryData[];
-		totalEntries: number;
-	}>({
-		queryKey,
-		queryFn: () =>
-			fetchTimeEntries(page, pageSize, {
-				startDate: formattedStartDate,
-				endDate: formattedEndDate,
-				customerId,
-				isInvoiced,
-			}),
+	const query = useQuery<TimeEntryResponse>({
+		queryKey, // Pass queryKey as the key for this query
+		queryFn: async () => {
+			const params: Record<string, string> = {
+				page: page.toString(),
+				pageSize: pageSize.toString(),
+				...(formattedStartDate && { startDate: formattedStartDate }),
+				...(formattedEndDate && { endDate: formattedEndDate }),
+				...(customerId !== undefined ? { customerId: customerId.toString() } : {}),
+				isInvoiced: isInvoiced?.toString() ?? "false",
+			};
+			const queryString = new URLSearchParams(params).toString();
+			console.log("Request URL to Endpoint: ", `/api/timelog?${queryString}`);
+			const result = await fetchTimeEntries(page, pageSize, params);
+			return result;
+		},
 		refetchOnWindowFocus: true,
 		retry: 3,
 	});
 
-	// Invalidate the query when filters change
 	useEffect(() => {
 		console.log("Invalidating query with key:", queryKey);
 		queryClient.invalidateQueries({ queryKey });
-	}, [formattedStartDate, formattedEndDate, customerId, isInvoiced, page, pageSize, queryClient]);
+	}, [queryKey, queryClient]);
 
 	return query;
 };
+
+// Fetch function with consistent return type
+async function fetchTimeEntries(
+	page: number,
+	pageSize: number,
+	filters: { startDate?: string; endDate?: string; customerId?: string; isInvoiced?: string }
+): Promise<TimeEntryResponse> {
+	const params = new URLSearchParams({
+		page: page.toString(),
+		pageSize: pageSize.toString(),
+		...(filters.startDate && { startDate: filters.startDate }),
+		...(filters.endDate && { endDate: filters.endDate }),
+		...(filters.customerId && { customerId: filters.customerId }),
+		isInvoiced: filters.isInvoiced ?? "false",
+	});
+
+	try {
+		console.log("Request URL to Endpoint: ", `/api/timelog?${params.toString()}`);
+		const response = await axios.get(`/api/timelog?${params.toString()}`);
+
+		if (!response.data || !Array.isArray(response.data.entries)) {
+			throw new Error("Invalid response format");
+		}
+
+		return {
+			length: response.data.entries.length,
+			entries: response.data.entries,
+			totalEntries: response.data.totalEntries ?? response.data.entries.length,
+		};
+	} catch (error) {
+		console.error("Error fetching time entries:", error);
+		throw new Error("Error fetching time entries");
+	}
+}

@@ -22,7 +22,13 @@ const Page: React.FC = () => {
 
 	const days = Array.from({ length: 7 }, (_, i) => new Date(new Date().setDate(new Date().getDate() + i)));
 
-	const { error, isLoading } = useGetTimeEntries(filters.startDate, filters.endDate, filters.customerId);
+	const { data, error, isLoading } = useGetTimeEntries({
+		pageSize: 20,
+		page: 1,
+		startDate: filters.startDate ? new Date(filters.startDate) : undefined,
+		endDate: filters.endDate ? new Date(filters.endDate) : undefined,
+		customerId: filters.customerId !== null && filters.customerId !== undefined ? filters.customerId : undefined,
+	});
 
 	return (
 		<Flex direction="column" gap="4">

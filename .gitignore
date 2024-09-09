@@ -29,6 +29,9 @@ yarn-error.log*
 .env*.local
 .env
 
+# AI
+.prompts
+
 # vercel
 .vercel
 
@@ -41,3 +44,4 @@ next-env.d.ts
 
 # Output
 *.pdf
+.aider*

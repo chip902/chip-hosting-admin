@@ -10,21 +10,25 @@ import PaginationComponent from "./PaginationComponent";
 interface InvoiceGeneratorProps {
 	userId: number;
 }
-
 const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const [page, setPage] = useState(1);
+	const [pageSize, setPageSize] = useState(10);
 	const [filters, setFilters] = useState<{ customerId?: number; startDate?: string; endDate?: string; isInvoiced?: boolean }>({});
-	const { data, error, isLoading } = useGetTimeEntries(
-		filters.startDate ? new Date(filters.startDate) : undefined,
-		filters.endDate ? new Date(filters.endDate) : undefined,
-		filters.customerId,
-		filters.isInvoiced ?? false,
-		page
-	);
+	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
+	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
+	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
+	const { data, error, isLoading } = useGetTimeEntries({
+		startDate: parsedStartDate,
+		endDate: parsedEndDate,
+		customerId: parsedCustomerId,
+		isInvoiced: filters.isInvoiced ?? false,
+		pageSize: pageSize,
+		page: page,
+	});
 	const timeEntries = data?.entries || [];
-	const totalEntries = data?.totalEntries || 0;
+	const totalEntries = data?.length || 0;
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
