@@ -36,8 +36,8 @@ export const filterSchema = z.object({
 });
 
 export const projectSchema = z.object({
-	id: z.number(),
-	customerId: z.number().optional(),
+	id: z.number().optional(),
+	customerId: z.number(),
 	dateCreated: z.string().nullable().optional(),
 	rate: z
 		.union([z.string(), z.number()])
@@ -52,7 +52,7 @@ export const projectSchema = z.object({
 		})
 		.optional(),
 	description: z.string().optional(),
-	name: z.string(),
+	name: z.string().min(1, "Project name is required"),
 });
 
 export const bookingSchema = z.object({
