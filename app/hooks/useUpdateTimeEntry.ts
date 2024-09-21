@@ -3,6 +3,7 @@ import axios from "axios";
 
 const updateTimeEntry = async ({ id, data }: { id: number; data: object }) => {
 	const response = await axios.patch(`/api/timelog/${id}`, data);
+
 	if (response.status !== 200) {
 		throw new Error("Error updating time entry");
 	}
