@@ -1,3 +1,6 @@
+import HeaderBox from "@/components/HeaderBox";
+import RightSidebar from "../components/RightSidebar";
+import TotalBalanceBox from "../components/TotalBalanceBox";
 import IssueChart from "./IssueChart";
 
 const stats = [
@@ -12,9 +15,25 @@ function classNames(...classes: string[]) {
 }
 
 export default function Home() {
+	const loggedIn = { firstName: "Andrew", lastName: "Chepurny", email: "andrew@chip-hosting.com" };
 	return (
 		<>
-			<div className="container mr-auto px-4">
+			<section className="home">
+				<div className="home-content">
+					<header className="home-header">
+						<TotalBalanceBox accounts={[]} totalBanks={1} totalCurrentBalance={1234.12} />
+						<HeaderBox title={"Welcome"} user={loggedIn.firstName || "Guest"} subtext={"Make that  money!"} />
+					</header>
+					RECENT TRANSACTIONS
+				</div>
+				<RightSidebar user={loggedIn} transactions={[]} banks={[{ currentBalance: 123.5 }, { currentBalance: 500 }]} />
+			</section>
+		</>
+	);
+}
+
+/**
+ * <div className="container mr-auto px-4">
 				<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
 					{stats.map((stat) => (
 						<div key={stat.name} className="flex flex-col items-center p-6 bg-white shadow rounded-lg">
@@ -28,6 +47,5 @@ export default function Home() {
 				</dl>
 				<IssueChart />
 			</div>
-		</>
-	);
-}
+ * 
+ */

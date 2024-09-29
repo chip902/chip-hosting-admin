@@ -16,6 +16,7 @@ type ProjectSchema = z.infer<typeof projectSchema>;
 
 const AddDocument = ({ project }: { project?: Project }) => {
 	const [customers, setCustomers] = useState<Customer[]>([]);
+	const [isModalOpen, setIsModalOpen] = useState(false);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -57,6 +58,7 @@ const AddDocument = ({ project }: { project?: Project }) => {
 			setSubmitting(false);
 			router.push("/projects");
 			router.refresh();
+			setIsModalOpen(false);
 		} catch (error) {
 			console.error("Error occurred during submission:", error);
 			setSubmitting(false);
@@ -66,7 +68,7 @@ const AddDocument = ({ project }: { project?: Project }) => {
 
 	return (
 		<Flex direction="column" gap="2">
-			<Dialog.Root>
+			<Dialog.Root open={isModalOpen} onOpenChange={setIsModalOpen}>
 				<Dialog.Trigger>
 					<Button variant="solid">Add Project</Button>
 				</Dialog.Trigger>
