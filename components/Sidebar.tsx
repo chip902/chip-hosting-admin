@@ -26,7 +26,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 	return (
 		<div className={classNames("flex flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-4", className || "")}>
 			<div className="flex h-16 shrink-0 items-center mt-2">
-				<img className="h-12 w-auto rounded-full" src="/CHS_Logo.png" alt="Your Company" />
+				<img className="h-12 w-auto rounded-full" src="/CHS_Logo.png" alt="Chip Hosting Solutions" />
 			</div>
 			<nav className="flex flex-1 flex-col">
 				<ul role="list" className="flex flex-1 flex-col gap-y-7">
