@@ -19,9 +19,9 @@ const InvoiceGenerator = () => {
 	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; isInvoiced?: boolean }>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10); // Define page size
-	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined; // Default to undefined
-	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined; // Default to undefined
-	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined; // Default to undefined
+	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
+	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
+	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
 
 	// Call useGetTimeEntries with undefined filters initially to fetch all entries
 	const { data, error, isLoading } = useGetTimeEntries({
