@@ -2,6 +2,7 @@ import HeaderBox from "@/components/HeaderBox";
 import RightSidebar from "../components/RightSidebar";
 import TotalBalanceBox from "../components/TotalBalanceBox";
 import IssueChart from "./IssueChart";
+import React from "react";
 
 const stats = [
 	{ name: "Revenue", value: "$405,091.00", change: "+4.75%", changeType: "positive" },
@@ -22,7 +23,7 @@ export default function Home() {
 				<div className="home-content">
 					<header className="home-header">
 						<TotalBalanceBox accounts={[]} totalBanks={1} totalCurrentBalance={1234.12} />
-						<HeaderBox title={"Welcome"} user={loggedIn.firstName || "Guest"} subtext={"Make that  money!"} />
+						<HeaderBox title={"Welcome"} user={loggedIn.firstName || "Guest"} subtext={"Make that money!"} />
 					</header>
 					RECENT TRANSACTIONS
 				</div>
