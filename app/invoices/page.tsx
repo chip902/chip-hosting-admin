@@ -1,14 +1,15 @@
 "use client";
 import { useState, useEffect } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog, DropdownMenu } from "@radix-ui/themes";
-import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
+import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import FilterComponent from "./FilterComponent";
 import PaginationComponent from "./PaginationComponent";
-import { toZonedTime, format } from "date-fns-tz";
+import { format } from "date-fns-tz";
 import React from "react";
+import { TimeEntryData } from "@/types";
 
 const InvoiceGenerator = () => {
 	const router = useRouter();

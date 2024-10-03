@@ -1,11 +1,12 @@
 "use client";
 import { useState } from "react";
 import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
-import { TimeEntryData, useGetTimeEntries } from "../hooks/useGetTimeEntries";
+import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import PaginationComponent from "./PaginationComponent";
+import { TimeEntryData } from "@/types";
 
 interface InvoiceGeneratorProps {
 	userId: number;
