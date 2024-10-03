@@ -3,23 +3,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useEffect } from "react";
 import { format } from "date-fns";
-
-export interface TimeEntryData {
-	id: number;
-	description: string | null;
-	duration: number;
-	date: string;
-	userId: number;
-	taskId: number;
-	customerid: number;
-	projectId: number;
-	invoiceItemId: number | null;
-	isInvoiced: boolean;
-	Customer: { id: number; name: string; color: string };
-	Project: { id: number; name: string };
-	Task: { id: number; name: string };
-	User: { id: number; name: string };
-}
+import { TimeEntryData } from "@/types";
 
 interface QueryParams {
 	customerId?: number;
@@ -49,7 +33,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 		startDate ? startDate.toISOString() : undefined, // Convert dates to ISO strings
 		endDate ? endDate.toISOString() : undefined, // Convert dates to ISO strings
 		customerId !== undefined ? customerId : undefined, // Include customerId only if it's defined
-		isInvoiced,
+		isInvoiced !== undefined ? isInvoiced : undefined,
 		sortBy,
 		sortOrder,
 	].filter((key) => key !== undefined);
@@ -66,7 +50,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 				...(formattedStartDate && { startDate: formattedStartDate }),
 				...(formattedEndDate && { endDate: formattedEndDate }),
 				...(customerId !== undefined ? { customerId: customerId.toString() } : {}),
-				isInvoiced: isInvoiced?.toString() ?? "false",
+				...(isInvoiced !== undefined ? { isInvoiced: isInvoiced.toString() } : {}),
 				sortBy,
 				sortOrder,
 			};
@@ -93,14 +77,23 @@ async function fetchTimeEntries(
 	pageSize: number,
 	filters: { startDate?: string; endDate?: string; customerId?: string; isInvoiced?: string }
 ): Promise<TimeEntryResponse> {
-	const params = new URLSearchParams({
-		page: page.toString(),
-		pageSize: pageSize.toString(),
-		...(filters.startDate && { startDate: filters.startDate }),
-		...(filters.endDate && { endDate: filters.endDate }),
-		...(filters.customerId && { customerId: filters.customerId }),
-		isInvoiced: filters.isInvoiced ?? "false",
-	});
+	const params = new URLSearchParams();
+	if (filters.startDate) {
+		params.append("startDate", filters.startDate);
+	}
+	if (filters.endDate) {
+		params.append("endDate", filters.endDate);
+	}
+	if (filters.customerId) {
+		params.append("customerId", filters.customerId);
+	}
+	if (filters.isInvoiced !== undefined) {
+		params.append("isInvoiced", filters.isInvoiced);
+	}
+
+	// Always add page and pageSize params
+	params.append("page", page.toString());
+	params.append("pageSize", pageSize.toString());
 
 	try {
 		console.log("Request URL to Endpoint: ", `/api/timelog?${params.toString()}`);

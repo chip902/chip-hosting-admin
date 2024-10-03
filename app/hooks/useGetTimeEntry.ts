@@ -1,37 +1,6 @@
+import { TimeEntryData } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
-
-export interface TimeEntryData {
-	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: string;
-	userId: number;
-	taskId: number;
-	customerId: number;
-	projectId: number;
-	invoiceItemId: number | null;
-	isInvoiced: boolean;
-	shortname: string;
-	Customer: {
-		id: number;
-		name: string;
-		color: string;
-		shortname: string;
-	};
-	Project: {
-		id: number;
-		name: string;
-	};
-	Task: {
-		id: number;
-		name: string;
-	};
-	User: {
-		id: number;
-		name: string;
-	};
-}
 
 const fetchTimeEntry = async (userId: number, filters: any, isInvoiced: boolean) => {
 	const response = await axios.get("/api/timelog", {

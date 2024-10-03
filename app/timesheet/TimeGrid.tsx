@@ -4,20 +4,13 @@ import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
-
-interface TimeGridProps {
-	filters: {
-		startDate?: Date;
-		endDate?: Date;
-		customerId?: number;
-	};
-}
+import { TimeGridProps } from "@/types";
 
 const TimeGrid = ({ filters }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
 	const { data, error, isLoading } = useGetTimeEntries({
-		pageSize: 20,
+		pageSize: 50,
 		page: 1,
 		startDate: startDate ? new Date(startDate) : undefined,
 		endDate: endDate ? new Date(endDate) : undefined,
@@ -113,7 +106,7 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 											entry={{
 												...entry,
 												name: customerName,
-												customerId: entry.customerid,
+												customerId: entry.customerId,
 												date: new Date(entry.date),
 												description: entry.description ?? "",
 											}}

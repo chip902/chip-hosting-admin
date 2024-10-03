@@ -383,3 +383,42 @@ export interface TableRow {
 	rate: number;
 	amount: number;
 }
+
+export interface TimeGridProps {
+	filters: {
+		startDate?: Date;
+		endDate?: Date;
+		customerId?: number;
+	};
+}
+export interface TimeEntryData {
+	id: number;
+	description: string | null;
+	duration: number | undefined;
+	date: string;
+	userId: number;
+	taskId: number;
+	customerId: number;
+	projectId: number;
+	invoiceItemId: number | null;
+	isInvoiced: boolean;
+	shortname: string;
+	Customer: {
+		id: number;
+		name: string;
+		color: string;
+		shortname: string;
+	};
+	Project: {
+		id: number;
+		name: string;
+	};
+	Task: {
+		id: number;
+		name: string;
+	};
+	User: {
+		id: number;
+		name: string;
+	};
+}
