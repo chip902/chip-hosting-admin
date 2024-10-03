@@ -12,6 +12,7 @@ interface CustomInputProps {
 	name: FieldPath<z.infer<typeof formSchema>>;
 	label: string;
 	placeholder: string;
+	onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
 const CustomInput = ({ control, name, label, placeholder }: CustomInputProps) => {

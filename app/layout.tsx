@@ -20,7 +20,7 @@ const poppins = Poppins({
 
 const userNavigation = [
 	{ name: "Your profile", href: "#" },
-	{ name: "Sign out", href: "#" },
+	{ name: "Sign out", href: "/sign-out" },
 ];
 
 function classNames(...classes: string[]) {

@@ -1,307 +1,137 @@
-import { PDFDocument, rgb, StandardFonts } from "pdf-lib";
 import fs from "fs";
 import path from "path";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import { PdfData, TableRow, TimeEntry } from "@/types";
 
-interface PdfData {
-	id: number;
-	customer: {
-		id: number;
-		name: string;
-		shortName: string;
-		email: string;
-		defaultRate: number;
-		color: string | null;
-	};
-	totalAmount: number;
-	timeEntries: {
-		id: number;
-		description: string | null;
-		duration: number;
-		date: Date;
-		userId: number;
-		taskId: number;
-		customerId: number;
-		projectId: number;
-		customer: {
-			id: number;
-			name: string;
-			shortName: string | null;
-			email: string;
-			defaultRate: number;
-			color: string | null;
-		};
-		task: {
-			id: number;
-			name: string;
-		};
-		user: {
-			id: number;
-			name: string;
-			email: string;
-		};
-		project: {
-			id: number;
-			name: string;
-		};
-	}[];
-}
+export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> {
+	const doc = new jsPDF({
+		orientation: "portrait",
+		unit: "mm",
+		format: "letter",
+	});
+	// Helper function to round to nearest quarter hour
+	function roundToQuarterHour(hours: number): number {
+		return Math.round(hours * 4) / 4;
+	}
+	function formatCurrency(amount: number): string {
+		return new Intl.NumberFormat("en-US", {
+			style: "currency",
+			currency: "USD",
+			minimumFractionDigits: 2,
+			maximumFractionDigits: 2,
+		}).format(amount);
+	}
+	function wrapText(text: string, maxWidth: number): string[] {
+		const words = text.split(" ");
+		const lines: string[] = [];
+		let currentLine = "";
 
-const wrapText = (text: string, maxWidth: number, fontSize: number, font: any) => {
-	const lines = [];
-	let line = "";
-	const words = text.split(" ");
+		words.forEach((word) => {
+			const testLine = currentLine ? `${currentLine} ${word}` : word;
+			const testWidth = doc.getTextWidth(testLine);
 
-	for (let i = 0; i < words.length; i++) {
-		const testLine = line + words[i] + " ";
-		const width = font.widthOfTextAtSize(testLine.replace(/\n/g, ""), fontSize);
+			if (testWidth > maxWidth) {
+				lines.push(currentLine);
+				currentLine = word;
+			} else {
+				currentLine = testLine;
+			}
+		});
 
-		if (width > maxWidth && i > 0) {
-			lines.push(line.trim());
-			line = words[i] + " ";
-		} else {
-			line = testLine;
+		if (currentLine) {
+			lines.push(currentLine);
 		}
+
+		return lines;
 	}
 
-	lines.push(line.trim());
-	return lines;
-};
-
-export async function generateInvoicePdf(data: PdfData): Promise<Uint8Array> {
-	const pdfDoc = await PDFDocument.create();
-	const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
 	// Sort timeEntries by date in ascending order
-	data.timeEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+	pdfData.timeEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-	const logoPath = path.resolve(process.cwd(), "public", "CHS_Logo.png");
-	const logoBytes = fs.readFileSync(logoPath);
-	const logoImage = await pdfDoc.embedPng(logoBytes);
-	const logoDims = logoImage.scale(0.5);
-
-	const createPage = (isFirstPage = false) => {
-		const page = pdfDoc.addPage([600, 750]);
-		const { width, height } = page.getSize();
-
-		if (isFirstPage) {
-			page.drawImage(logoImage, {
-				x: 50,
-				y: height - 100,
-				width: logoDims.width,
-				height: logoDims.height,
-			});
-
-			page.drawText("Chip Hosting Solutions, LLC", {
-				x: 50,
-				y: height - 150,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-			page.drawText("PO Box 397", {
-				x: 50,
-				y: height - 165,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-			page.drawText("Pound Ridge, NY 10576", {
-				x: 50,
-				y: height - 180,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-			page.drawText("Payment Terms: Net 30 days", {
-				x: 50,
-				y: height - 195,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-
-			page.drawText(`Invoice No. ${data.customer.shortName}-${data.id}`, {
-				x: 50,
-				y: height - 220,
-				size: 15,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-
-			page.drawText(`Bill To: ${data.customer.name}`, {
-				x: 50,
-				y: height - 240,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-
-			page.drawText(`Date: ${new Date().toLocaleDateString()}`, {
-				x: 50,
-				y: height - 260,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-
-			page.drawText(`Project: ${data.timeEntries[0].project.name}`, {
-				x: 50,
-				y: height - 280,
-				size: 12,
-				font: font,
-				color: rgb(0, 0, 0),
-			});
-		}
-
-		// Table Headers
-		const tableTopY = isFirstPage ? height - 310 : height - 70;
-		const tableX = 50;
-		const columnWidths = [80, 170, 80, 80, 80];
-
-		page.drawText("Date", {
-			x: tableX + 10, // Add padding
-			y: tableTopY,
-			size: 12,
-			font: font,
-			color: rgb(0, 0, 0),
-		});
-
-		page.drawText("Serviced Item Description", {
-			x: tableX + columnWidths[0] + 10, // Add padding
-			y: tableTopY,
-			size: 12,
-			font: font,
-			color: rgb(0, 0, 0),
-		});
-
-		page.drawText("Hours", {
-			x: tableX + columnWidths[0] + columnWidths[1] + 10, // Add padding
-			y: tableTopY,
-			size: 12,
-			font: font,
-			color: rgb(0, 0, 0),
-		});
-
-		page.drawText("Rate", {
-			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + 10, // Add padding
-			y: tableTopY,
-			size: 12,
-			font: font,
-			color: rgb(0, 0, 0),
-		});
-
-		page.drawText("Amount", {
-			x: tableX + columnWidths[0] + columnWidths[1] + columnWidths[2] + columnWidths[3] + 10, // Add padding
-			y: tableTopY,
-			size: 12,
-			font: font,
-			color: rgb(0, 0, 0),
-		});
-
-		return { page, tableTopY: tableTopY - 20 };
-	};
-
-	const { page: firstPage, tableTopY: firstTableTopY } = createPage(true);
-
-	let currentY = firstTableTopY;
-	let currentPage = firstPage;
-
-	const fontSize = 10;
-	const maxWidth = 160; // Adjust maxWidth for the description column
-
-	data.timeEntries.forEach((entry) => {
-		const formattedDate = new Date(entry.date).toLocaleDateString(); // Format date as MM/DD/YYYY
-		const lines = wrapText(entry.description || "", maxWidth, fontSize, font);
-
-		if (currentY - (fontSize * lines.length + 20) < 0) {
-			// Check if there's enough space
-			const { page, tableTopY } = createPage();
-			currentPage = page;
-			currentY = tableTopY;
-		}
-
-		// Draw the Date column
-		currentPage.drawText(formattedDate, {
-			x: 50 + 10, // Add padding
-			y: currentY,
-			size: fontSize,
-			font,
-			color: rgb(0, 0, 0),
-		});
-
-		// Draw the Serviced Item Description column
-		lines.forEach((line, index) => {
-			currentPage.drawText(line, {
-				x: 130 + 10, // Add padding
-				y: currentY - fontSize * index,
-				size: fontSize,
-				font,
-				color: rgb(0, 0, 0),
-			});
-		});
-
-		// Draw other columns: Hours, Rate, Amount
-		const lineOffset = fontSize * (lines.length - 1); // Offset for the lines of text
-
-		currentPage.drawText(`${(entry.duration / 60).toFixed(2)}`, {
-			x: 300 + 10, // Add padding
-			y: currentY - lineOffset,
-			size: fontSize,
-			font,
-			color: rgb(0, 0, 0),
-		});
-
-		currentPage.drawText(`$${data.customer.defaultRate.toFixed(2)}`, {
-			x: 380 + 10, // Add padding
-			y: currentY - lineOffset,
-			size: fontSize,
-			font,
-			color: rgb(0, 0, 0),
-		});
-
-		const amount = (entry.duration / 60) * data.customer.defaultRate;
-		currentPage.drawText(`$${amount.toFixed(2)}`, {
-			x: 460 + 10, // Add padding
-			y: currentY - lineOffset,
-			size: fontSize,
-			font,
-			color: rgb(0, 0, 0),
-		});
-
-		currentY -= fontSize * (lines.length + 2); // Add space between entries
-	});
-
-	// Total Amount on the last page
-	if (currentY - 20 < 0) {
-		const { page, tableTopY } = createPage();
-		currentPage = page;
-		currentY = tableTopY;
+	// Load logo
+	try {
+		const logoPath = path.resolve(process.cwd(), "public", "CHS_Logo.png");
+		const logoData = fs.readFileSync(logoPath, { encoding: "base64" });
+		doc.addImage(`data:image/png;base64,${logoData}`, "PNG", 10, 10, 30, 30);
+	} catch (error) {
+		console.error("Error loading logo:", error);
+		// Continue without the logo if there's an error
 	}
 
-	const totalY = currentY - 20;
-	currentPage.drawText(`Total: $${data.totalAmount.toFixed(2)}`, {
-		x: 460 + 10, // Add padding
-		y: totalY,
-		size: 12,
-		font: font,
-		color: rgb(0, 0, 0),
+	// Prepare table data
+	const tableData: TableRow[] = pdfData.timeEntries.map((entry: TimeEntry) => {
+		const rate = entry.Project.rate ?? entry.Customer.defaultRate ?? 0;
+		const hours = roundToQuarterHour(entry.duration / 60);
+		const amount = hours * rate;
+
+		return {
+			date: new Date(entry.date).toLocaleDateString(),
+			projectName: entry.Project.name,
+			description: entry.description,
+			hours: hours,
+			rate: rate,
+			amount: amount,
+		};
 	});
 
-	const pdfBytes = await pdfDoc.save();
-	return pdfBytes;
+	// Load and add custom font
+	try {
+		// Use an absolute path to the font file
+		const fontPath = path.resolve(process.cwd(), "public", "fonts", "Poppins-Regular.ttf");
+		const fontData = fs.readFileSync(fontPath);
+
+		doc.addFileToVFS("Poppins-Regular.ttf", fontData.toString("base64"));
+		doc.addFont("Poppins-Regular.ttf", "Poppins", "normal");
+		doc.setFont("Poppins");
+	} catch (error) {
+		console.error("Error loading custom font:", error);
+		// Fall back to a default font if there's an error
+		doc.setFont("helvetica");
+	}
+
+	// Add invoice details
+	doc.setFontSize(12);
+	doc.text("Chip Hosting Solutions, LLC", 10, 50);
+	doc.setFontSize(10);
+	doc.text("PO Box 397", 10, 55);
+	doc.text("Pound Ridge, NY 10576", 10, 60);
+	doc.text("Payment Terms: Net 30 days", 10, 65);
+
+	const customer = pdfData.timeEntries[0].Customer;
+	doc.text(`Invoice No. ${pdfData.invoiceNumber || "N/A"}`, 140, 50);
+	doc.text(`Bill To: ${customer.name}`, 140, 55);
+	doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 60);
+	doc.text(`Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.Project.name))).join(", ")}`, 140, 65);
+
+	const projectsText = `Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.Project.name))).join(", ")}`;
+	const wrappedProjects = wrapText(projectsText, 60);
+	wrappedProjects.forEach((line, index) => {
+		doc.text(line, 140, 65 + index * 5);
+	});
+
+	// Add table
+	autoTable(doc, {
+		head: [["Date", "Project", "Description", "Hours", "Rate", "Amount"]],
+		body: tableData.map((row) => [row.date, row.projectName, row.description, row.hours.toFixed(2), formatCurrency(row.rate), formatCurrency(row.amount)]),
+		startY: 80 + wrappedProjects.length * 5,
+		styles: { cellPadding: 1.5, fontSize: 8 },
+		columnStyles: {
+			0: { cellWidth: 20 },
+			1: { cellWidth: 30 },
+			2: { cellWidth: "auto" },
+			3: { cellWidth: 15, halign: "right" },
+			4: { cellWidth: 20, halign: "right" },
+			5: { cellWidth: 25, halign: "right" },
+		},
+	});
+
+	// Calculate and format total
+	const totalAmount = tableData.reduce((acc, row) => acc + row.amount, 0);
+	const formattedTotal = formatCurrency(totalAmount);
+	const finalY = (doc as any).lastAutoTable.finalY || 0;
+	doc.text(`Total: ${formattedTotal}`, 170, finalY + 10, { align: "right" });
+
+	// Generate PDF
+	return doc.output("arraybuffer");
 }
-
-export const ensureDirectoryExistence = (filePath: string) => {
-	const dirname = path.dirname(filePath);
-	if (fs.existsSync(dirname)) {
-		return true;
-	}
-	ensureDirectoryExistence(dirname);
-	fs.mkdirSync(dirname);
-};
-
-export const savePdf = async (pdfBytes: Uint8Array, invoiceId: number) => {
-	const pdfPath = path.join(process.cwd(), "public", "invoices", `invoice_${invoiceId}.pdf`);
-	ensureDirectoryExistence(pdfPath);
-	fs.writeFileSync(pdfPath, pdfBytes);
-	return pdfPath;
-};

@@ -21,24 +21,25 @@ declare type SignUpParams = {
 };
 
 declare type LoginUser = {
+	id: number;
 	email: string;
 	password: string;
 };
 
 declare type User = {
-	// $id: string;
+	$id: string;
 	email: string;
-	// userId: string;
-	// dwollaCustomerUrl: string;
-	// dwollaCustomerId: string;
+	userId: string;
+	dwollaCustomerUrl: string;
+	dwollaCustomerId: string;
 	firstName: string;
 	lastName: string;
-	// address1: string;
-	// city: string;
-	// state: string;
-	// postalCode: string;
-	// dateOfBirth: string;
-	// ssn: string;
+	address: string;
+	city: string;
+	state: string;
+	postalCode: string;
+	dateOfBirth: string;
+	ssn: string;
 };
 
 declare type NewUserParams = {
@@ -347,4 +348,38 @@ export interface Customer {
 	dateCreated: string;
 	defaultRate: number;
 	color: string;
+}
+
+export interface TimeEntry {
+	id: number;
+	description: string;
+	duration: number;
+	date: string;
+	Customer: {
+		name: string;
+		email: string;
+		defaultRate: number;
+	};
+	Project: {
+		name: string;
+		rate: number;
+	};
+	Task: {
+		name: string;
+	};
+}
+
+export interface PdfData {
+	invoiceNumber?: string;
+	timeEntries: TimeEntry[];
+}
+
+export interface TableRow {
+	[key: string]: string | number;
+	date: string;
+	projectName: string;
+	description: string;
+	hours: number;
+	rate: number;
+	amount: number;
 }

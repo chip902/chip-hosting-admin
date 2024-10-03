@@ -198,7 +198,7 @@ const LogTime = () => {
 										<Select.Content>
 											{users.map((user) => (
 												<Select.Item key={user.id} value={String(user.id)}>
-													{user.name}
+													{user.firstName} {user.lastName}
 												</Select.Item>
 											))}
 										</Select.Content>

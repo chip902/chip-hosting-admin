@@ -49,9 +49,14 @@ export async function GET(request: NextRequest) {
 			whereClause.date = { ...whereClause.date, lte: nowDate };
 		}
 
-		if (customerId !== null && customerId !== undefined) whereClause.customerId = parseInt(customerId, 10); // Convert string to number
-		if (isInvoiced !== null && isInvoiced !== undefined) whereClause.isInvoiced = Boolean(Number(isInvoiced)); // Convert string to boolean
-
+		if (customerId !== null && customerId !== undefined) whereClause.customerId = parseInt(customerId, 10);
+		if (isInvoiced !== null && isInvoiced !== undefined) {
+			if (isInvoiced === "true") {
+				whereClause.isInvoiced = true;
+			} else if (isInvoiced === "false") {
+				whereClause.isInvoiced = false;
+			}
+		}
 		const timeEntries = await prisma.timeEntry.findMany({
 			where: whereClause,
 			include: {
@@ -70,7 +75,7 @@ export async function GET(request: NextRequest) {
 		const totalEntries = await prisma.timeEntry.count({
 			where: whereClause,
 		});
-
+		// console.log("CHIP DEBUG ", timeEntries);
 		return NextResponse.json({ entries: timeEntries, totalEntries }, { status: 200 });
 	} catch (error) {
 		console.error("Error fetching time entries:", error);
