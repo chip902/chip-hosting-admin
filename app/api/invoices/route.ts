@@ -53,12 +53,18 @@ export async function POST(request: NextRequest) {
 
 		const pdfData = {
 			invoiceNumber: `${customer.shortName}-${invoice.id}`,
+			paymentTerms: customer.paymentTerms || "30",
 			timeEntries: timeEntries.map((entry) => ({
 				id: entry.id,
 				description: entry.description ?? "",
 				duration: entry.duration,
 				date: entry.date.toISOString(),
-				Customer: { name: entry.Customer.name, email: entry.Customer.email, defaultRate: entry.Customer.defaultRate },
+				Customer: {
+					name: entry.Customer.name,
+					email: entry.Customer.email,
+					defaultRate: entry.Customer.defaultRate,
+					paymentTerms: entry.Customer.paymentTerms || "30",
+				},
 				Project: { name: entry.Project.name, rate: entry.Project.rate ?? entry.Customer.defaultRate },
 				Task: { name: entry.Task.name },
 			})),

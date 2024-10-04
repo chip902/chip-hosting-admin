@@ -8,6 +8,7 @@ export const customerSchema = z.object({
 	email: z.string().email().max(255),
 	defaultRate: z.number().positive(),
 	color: z.string().max(7).nullable().optional(),
+	paymentTerms: z.string().optional(),
 });
 
 export const timeLogSchema = z.object({
@@ -86,20 +87,20 @@ export const bookingSchema = z.object({
 
 export const authFormSchema = (type: string) =>
 	z.object({
-		firstName: type === "sign-in" ? z.string().optional() : z.string().min(2).max(32),
-		lastName: type === "sign-in" ? z.string().optional() : z.string().min(2).max(32),
-		address: type === "sign-in" ? z.string().optional() : z.string().min(2).max(100),
-		city: type === "sign-in" ? z.string().optional() : z.string().min(2).max(32),
-		state: type === "sign-in" ? z.string().optional() : z.string().min(2).max(2),
-		postalCode: type === "sign-in" ? z.string().optional() : z.string(),
-		dob: type === "sign-in" ? z.string().optional() : z.string().max(10),
-		role: type === "sign-in" ? z.string().optional() : z.string().max(10),
+		firstName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		lastName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		address: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(100),
+		city: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		state: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(2),
+		postalCode: type === "sign-in" || type === "customer" ? z.string().optional() : z.string(),
+		dob: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
+		role: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
 		ssn:
-			type === "sign-in"
+			type === "sign-in" || type === "customer"
 				? z.string().optional()
 				: z.string().min(4, "Should only be the last 4 digits of your SSN or TIN").max(4, "Should only be the last 4 digits of your SSN or TIN"),
 		email: z.string().email().min(2, {
 			message: "Email must be at least 2 characters.",
 		}),
-		password: z.string().min(8, "Password must be at least 8 characters"),
+		password: type === "customer" ? z.string().optional() : z.string().min(8, "Password must be at least 8 characters"),
 	});

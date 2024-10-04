@@ -27,16 +27,17 @@ model User {
 }
 
 model Customer {
-  id          Int         @id @default(autoincrement())
-  name        String      @db.VarChar(255)
-  email       String      @db.VarChar(255)
-  dateCreated DateTime    @default(now())
-  defaultRate Float
-  color       String?
-  shortName   String?
-  invoices    Invoice[]
-  projects    Project[]
-  timeEntries TimeEntry[]
+  id           Int         @id @default(autoincrement())
+  name         String      @db.VarChar(255)
+  email        String      @db.VarChar(255)
+  dateCreated  DateTime    @default(now())
+  defaultRate  Float
+  color        String?
+  shortName    String?
+  paymentTerms String?
+  invoices     Invoice[]
+  projects     Project[]
+  timeEntries  TimeEntry[]
 }
 
 model Project {

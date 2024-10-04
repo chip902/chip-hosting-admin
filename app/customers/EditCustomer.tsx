@@ -11,6 +11,7 @@ import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
 import { Cross1Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import CustomInput from "@/components/CustomInput";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 
@@ -23,6 +24,7 @@ interface EditCustomerProps {
 		dateCreated: Date;
 		defaultRate: number;
 		color: string | null;
+		paymentTerms: string | null;
 	};
 }
 
@@ -30,6 +32,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
 	const {
+		control,
 		register,
 		handleSubmit,
 		setValue,
@@ -43,6 +46,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 			name: customer?.name || "",
 			shortname: customer?.shortName || "",
 			defaultRate: customer?.defaultRate || 0,
+			paymentTerms: customer?.paymentTerms || "30",
 		},
 	});
 	const [error, setError] = useState("");
@@ -68,6 +72,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 				name: data.name,
 				shortname: data.shortname,
 				email: data.email,
+				paymentTerms: data.paymentTerms,
 			};
 
 			if (customer) {
@@ -140,6 +145,13 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 								<TextField.Root placeholder="Rate per hour USD" {...register("defaultRate", { valueAsNumber: true })} />
 							</Form.Control>
 							{errors.defaultRate && <ErrorMessage>{errors.defaultRate.message}</ErrorMessage>}
+						</Form.Field>
+						<Form.Field name="paymentTerms">
+							<Form.Label>Payment Terms</Form.Label>
+							<Form.Control asChild>
+								<TextField.Root placeholder="ex. 30, for Net 30 Days" {...register("paymentTerms", { valueAsNumber: false })} />
+							</Form.Control>
+							{errors.paymentTerms && <ErrorMessage>{errors.paymentTerms.message}</ErrorMessage>}
 						</Form.Field>
 						<Form.Field name="color">
 							<Form.Label>Display Color</Form.Label>
