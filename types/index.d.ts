@@ -27,13 +27,14 @@ declare type LoginUser = {
 };
 
 declare type User = {
+	id: string;
 	$id?: string;
 	email: string;
 	userId?: string;
 	dwollaCustomerUrl?: string;
 	dwollaCustomerId?: string;
-	firstName: string;
-	lastName: string;
+	firstName?: string;
+	lastName?: string;
 	address?: string;
 	city?: string;
 	state?: string;
@@ -205,17 +206,17 @@ declare interface TotlaBalanceBoxProps {
 }
 
 declare interface FooterProps {
-	user: User;
+	user: User | null;
 }
 
 declare interface RightSidebarProps {
-	user: User;
+	user: User | null;
 	transactions: Transaction[];
 	banks: Bank[] & Account[];
 }
 
 declare interface SiderbarProps {
-	user: User;
+	user?: User | null;
 }
 
 declare interface RecentTransactionsProps {

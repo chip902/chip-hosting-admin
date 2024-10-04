@@ -45,7 +45,7 @@ const AuthForm = ({ type }: { type: string }) => {
 				const result = await signIn("credentials", {
 					email: data.email,
 					password: data.password,
-					callbackUrl: "/admin/",
+					callbackUrl: "/",
 				});
 			}
 		} catch (error) {

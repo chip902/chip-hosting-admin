@@ -3,50 +3,59 @@ import RightSidebar from "../components/RightSidebar";
 import TotalBalanceBox from "../components/TotalBalanceBox";
 import IssueChart from "./IssueChart";
 import React from "react";
+import { auth } from "@/auth";
+import { User } from "next-auth";
+import { headers } from "next/headers";
+import { cookies } from "next/headers";
 
-const stats = [
-	{ name: "Revenue", value: "$405,091.00", change: "+4.75%", changeType: "positive" },
-	{ name: "Overdue invoices", value: "$12,787.00", change: "+54.02%", changeType: "negative" },
-	{ name: "Outstanding invoices", value: "$245,988.00", change: "-1.39%", changeType: "positive" },
-	{ name: "Expenses", value: "$30,156.00", change: "+10.18%", changeType: "negative" },
-];
+export default async function Home() {
+	console.log("Home component rendered");
+	let session;
+	let error;
+	let debugInfo: any = {};
 
-function classNames(...classes: string[]) {
-	return classes.filter(Boolean).join(" ");
-}
+	try {
+		const headersList = headers();
+		const cookieStore = cookies();
+		const req = {
+			headers: Object.fromEntries(headersList.entries()),
+			method: "GET",
+			url: "/",
+			cookies: Object.fromEntries(cookieStore.getAll().map((c) => [c.name, c.value])),
+		};
+		const res = { getHeader: () => {}, setHeader: () => {} };
+		session = await auth(req as any, res as any);
+		console.log("Auth function called, session:", JSON.stringify(session, null, 2));
 
-export default function Home() {
-	const loggedIn = { firstName: "Andrew", lastName: "Chepurny", email: "andrew@chip-hosting.com" };
+		debugInfo = {
+			session,
+			cookies: req.cookies,
+		};
+	} catch (e) {
+		error = e;
+		console.error("Error calling auth function:", e);
+		debugInfo.error = e;
+	}
+
+	const userName = session?.user?.name || session?.user?.email || "Guest";
+	console.log("User name being passed to HeaderBox:", userName);
+
 	return (
 		<>
 			<section className="home">
 				<div className="home-content">
 					<header className="home-header">
 						<TotalBalanceBox accounts={[]} totalBanks={1} totalCurrentBalance={1234.12} />
-						<HeaderBox title={"Welcome"} user={loggedIn.firstName || "Guest"} subtext={"Make that money!"} />
+						<HeaderBox type="greeting" title="Welcome" user={userName} subtext="Make that money!" />
+						<div>
+							<h2>Debug Info:</h2>
+							<pre>{JSON.stringify(debugInfo, null, 2)}</pre>
+						</div>
 					</header>
 					RECENT TRANSACTIONS
 				</div>
-				<RightSidebar user={loggedIn} transactions={[]} banks={[]} />
+				<RightSidebar user={session?.user as User | null} transactions={[]} banks={[]} />
 			</section>
 		</>
 	);
 }
-
-/**
- * <div className="container mr-auto px-4">
-				<dl className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-					{stats.map((stat) => (
-						<div key={stat.name} className="flex flex-col items-center p-6 bg-white shadow rounded-lg">
-							<dt className="text-sm font-medium text-gray-500">{stat.name}</dt>
-							<dd className={classNames(stat.changeType === "negative" ? "text-rose-600" : "text-gray-700", "text-xs font-medium")}>
-								{stat.change}
-							</dd>
-							<dd className="text-3xl font-semibold text-gray-900">{stat.value}</dd>
-						</div>
-					))}
-				</dl>
-				<IssueChart />
-			</div>
- * 
- */

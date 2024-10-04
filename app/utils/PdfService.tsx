@@ -142,5 +142,5 @@ export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> 
 	doc.text(`Total: ${formattedTotal}`, 170, finalY + 10, { align: "right" });
 
 	// Generate PDF
-	return doc.output("arraybuffer");
+	return await new Uint8Array(await doc.output("arraybuffer"));
 }

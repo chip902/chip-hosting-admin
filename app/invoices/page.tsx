@@ -46,7 +46,7 @@ const InvoiceGenerator = () => {
 		if (selectedEntries.length !== newSelectedEntries.length) {
 			setSelectedEntries(newSelectedEntries);
 		}
-	}, [isSelectAll, timeEntries]);
+	}, [isSelectAll, timeEntries, selectedEntries.length]);
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
