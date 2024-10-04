@@ -2,7 +2,6 @@ import React from "react";
 import { HeaderBoxProps } from "@/types";
 
 const HeaderBox: React.FC<HeaderBoxProps> = ({ type = "title", title, subtext, user }) => {
-	console.log("HeaderBox rendered with type:", type, "and user:", user);
 	return (
 		<div className="header-box">
 			<h1 className="header-box-title">
