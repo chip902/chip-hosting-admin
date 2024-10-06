@@ -1,23 +1,26 @@
-import { RightSidebarProps } from "@/types";
 import Link from "next/link";
-import React from "react";
 import Image from "next/image";
 import BankCard from "./BankCard";
+import { RightSidebarProps } from "@/types";
 
-const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
+const RightSidebar: React.FC<RightSidebarProps> = ({ user, transactions, banks }) => {
+	if (!user) {
+		return;
+	}
+
 	return (
 		<aside className="right-sidebar">
 			<section className="flex flex-col pb-8">
 				<div className="profile-banner" />
 				<div className="profile">
 					<div className="profile-img">
-						<span className="text-5xl font-bold text-blue-500">{user?.firstName}</span>
+						<span className="text-5xl font-bold text-blue-500">{user.firstName?.[0] || "G"}</span>
 					</div>
 					<div className="profile-details">
 						<h2 className="profile-name">
-							{user?.firstName} {user?.lastName}
+							{user.firstName} {user.lastName}
 						</h2>
-						<div className="profile-email">{user?.email}</div>
+						<div className="profile-email">{user.email}</div>
 					</div>
 				</div>
 			</section>
@@ -33,11 +36,16 @@ const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
 				{banks?.length > 0 && (
 					<div className="relative flex flex-1 flex-col items-center justify-center gap-5">
 						<div className="relative z-10">
-							<BankCard key={banks[0].$id} account={banks[0]} userName={`${user?.firstName}  ${user?.lastName}`} showBalance={false} />
+							<BankCard key={banks[0].$id} account={banks[0]} userName={`${user.firstName || ""} ${user.lastName || ""}`} showBalance={false} />
 						</div>
 						{banks[1] && (
 							<div className="absolute right-0 top-8 z-0 w-[90%]">
-								<BankCard key={banks[1].$id} account={banks[1]} userName={`${user?.firstName}  ${user?.lastName}`} showBalance={false} />
+								<BankCard
+									key={banks[1].$id}
+									account={banks[1]}
+									userName={`${user.firstName || ""} ${user.lastName || ""}`}
+									showBalance={false}
+								/>
 							</div>
 						)}
 					</div>
@@ -48,34 +56,3 @@ const RightSidebar = ({ user, transactions, banks }: RightSidebarProps) => {
 };
 
 export default RightSidebar;
-
-// import React from "react";
-// import { User } from "next-auth";
-
-// interface RightSidebarProps {
-// 	user: User | null;
-// 	transactions: any[]; // Replace 'any' with the correct type for your transactions
-// 	banks: any[]; // Replace 'any' with the correct type for your banks
-// }
-
-// const RightSidebar: React.FC<RightSidebarProps> = ({ user, transactions, banks }) => {
-// 	return (
-// 		<div className="right-sidebar">
-// 			{user ? (
-// 				<div>
-// 					<h2>Welcome, {user.name || user.email || "User"}</h2>
-// 					<div>
-// 						<h3>User Debug Info:</h3>
-// 						<pre>{JSON.stringify(user, null, 2)}</pre>
-// 					</div>
-// 					{/* Rest of your component */}
-// 				</div>
-// 			) : (
-// 				<div>Please sign in</div>
-// 			)}
-// 			{/* Rest of your component */}
-// 		</div>
-// 	);
-// };
-
-// export default RightSidebar;

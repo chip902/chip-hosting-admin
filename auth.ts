@@ -6,9 +6,7 @@ import { getServerSession } from "next-auth/next";
 export const handler = NextAuth(authOptions);
 
 export async function auth(...args: [GetServerSidePropsContext["req"], GetServerSidePropsContext["res"]] | [NextApiRequest, NextApiResponse] | []) {
-	if (args.length === 0) {
-		return null;
-	}
-	const [req, res] = args as [NextApiRequest, NextApiResponse];
-	return getServerSession(req, res, authOptions);
+	return getServerSession(...args, authOptions);
 }
+
+export { handler as GET, handler as POST };

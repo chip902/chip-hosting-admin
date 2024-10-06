@@ -7,11 +7,12 @@ import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import { ChevronDownIcon } from "lucide-react";
 import { Poppins } from "next/font/google";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import "./globals.css";
 import QueryClientProvider from "./QueryClientProvider";
 import Image from "next/image";
+import { signOut } from "next-auth/react";
 
 const poppins = Poppins({
 	subsets: ["latin"],
@@ -19,16 +20,23 @@ const poppins = Poppins({
 	weight: "100",
 });
 
-const userNavigation = [
-	{ name: "Your profile", href: "#" },
-	{ name: "Sign out", href: "/sign-out" },
-];
-
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+	const router = useRouter();
+	const userNavigation = [
+		{ name: "Your profile", href: "#" },
+		{
+			name: "Sign out",
+			onClick: async () => {
+				await signOut();
+				router.push("/");
+			},
+		},
+		{ name: "Sign In", href: "/sign-in" },
+	];
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = usePathname();
 
@@ -130,8 +138,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 															{({ focus }) => (
 																<a
 																	href={item.href}
+																	onClick={item.onClick}
 																	className={classNames(
-																		focus ? "bg-gray-50" : "",
+																		focus ? "bg-gray-50 dark:bg-slate-500" : "",
 																		"block px-3 py-1 text-sm leading-6 text-gray-900"
 																	)}>
 																	{item.name}

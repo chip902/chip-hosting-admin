@@ -27,20 +27,20 @@ declare type LoginUser = {
 };
 
 declare type User = {
-	id: string;
-	$id?: string;
+	id?: string | null;
+	$id?: string | null;
 	email: string;
-	userId?: string;
-	dwollaCustomerUrl?: string;
-	dwollaCustomerId?: string;
-	firstName?: string;
-	lastName?: string;
-	address?: string;
-	city?: string;
-	state?: string;
-	postalCode?: string;
-	dateOfBirth?: string;
-	ssn?: string;
+	userId?: string | null;
+	dwollaCustomerUrl?: string | null;
+	dwollaCustomerId?: string | null;
+	firstName?: string | null;
+	lastName?: string | null;
+	address?: string | null;
+	city?: string | null;
+	state?: string | null;
+	postalCode?: string | null;
+	dateOfBirth?: string | null;
+	ssn?: string | null;
 };
 
 declare type NewUserParams = {
@@ -210,7 +210,7 @@ declare interface FooterProps {
 }
 
 declare interface RightSidebarProps {
-	user: User | null;
+	user: User;
 	transactions: Transaction[];
 	banks: Bank[] & Account[];
 }
