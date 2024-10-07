@@ -9,6 +9,7 @@ datasource db {
 
 model User {
   id            Int             @id @default(autoincrement())
+  userId        String?         @unique
   email         String          @unique
   password      String?
   firstName     String?
@@ -24,6 +25,7 @@ model User {
   projects      Project[]       @relation("ProjectUser")
   Session       Session[]
   Authenticator Authenticator[]
+  banks         Bank[]
 }
 
 model Customer {
@@ -149,4 +151,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Bank {
+  id               Int    @id @unique @default(autoincrement())
+  userId           String
+  bankId           String
+  accountId        String
+  accessToken      String
+  fundingSourceUrl String
+  sharableId       String
+  User             User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }
