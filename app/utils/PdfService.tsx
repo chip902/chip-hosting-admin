@@ -45,6 +45,14 @@ export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> 
 
 		return lines;
 	}
+	function dueDate(paymentTerms: number): string {
+		const today = new Date();
+		const dueDate = new Date(today.getTime() + paymentTerms * 24 * 60 * 60 * 1000);
+		const month = dueDate.getMonth() + 1; // months are 0-based, so add 1
+		const day = dueDate.getDate();
+		const year = dueDate.getFullYear();
+		return `${month.toString().padStart(2, "0")}/${day.toString().padStart(2, "0")}/${year}`;
+	}
 
 	// Sort timeEntries by date in ascending order
 	pdfData.timeEntries.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
@@ -96,7 +104,8 @@ export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> 
 	doc.setFontSize(10);
 	doc.text("PO Box 397", 10, 55);
 	doc.text("Pound Ridge, NY 10576", 10, 60);
-	doc.text("Payment Terms: Net 30 days", 10, 65);
+	doc.text(`Payment Terms: Net ${pdfData.paymentTerms} days`, 10, 65);
+	doc.text(`Due Date: ${pdfData.paymentTerms ? dueDate(parseInt(pdfData.paymentTerms)) : "Upon Receipt"}`, 10, 70);
 
 	const customer = pdfData.timeEntries[0].Customer;
 	doc.text(`Invoice No. ${pdfData.invoiceNumber || "N/A"}`, 140, 50);

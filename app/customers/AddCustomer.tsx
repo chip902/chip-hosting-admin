@@ -87,6 +87,13 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 								</Form.Control>
 								{errors.defaultRate && <ErrorMessage>{errors.defaultRate.message}</ErrorMessage>}
 							</Form.Field>
+							<Form.Field name="paymentTerms">
+								<Form.Label>Payment Terms</Form.Label>
+								<Form.Control asChild>
+									<TextField.Root placeholder="ex. 30, for Net 30 Days" {...register("paymentTerms", { valueAsNumber: false })} />
+								</Form.Control>
+								{errors.paymentTerms && <ErrorMessage>{errors.paymentTerms.message}</ErrorMessage>}
+							</Form.Field>
 							<Form.Field name="color">
 								<Form.Label>Display Color</Form.Label>
 								<Form.Control asChild>

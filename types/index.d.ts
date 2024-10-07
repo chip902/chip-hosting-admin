@@ -348,6 +348,7 @@ export interface Customer {
 	dateCreated: string;
 	defaultRate: number;
 	color: string;
+	paymentTerms: string;
 }
 
 export interface TimeEntry {
@@ -359,6 +360,7 @@ export interface TimeEntry {
 		name: string;
 		email: string;
 		defaultRate: number;
+		paymentTerms: string;
 	};
 	Project: {
 		name: string;
@@ -371,6 +373,7 @@ export interface TimeEntry {
 
 export interface PdfData {
 	invoiceNumber?: string;
+	paymentTerms: string | null;
 	timeEntries: TimeEntry[];
 }
 

@@ -4,6 +4,7 @@ import AddCustomer from "./AddCustomer";
 import { useCustomers } from "../hooks/useCustomers";
 import EditCustomer from "./EditCustomer";
 import { Customer } from "@prisma/client";
+import React from "react";
 
 const CustomerTable = () => {
 	const { data: customers } = useCustomers();
@@ -33,6 +34,7 @@ const CustomerTable = () => {
 							dateCreated: new Date(customer.dateCreated),
 							defaultRate: customer.defaultRate,
 							color: customer.color ?? null,
+							paymentTerms: customer.paymentTerms,
 						};
 
 						return (
