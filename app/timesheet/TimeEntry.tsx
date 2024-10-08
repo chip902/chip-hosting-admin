@@ -78,6 +78,10 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 			},
 		});
 	};
+	console.log(`Rendering TimeEntry: ${entry.description}, dayIndex: ${dayIndex}, date: ${entry.date}, startSlot: ${startSlot}, endSlot: ${endSlot}`);
+	console.log(
+		`Calculated styles: gridColumn: ${dayIndex + 2} / ${dayIndex + 3}, top: ${(startSlot / 1440) * 100}%, height: ${((endSlot - startSlot) / 1440) * 100}%`
+	);
 
 	return (
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
