@@ -53,15 +53,6 @@ html {
 	grid-template-rows: repeat(24, 80px);
 }
 
-.time-entry {
-	position: absolute;
-	overflow: hidden;
-	background-color: var(--primary-color);
-	color: var(--text-color);
-	padding: 0.5rem;
-	border-radius: 0.25rem;
-}
-
 .time-column {
 	width: 3.5rem;
 }
@@ -81,15 +72,18 @@ html {
 	grid-template-rows: repeat(24, 80px);
 	grid-template-columns: repeat(8, 1fr);
 	position: relative;
+	background-color: var(--primary-color);
 	/* Remove overflow-y: scroll to allow proper sticky behavior */
-	overflow-y: visible;
+	overflow-y: hidden;
 }
 
 .time-entry {
 	position: absolute;
-	border-radius: 8px;
+	overflow: hidden;
+	border-radius: 0.25rem;
 	padding: 8px;
 	color: var(--text-color);
+	background-color: var(--primary-color);
 	cursor: pointer;
 }
 

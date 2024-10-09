@@ -38,7 +38,6 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 			});
 
 			const url = `/api/timelog?${params.toString()}`;
-			console.log("Request URL to Endpoint: ", url);
 
 			const response = await axios.get<TimeEntryResponse>(url);
 

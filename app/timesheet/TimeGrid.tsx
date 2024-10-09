@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
-import { AlertDialog, Button, Flex } from "@radix-ui/themes";
+import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { TimeGridProps } from "@/types";
 import { format, startOfDay, differenceInMinutes, addDays, startOfWeek, isSameDay } from "date-fns";
@@ -46,19 +46,13 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 	}
 
 	if (isLoading) {
-		return <div>Loading...</div>;
+		return <Skeleton />;
 	}
 
 	// Ensure we have a valid start date for the week
 	const weekStart = startOfDay(startDate ? new Date(startDate) : startOfWeek(new Date()));
 	// Generate an array of 7 days starting from weekStart
 	const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
-
-	console.log("Week start:", format(weekStart, "yyyy-MM-dd"));
-	console.log(
-		"Days in week:",
-		days.map((d) => format(d, "yyyy-MM-dd"))
-	);
 
 	return (
 		<div className="relative flex flex-col h-screen bg-white dark:bg-gray-900">
@@ -81,9 +75,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 
 					{/* Time Entries Columns */}
 					{days.map((day, dayIndex) => {
-						console.log(`Rendering column for day: ${format(day, "yyyy-MM-dd")}`);
-						const dayEntries = data?.entries.filter((entry) => format(new Date(entry.date), "yyyy-MM-dd") === format(day, "yyyy-MM-dd"));
-						console.log(`Entries for ${format(day, "EEE dd/MM")}: `, dayEntries);
 						return (
 							<div key={dayIndex} className="relative col-span-1 border-l border-gray-100 dark:border-gray-700 grid grid-rows-24">
 								{[...Array(24)].map((_, hour) => (
@@ -95,12 +86,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 									.filter((entry) => {
 										const entryDate = new Date(entry.date);
 										const isSame = isSameDay(entryDate, day);
-										console.log(
-											`Entry: ${entry.description}, Date: ${format(entryDate, "yyyy-MM-dd HH:mm")}, Column Date: ${format(
-												day,
-												"yyyy-MM-dd"
-											)}, Is Same Day: ${isSame}`
-										);
 										return isSame;
 									})
 									.map((entry) => {
@@ -108,9 +93,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 										const dayStart = startOfDay(entryDate);
 										const startMinutes = differenceInMinutes(entryDate, dayStart);
 										const endMinutes = startMinutes + (entry.duration ?? 0);
-										console.log(
-											`Rendering TimeEntryComponent for ${entry.description}, startSlot: ${startMinutes}, endSlot: ${endMinutes}`
-										);
 										return (
 											<TimeEntryComponent
 												key={entry.id}
