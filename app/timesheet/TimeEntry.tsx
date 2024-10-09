@@ -85,7 +85,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 				<div
 					className="time-entry absolute bg-blue-500 text-white p-1 rounded-xl cursor-pointer"
 					style={{
-						gridColumn: `${dayIndex + 2} / ${dayIndex + 3}`,
+						gridColumn: `${dayIndex + 1} / ${dayIndex - 1}`,
 						top: `${(startSlot / 1440) * 100}%`,
 						height: `${((endSlot - startSlot) / 1440) * 100}%`,
 						width: "90%",
@@ -106,7 +106,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 							name="description"
 							value={formState.description}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 rounded dark:text-black"
+							className="block w-full mt-1 border border-gray-300 rounded text-black-1"
 						/>
 					</label>
 					<label>
@@ -116,7 +116,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 dark:text-black"
+							className="block w-full mt-1 border border-gray-300 text-black-1"
 						/>
 					</label>
 					<div className="flex space-x-2">

@@ -2,13 +2,15 @@
 import React, { useEffect, useRef } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
-import { AlertDialog, Button, Flex } from "@radix-ui/themes";
+import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { TimeGridProps } from "@/types";
+import { format, startOfDay, differenceInMinutes, addDays, startOfWeek, isSameDay } from "date-fns";
 
 const TimeGrid = ({ filters }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
+
 	const { data, error, isLoading } = useGetTimeEntries({
 		pageSize: 50,
 		page: 1,
@@ -44,22 +46,18 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 	}
 
 	if (isLoading) {
-		return <div>Loading...</div>;
+		return <Skeleton />;
 	}
 
-	const start = startDate ? new Date(startDate) : new Date();
-	const days = Array.from({ length: 7 }, (_, i) => {
-		const date = new Date(start);
-		date.setDate(date.getDate() + i);
-		return date;
-	});
+	// Ensure we have a valid start date for the week
+	const weekStart = startOfDay(startDate ? new Date(startDate) : startOfWeek(new Date()));
+	// Generate an array of 7 days starting from weekStart
+	const days = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
 	return (
 		<div className="relative flex flex-col h-screen bg-white dark:bg-gray-900">
-			{/* Sticky Header */}
 			<TimeGridHeader days={days} />
 			<div className="flex-1 overflow-y-auto" ref={container}>
-				{/* Time Grid */}
 				<div className="grid grid-cols-8">
 					{/* Hour Labels Column */}
 					<div className="col-start-1 col-end-2">
@@ -75,50 +73,46 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 						</div>
 					</div>
 
-					{/* Time Entries Column */}
-					{days.map((day, dayIndex) => (
-						<div key={dayIndex} className="relative col-span-1 border-l border-gray-100 dark:border-gray-700 grid grid-rows-24">
-							{[...Array(24)].map((_, hour) => (
-								<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700"></div>
-							))}
+					{/* Time Entries Columns */}
+					{days.map((day, dayIndex) => {
+						return (
+							<div key={dayIndex} className="relative col-span-1 border-l border-gray-100 dark:border-gray-700 grid grid-rows-24">
+								{[...Array(24)].map((_, hour) => (
+									<div key={hour} className="relative h-16 border-t border-gray-100 dark:border-gray-700"></div>
+								))}
 
-							{/* Iterate over Time Entries */}
-							{(data?.entries || [])
-								.filter((entry) => {
-									const entryDate = new Date(entry.date);
-									return entryDate.toDateString() === day.toDateString();
-								})
-								.map((entry) => {
-									const startDateTime = new Date(entry.date);
-									const startHour = startDateTime.getUTCHours();
-									const startMinute = startDateTime.getUTCMinutes();
-
-									const endDateTime = new Date(startDateTime.getTime() + (entry.duration ?? 0) * 60000);
-									const endHour = endDateTime.getUTCHours();
-									const endMinute = endDateTime.getUTCMinutes();
-
-									const customerName = entry.Customer?.name || "Unknown Customer";
-									const color = entry.Customer?.color || "#000000";
-
-									return (
-										<TimeEntryComponent
-											key={entry.id}
-											entry={{
-												...entry,
-												name: customerName,
-												customerId: entry.customerId,
-												date: new Date(entry.date),
-												description: entry.description ?? "",
-											}}
-											startSlot={startHour * 60 + startMinute}
-											endSlot={endHour * 60 + endMinute}
-											dayIndex={dayIndex}
-											color={color}
-										/>
-									);
-								})}
-						</div>
-					))}
+								{/* Iterate over Time Entries */}
+								{data?.entries
+									.filter((entry) => {
+										const entryDate = new Date(entry.date);
+										const isSame = isSameDay(entryDate, day);
+										return isSame;
+									})
+									.map((entry) => {
+										const entryDate = new Date(entry.date);
+										const dayStart = startOfDay(entryDate);
+										const startMinutes = differenceInMinutes(entryDate, dayStart);
+										const endMinutes = startMinutes + (entry.duration ?? 0);
+										return (
+											<TimeEntryComponent
+												key={entry.id}
+												entry={{
+													...entry,
+													name: entry.Customer?.name || "Unknown Customer",
+													customerId: entry.customerId,
+													date: entryDate,
+													description: entry.description ?? "",
+												}}
+												startSlot={startMinutes}
+												endSlot={endMinutes}
+												dayIndex={dayIndex}
+												color={entry.Customer?.color || "#000000"}
+											/>
+										);
+									})}
+							</div>
+						);
+					})}
 				</div>
 			</div>
 		</div>
