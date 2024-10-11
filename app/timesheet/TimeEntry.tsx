@@ -26,9 +26,11 @@ export interface TimeEntryProps {
 	endSlot: number;
 	dayIndex: number;
 	color: string;
+	width: number;
+	left: number;
 }
 
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, color }) => {
+const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
@@ -83,47 +85,55 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Popover.Trigger asChild>
 				<div
-					className="time-entry absolute bg-blue-500 text-white p-1 rounded-xl cursor-pointer"
+					className="time-entry absolute bg-opacity-80 text-black-1 p-1 rounded-lg cursor-pointer overflow-hidden"
 					style={{
-						gridColumn: `${dayIndex + 2} / ${dayIndex + 3}`,
+						gridColumn: dayIndex + 2,
 						top: `${(startSlot / 1440) * 100}%`,
 						height: `${((endSlot - startSlot) / 1440) * 100}%`,
-						width: "90%",
-						left: "5%",
+						width: `${width * 100}%`,
+						left: `${left * 100}%`,
 						backgroundColor: color,
+						zIndex: 10, // Add this line
 					}}>
 					<Text>{entry.duration && entry.duration / 60} Hours</Text>
 					<br />
 					<Text>{entry.name}</Text>
 				</div>
 			</Popover.Trigger>
-			<Popover.Content className="p-4 bg-gray-500 rounded shadow-lg z-20">
-				<form className="flex flex-col space-y-2">
-					<label>
-						Description:
-						<input
-							type="text"
+			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">
+				<form className="flex flex-col space-y-4">
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description:</span>
+						<textarea
 							name="description"
 							value={formState.description}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 rounded dark:text-black"
+							className="w-full h-24 px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
-					<label>
-						Duration:
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
 						<input
 							type="number"
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 dark:text-black"
+							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
 					<div className="flex space-x-2">
-						<button type="button" onClick={handleUpdate} disabled={isLoading} className="px-4 py-2 text-white bg-blue-500 rounded">
+						<button
+							type="button"
+							onClick={handleUpdate}
+							disabled={isLoading}
+							className="flex-1 px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
 							{isLoading ? <Spinner /> : "Update"}
 						</button>
-						<button type="button" onClick={handleDelete} disabled={isLoading} className="px-4 py-2 text-white bg-red-500 rounded">
+						<button
+							type="button"
+							onClick={handleDelete}
+							disabled={isLoading}
+							className="flex-1 px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
 							{isLoading ? <Spinner /> : "Delete"}
 						</button>
 					</div>

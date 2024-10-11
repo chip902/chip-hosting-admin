@@ -395,7 +395,7 @@ export interface TimeGridProps {
 		customerId?: number;
 	};
 }
-export interface TimeEntryData {
+export interface OldTimeEntryData {
 	id: number;
 	description: string | null;
 	duration: number | undefined;
@@ -424,5 +424,24 @@ export interface TimeEntryData {
 	User: {
 		id: number;
 		name: string;
+	};
+}
+
+export interface TimeEntryData {
+	id: number;
+	description: string | null;
+	duration: number | undefined;
+	date: string;
+	userId: number;
+	taskId: number;
+	customerId: number;
+	projectId: number;
+	invoiceItemId: number | null;
+	startTime?: string;
+	endTime?: string;
+	repeatInterval?: number;
+	Customer?: {
+		name: string;
+		color: string;
 	};
 }

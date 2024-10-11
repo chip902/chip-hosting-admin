@@ -62,8 +62,17 @@ html {
 	overflow: hidden;
 	background-color: var(--primary-color);
 	color: var(--text-color);
-	padding: 0.5rem;
-	border-radius: 0.25rem;
+	padding: 10px;
+	border-radius: 0.5rem;
+	transition: all 0.2s ease-in-out;
+	cursor: pointer;
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12), 0 1px 2px rgba(0, 0, 0, 0.24);
+}
+
+.time-entry:hover {
+	z-index: 10;
+	transform: scale(1.02);
+	box-shadow: 0 3px 6px rgba(0, 0, 0, 0.16), 0 3px 6px rgba(0, 0, 0, 0.23);
 }
 
 .time-column {
@@ -87,19 +96,11 @@ html {
 	overflow-y: visible;
 }
 
-.time-entry {
-	position: absolute;
-	border-radius: 8px;
-	padding: 8px;
-	color: var(--text-color);
-	cursor: pointer;
-}
-
 /* Dark mode styles for time entries */
-.dark .time-entry {
-	background-color: #2d3748; /* dark:bg-gray-800 */
-	color: #e2e8f0; /* dark:text-gray-100 */
-}
+/* .dark .time-entry {
+	background-color: #2d3748; 
+	color: #e2e8f0;
+} */
 
 .no-scrollbar::-webkit-scrollbar {
 	display: none;
