@@ -1,8 +1,10 @@
 // app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
-import { parseISO, isValid } from "date-fns";
+import { parseISO, isValid, startOfDay, addMinutes } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
+import { TimeEntryData } from "@/types";
+import { format, toZonedTime } from "date-fns-tz";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -34,7 +36,7 @@ export async function GET(request: NextRequest) {
 			let parsedEndDate;
 			try {
 				parsedEndDate = parseISO(endDate);
-				const endOfDay = new Date(parsedEndDate.setUTCHours(23, 59, 59, 999));
+				const endOfDay = new Date(parsedEndDate.setHours(23, 59, 59, 999));
 
 				if (!isValid(endOfDay)) {
 					throw new Error("Invalid end date");
@@ -65,18 +67,57 @@ export async function GET(request: NextRequest) {
 				Task: true,
 				User: true,
 			},
-			skip: (page - 1) * pageSize, // Offset for pagination
-			take: pageSize, // Limit the number of results
+			skip: (page - 1) * pageSize,
+			take: pageSize,
 			orderBy: {
-				date: "desc", // Sort by date descending by default
+				date: "desc",
 			},
+		});
+
+		const formattedEntries: TimeEntryData[] = timeEntries.map((entry) => {
+			// Format dates in UTC and include 'Z' to indicate UTC time
+			const startTime = format(entry.date, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+			const endTime = format(new Date(entry.date.getTime() + entry.duration * 60000), "yyyy-MM-dd'T'HH:mm:ss'Z'");
+
+			return {
+				...entry,
+				date: format(entry.date, "yyyy-MM-dd"),
+				startTime,
+				endTime,
+				Customer: entry.Customer
+					? {
+							...entry.Customer,
+							dateCreated: format(entry.Customer.dateCreated, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+					  }
+					: null,
+				Project: entry.Project
+					? {
+							...entry.Project,
+							dateCreated: format(entry.Project.dateCreated, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+					  }
+					: null,
+				Task: entry.Task
+					? {
+							...entry.Task,
+							dateCreated: format(entry.Task.dateCreated, "yyyy-MM-dd'T'HH:mm:ss'Z'"),
+					  }
+					: null,
+				User: entry.User
+					? {
+							id: entry.User.id,
+							firstName: entry.User.firstName,
+							lastName: entry.User.lastName,
+							email: entry.User.email,
+					  }
+					: null,
+			};
 		});
 
 		const totalEntries = await prisma.timeEntry.count({
 			where: whereClause,
 		});
 		// console.log("CHIP DEBUG ", timeEntries);
-		return NextResponse.json({ entries: timeEntries, totalEntries }, { status: 200 });
+		return NextResponse.json({ entries: formattedEntries, totalEntries }, { status: 200 });
 	} catch (error) {
 		console.error("Error fetching time entries:", error);
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
@@ -87,8 +128,6 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
-
-		// Log the raw inputs before any parsing
 		console.log("Raw inputs:", body);
 
 		const validation = timeLogSchema.safeParse(body);
@@ -98,21 +137,22 @@ export async function POST(request: NextRequest) {
 
 		const { date, startTime, endTime, customerId, projectId, taskId, userId, ...rest } = body;
 
-		// Parse and log the date
-		const parsedDate = parseISO(date);
-		console.log("Parsed date:", parsedDate);
+		// Extract the date part from the date string
+		const dateOnly = date.split("T")[0];
 
-		if (!isValid(parsedDate)) {
-			throw new Error("Invalid date format");
-		}
+		// Construct valid ISO date-time strings
+		const startDateTimeString = `${dateOnly}T${startTime}`;
+		const endDateTimeString = `${dateOnly}T${endTime}`;
 
-		// Combine date and time directly into a Date object
-		const startDateTime = new Date(`${date.split("T")[0]}T${startTime}:00Z`);
-		const endDateTime = new Date(`${date.split("T")[0]}T${endTime}:00Z`);
+		console.log("Start DateTime String:", startDateTimeString);
+		console.log("End DateTime String:", endDateTimeString);
 
-		// Log the directly combined DateTime values
-		console.log("Direct Start DateTime:", startDateTime);
-		console.log("Direct End DateTime:", endDateTime);
+		// Parse the ISO date-time strings
+		const startDateTime = parseISO(startDateTimeString);
+		const endDateTime = parseISO(endDateTimeString);
+
+		console.log("Start DateTime:", startDateTime);
+		console.log("End DateTime:", endDateTime);
 
 		if (!isValid(startDateTime) || !isValid(endDateTime)) {
 			throw new Error("Invalid start or end time");
@@ -122,25 +162,20 @@ export async function POST(request: NextRequest) {
 			throw new Error("Start time must be before end time");
 		}
 
+		const duration = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60);
+
 		const newEntry = await prisma.timeEntry.create({
 			data: {
 				...rest,
 				date: startDateTime,
-				duration: (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60),
-				Customer: {
-					connect: { id: parseInt(customerId, 10) },
-				},
-				Project: {
-					connect: { id: parseInt(projectId, 10) },
-				},
-				Task: {
-					connect: { id: parseInt(taskId, 10) },
-				},
-				User: {
-					connect: { id: parseInt(userId, 10) },
-				},
+				duration,
+				customerId: parseInt(customerId, 10),
+				projectId: parseInt(projectId, 10),
+				taskId: parseInt(taskId, 10),
+				userId: parseInt(userId, 10),
 			},
 		});
+
 		return NextResponse.json(newEntry, { status: 201 });
 	} catch (error) {
 		console.error("Error creating time entry:", error);

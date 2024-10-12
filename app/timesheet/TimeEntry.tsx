@@ -3,32 +3,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-
-export interface TimeEntry {
-	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: Date;
-	userId: number;
-	taskId: number;
-	customerId: number;
-	name: string;
-	projectId: number;
-	invoiceItemId: number | null;
-	startTime?: string;
-	endTime?: string;
-	repeatInterval?: number;
-}
-
-export interface TimeEntryProps {
-	entry: TimeEntry;
-	startSlot: number;
-	endSlot: number;
-	dayIndex: number;
-	color: string;
-	width: number;
-	left: number;
-}
+import { TimeEntryProps } from "@/types";
 
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -56,7 +31,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 	const handleUpdate = () => {
 		setLoading(true);
 		updateTimeEntry(
-			{ id: entry.id, data: { duration: parseInt(formState.duration), description: formState.description } },
+			{ id: entry.id, data: { duration: formState.duration, description: formState.description } },
 			{
 				onSuccess: () => {
 					setIsOpen(false);
@@ -81,23 +56,33 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		});
 	};
 
+	const calculatePosition = (start: number, end: number) => {
+		const top = (start / 1440) * 100;
+		let height = ((end - start) / 1440) * 100;
+		if (height < 0) {
+			height += 100; // Adjust for entries that cross midnight
+		}
+		return { top, height: Math.max(height, 1) };
+	};
+
+	const { top, height } = calculatePosition(startSlot, endSlot);
+
 	return (
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Popover.Trigger asChild>
 				<div
-					className="time-entry absolute bg-opacity-80 text-black-1 p-1 rounded-lg cursor-pointer overflow-hidden"
+					className="absolute time-entry bg-opacity-80 text-black-1 p-1 rounded-lg cursor-pointer overflow-hidden"
 					style={{
-						gridColumn: dayIndex + 2,
-						top: `${(startSlot / 1440) * 100}%`,
-						height: `${((endSlot - startSlot) / 1440) * 100}%`,
-						width: `${width * 100}%`,
+						top: `${top}%`,
+						height: `${height}%`,
 						left: `${left * 100}%`,
+						width: `${width * 100}%`,
 						backgroundColor: color,
-						zIndex: 10, // Add this line
+						zIndex: 10,
 					}}>
-					<Text>{entry.duration && entry.duration / 60} Hours</Text>
+					<Text className="text-sm">{(entry.duration / 60).toFixed(1)} Hours</Text>
 					<br />
-					<Text>{entry.name}</Text>
+					<Text className="text-sm">{entry.Customer.name}</Text>
 				</div>
 			</Popover.Trigger>
 			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">

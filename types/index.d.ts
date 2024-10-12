@@ -27,7 +27,7 @@ declare type LoginUser = {
 };
 
 declare type User = {
-	id?: string | null;
+	id?: number;
 	$id?: string | null;
 	email: string;
 	userId: string | null;
@@ -35,6 +35,7 @@ declare type User = {
 	dwollaCustomerId: string | null;
 	firstName: string | null;
 	lastName: string | null;
+	name: string | null;
 	address: string | null;
 	city: string | null;
 	state: string | null;
@@ -324,51 +325,85 @@ declare interface getBankByAccountIdProps {
 	accountId: string;
 }
 
-export interface Task {
+export interface Customer {
 	id: number;
 	name: string;
-	description?: string;
-	projectId: number;
+	email: string;
 	dateCreated: string;
-	rate?: number;
+	defaultRate: number;
+	color: string | null;
+	paymentTerms: string | null;
+	shortName: string | null;
 }
 
 export interface Project {
 	id: number;
 	name: string;
-	description?: string;
 	customerId: number;
 	dateCreated: string;
-	rate?: number;
+	description: string | null; // Changed from string | undefined to string | null
+	rate: number | null;
 }
 
-export interface Customer {
+export interface Task {
 	id: number;
-	name?: string;
-	email: string;
+	name: string;
+	projectId: number;
 	dateCreated: string;
-	defaultRate: number;
-	color: string;
-	paymentTerms: string;
+	description: string | null; // Changed from string | undefined to string | null
+	rate: number | null;
 }
 
-export interface TimeEntry {
+export interface TimeEntryBase {
 	id: number;
-	description: string;
+	description: string | null;
 	duration: number;
 	date: string;
-	Customer: {
-		name: string;
-		email: string;
-		defaultRate: number;
-		paymentTerms: string;
-	};
-	Project: {
-		name: string;
-		rate: number;
-	};
-	Task: {
-		name: string;
+	userId: number;
+	taskId: number;
+	customerId: number;
+	projectId: number;
+	invoiceItemId: number | null;
+	invoiceId: number | null;
+	isInvoiced: boolean;
+}
+
+export interface TimeEntryData extends TimeEntryBase {
+	Customer?: Partial<Customer> | null;
+	Project?: Partial<Project> | null;
+	Task?: Partial<Task> | null;
+	User?: Partial<User> | null; // Change this line
+	startTime?: string;
+	endTime?: string;
+	// Additional properties for rendering
+	width?: number;
+	left?: number;
+	startSlot?: number;
+	endSlot?: number;
+}
+
+export interface TimeEntry extends Omit<TimeEntryData, "date"> {
+	date: Date; // Convert to Date for frontend use
+	name: string;
+	Customer: Customer;
+	Project: Project;
+	Task: Task;
+}
+export interface TimeEntryProps {
+	entry: TimeEntry;
+	startSlot: number;
+	endSlot: number;
+	dayIndex: number;
+	color: string;
+	width: number;
+	left: number;
+}
+
+export interface TimeGridProps {
+	filters: {
+		startDate?: Date;
+		endDate?: Date;
+		customerId?: number;
 	};
 }
 
@@ -386,62 +421,4 @@ export interface TableRow {
 	hours: number;
 	rate: number;
 	amount: number;
-}
-
-export interface TimeGridProps {
-	filters: {
-		startDate?: Date;
-		endDate?: Date;
-		customerId?: number;
-	};
-}
-export interface OldTimeEntryData {
-	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: string;
-	userId: number;
-	taskId: number;
-	customerId: number;
-	projectId: number;
-	invoiceItemId: number | null;
-	isInvoiced: boolean;
-	shortname: string;
-	Customer: {
-		id: number;
-		name: string;
-		color: string;
-		shortname: string;
-	};
-	Project: {
-		id: number;
-		name: string;
-	};
-	Task: {
-		id: number;
-		name: string;
-	};
-	User: {
-		id: number;
-		name: string;
-	};
-}
-
-export interface TimeEntryData {
-	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: string;
-	userId: number;
-	taskId: number;
-	customerId: number;
-	projectId: number;
-	invoiceItemId: number | null;
-	startTime?: string;
-	endTime?: string;
-	repeatInterval?: number;
-	Customer?: {
-		name: string;
-		color: string;
-	};
 }
