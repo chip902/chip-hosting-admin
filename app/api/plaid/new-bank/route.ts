@@ -8,6 +8,11 @@ export async function POST(request: NextRequest) {
 
 		const { userId, bankId, accountId, accessToken, fundingSourceUrl, sharableId } = body;
 
+		// Validate required fields
+		if (!userId || !bankId || !accountId || !accessToken || !fundingSourceUrl || !sharableId) {
+			return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
+		}
+
 		const newBank = await prisma.bank.create({
 			data: {
 				userId: userId,
@@ -16,10 +21,16 @@ export async function POST(request: NextRequest) {
 				accessToken: accessToken,
 				fundingSourceUrl: fundingSourceUrl,
 				sharableId: sharableId,
+				// Handle User relation
+				User: {
+					connect: { userId: userId },
+				},
 			},
 		});
+
 		return NextResponse.json(newBank, { status: 201 });
 	} catch (error) {
+		console.error("Error creating Bank:", error);
 		return NextResponse.json({ error: "Error creating Bank" }, { status: 500 });
 	}
 }

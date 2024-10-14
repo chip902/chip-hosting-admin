@@ -27,21 +27,21 @@ declare type LoginUser = {
 };
 
 declare type User = {
-	id?: number;
+	id?: number | string;
 	$id?: string | null;
 	email: string;
-	userId: string | null;
-	dwollaCustomerUrl: string | null;
-	dwollaCustomerId: string | null;
-	firstName: string | null;
-	lastName: string | null;
-	name: string | null;
-	address: string | null;
-	city: string | null;
-	state: string | null;
-	postalCode: string | null;
-	dateOfBirth: string | null;
-	ssn: string | null;
+	userId?: string | null;
+	dwollaCustomerUrl?: string | null;
+	dwollaCustomerId?: ?(string | null);
+	firstName?: string | null;
+	lastName?: string | null;
+	name?: string | null;
+	address?: string | null;
+	city?: string | null;
+	state?: string | null;
+	postalCode?: string | null;
+	dateOfBirth?: string | null;
+	ssn?: string | null;
 };
 
 declare type NewUserParams = {
@@ -116,6 +116,7 @@ declare type TransferParams = {
 };
 
 declare type AddFundingSourceParams = {
+	dwollaCustomerUrl: string;
 	dwollaCustomerId: string;
 	processorToken: string;
 	bankName: string;
@@ -170,7 +171,7 @@ declare interface PaginationProps {
 	totalPages: number;
 }
 
-declare interface PlaidLinkProps {
+export interface PlaidLinkProps {
 	user: User;
 	variant?: "primary" | "ghost";
 	dwollaCustomerId?: string;
@@ -271,6 +272,7 @@ declare interface getTransactionsProps {
 
 declare interface CreateFundingSourceOptions {
 	customerId: string; // Dwolla Customer ID
+	customerUrl: string; //Dwolla Customer URL
 	fundingSourceName: string; // Dwolla Funding Source Name
 	plaidToken: string; // Plaid Account Processor Token
 	_links: object; // Dwolla On Demand Authorization Link

@@ -50,18 +50,18 @@ const AuthForm = ({ type }: { type: string }) => {
 					address1: data.address!,
 					dateOfBirth: data.dob!,
 				};
-				const dwollaCustomerUrl = createDwollaCustomer({
-					...data,
-					type: "personal",
-					address1: data.address!,
-					dateOfBirth: data.dob!,
-				});
-				const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
+				// const dwollaCustomerUrl = createDwollaCustomer({
+				// 	...data,
+				// 	type: "personal",
+				// 	address1: data.address!,
+				// 	dateOfBirth: data.dob!,
+				// });
+				// const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
 				const response = await axios.post("/api/user/new-user/", {
 					...data,
 					type: type,
-					dwollaCustomerID,
-					dwollaCustomerUrl,
+					// dwollaCustomerID,
+					// dwollaCustomerUrl,
 				});
 				if (response.status === 201) {
 					router.push("/sign-in/");
@@ -95,55 +95,55 @@ const AuthForm = ({ type }: { type: string }) => {
 					</h1>
 				</div>
 			</header>
-			{/* {user ? ( */}
-			<div className="flex flex-col gap-4">
-				<PlaidLink user={user} variant="primary" />
-			</div>
-			{/* ) : ( */}
-			<>
-				<Form {...form}>
-					<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-						{type === "sign-up" && (
-							<>
-								<div className="flex gap-4">
-									<CustomInput control={form.control} name="firstName" label="First Name" placeholder="ex. Joe" />
-									<CustomInput control={form.control} name="lastName" label="Last Name" placeholder="ex. Smith" />
-								</div>
-								<CustomInput control={form.control} name="address" label="Address" placeholder="ex. 1234 E. Main St." />
-								<CustomInput control={form.control} name="city" label="City" placeholder="ex. New York" />
-								<div className="flex gap-4">
-									<CustomInput control={form.control} name="state" label="State" placeholder="ex. NY" />
-									<CustomInput control={form.control} name="postalCode" label="Postal Code" placeholder="ex. 10001" />
-								</div>
-								<div className="flex gap-4">
-									<CustomInput control={form.control} name="dob" label="Date of Birth" placeholder="ex. YYYY-MM-DD" />
-									<CustomInput control={form.control} name="ssn" label="Last 4 of SSN" placeholder="ex. 1234" />
-								</div>
-							</>
-						)}
-						<CustomInput control={form.control} name="email" label="Email" placeholder="Enter your Email" />
-						<CustomInput
-							control={form.control}
-							name="password"
-							label="Password"
-							placeholder="Enter Password"
-							onChange={(e) => setPassword(e.target.value)}
-						/>
-						<div className="flex flex-col gap-4">
-							<Button disabled={loading} className="form-btn" type="submit">
-								{loading ? <Spinner /> : "Submit"}
-							</Button>
-						</div>
-					</form>
-				</Form>
-				<footer className="flex justify-center gap-1">
-					<p className="text-14 font-normal text-gray-600">{type === "sign-in" ? "Don't have an account?" : "Already have an account?"}</p>
-					<Link className="form-link" href={type === "sign-in" ? "/sign-up" : "/sign-in"}>
-						{type === "sign-in" ? "Sign Up" : "Sign In"}
-					</Link>
-				</footer>
-			</>
-			{/* )} */}
+			{user ? (
+				<div className="flex flex-col gap-4">
+					<PlaidLink user={user} variant="primary" />
+				</div>
+			) : (
+				<>
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+							{type === "sign-up" && (
+								<>
+									<div className="flex gap-4">
+										<CustomInput control={form.control} name="firstName" label="First Name" placeholder="ex. Joe" />
+										<CustomInput control={form.control} name="lastName" label="Last Name" placeholder="ex. Smith" />
+									</div>
+									<CustomInput control={form.control} name="address" label="Address" placeholder="ex. 1234 E. Main St." />
+									<CustomInput control={form.control} name="city" label="City" placeholder="ex. New York" />
+									<div className="flex gap-4">
+										<CustomInput control={form.control} name="state" label="State" placeholder="ex. NY" />
+										<CustomInput control={form.control} name="postalCode" label="Postal Code" placeholder="ex. 10001" />
+									</div>
+									<div className="flex gap-4">
+										<CustomInput control={form.control} name="dob" label="Date of Birth" placeholder="ex. YYYY-MM-DD" />
+										<CustomInput control={form.control} name="ssn" label="Last 4 of SSN" placeholder="ex. 1234" />
+									</div>
+								</>
+							)}
+							<CustomInput control={form.control} name="email" label="Email" placeholder="Enter your Email" />
+							<CustomInput
+								control={form.control}
+								name="password"
+								label="Password"
+								placeholder="Enter Password"
+								onChange={(e) => setPassword(e.target.value)}
+							/>
+							<div className="flex flex-col gap-4">
+								<Button disabled={loading} className="form-btn" type="submit">
+									{loading ? <Spinner /> : "Submit"}
+								</Button>
+							</div>
+						</form>
+					</Form>
+					<footer className="flex justify-center gap-1">
+						<p className="text-14 font-normal text-gray-600">{type === "sign-in" ? "Don't have an account?" : "Already have an account?"}</p>
+						<Link className="form-link" href={type === "sign-in" ? "/sign-up" : "/sign-in"}>
+							{type === "sign-in" ? "Sign Up" : "Sign In"}
+						</Link>
+					</footer>
+				</>
+			)}
 		</section>
 	);
 };

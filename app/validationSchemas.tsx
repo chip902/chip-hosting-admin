@@ -104,3 +104,20 @@ export const authFormSchema = (type: string) =>
 		}),
 		password: type === "customer" ? z.string().optional() : z.string().min(8, "Password must be at least 8 characters"),
 	});
+
+export const profileFormSchema = () =>
+	z.object({
+		firstName: z.string().min(2).max(32),
+		lastName: z.string().min(2).max(32),
+		address: z.string().min(2).max(100),
+		city: z.string().min(2).max(32),
+		state: z.string().min(2).max(2),
+		postalCode: z.string(),
+		dob: z.string().max(10),
+		role: z.string().max(10),
+		ssn: z.string().min(4, "Should only be the last 4 digits of your SSN or TIN").max(4, "Should only be the last 4 digits of your SSN or TIN"),
+		email: z.string().email().min(2, {
+			message: "Email must be at least 2 characters.",
+		}),
+		password: z.string().min(8, "Password must be at least 8 characters"),
+	});

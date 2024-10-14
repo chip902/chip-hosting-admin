@@ -1,11 +1,11 @@
 "use client";
-import React, { useEffect, useMemo, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { TimeEntry, TimeEntryData, TimeGridProps } from "@/types";
-import { parseISO, format, differenceInMinutes, startOfDay, addMinutes, isValid, isSameDay, add, addDays } from "date-fns";
+import { parseISO, format, isValid } from "date-fns";
 
 const TimeGrid = ({ filters }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);

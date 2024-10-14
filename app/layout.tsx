@@ -27,7 +27,7 @@ function classNames(...classes: string[]) {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
 	const userNavigation = [
-		{ name: "Your profile", href: "#" },
+		{ name: "Your profile", href: "/admin/profile" },
 		{
 			name: "Sign out",
 			onClick: async () => {

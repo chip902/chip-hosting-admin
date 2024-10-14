@@ -1,6 +1,8 @@
 "use client";
 import { useState, useEffect } from "react";
 import axios from "axios";
+import PlaidLink from "@/components/PlaidLink";
+import auth from "next-auth";
 
 interface IBooking {
 	id: number;

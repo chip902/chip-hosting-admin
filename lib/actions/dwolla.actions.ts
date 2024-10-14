@@ -1,5 +1,3 @@
-"use server";
-
 import { AddFundingSourceParams, CreateFundingSourceOptions, NewDwollaCustomerParams, TransferParams } from "@/types";
 import { Client } from "dwolla-v2";
 
@@ -16,7 +14,7 @@ const getEnvironment = (): "production" | "sandbox" => {
 	}
 };
 
-const dwollaClient = new Client({
+export const dwollaClient = new Client({
 	environment: getEnvironment(),
 	key: process.env.DWOLLA_KEY as string,
 	secret: process.env.DWOLLA_SECRET as string,
@@ -26,7 +24,7 @@ const dwollaClient = new Client({
 export const createFundingSource = async (options: CreateFundingSourceOptions) => {
 	try {
 		return await dwollaClient
-			.post(`customers/${options.customerId}/funding-sources`, {
+			.post(`${options.customerUrl}/funding-sources`, {
 				name: options.fundingSourceName,
 				plaidToken: options.plaidToken,
 			})
@@ -76,7 +74,7 @@ export const createTransfer = async ({ sourceFundingSourceUrl, destinationFundin
 	}
 };
 
-export const addFundingSource = async ({ dwollaCustomerId, processorToken, bankName }: AddFundingSourceParams) => {
+export const addFundingSource = async ({ dwollaCustomerId, processorToken, bankName, dwollaCustomerUrl }: AddFundingSourceParams) => {
 	try {
 		// create dwolla auth link
 		const dwollaAuthLinks = await createOnDemandAuthorization();
@@ -84,6 +82,7 @@ export const addFundingSource = async ({ dwollaCustomerId, processorToken, bankN
 		// add funding source to the dwolla customer & get the funding source url
 		const fundingSourceOptions = {
 			customerId: dwollaCustomerId,
+			customerUrl: dwollaCustomerUrl,
 			fundingSourceName: bankName,
 			plaidToken: processorToken,
 			_links: dwollaAuthLinks,

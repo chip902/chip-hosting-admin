@@ -1,9 +1,8 @@
-import type { NextAuthOptions } from "next-auth";
+import type { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/prisma/client";
 import bcrypt from "bcryptjs";
-import { User } from "next-auth";
 
 export const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
@@ -36,6 +35,9 @@ export const authOptions: NextAuthOptions = {
 
 					return {
 						id: user.id.toString(),
+						userId: user.userId || "",
+						dwollaCustomerUrl: user.dwollaCustomerUrl || null,
+						dwollaCustomerId: user.dwollaCustomerId || null,
 						email: user.email,
 						name: user.firstName || user.email,
 						firstName: user.firstName || null,
@@ -51,8 +53,11 @@ export const authOptions: NextAuthOptions = {
 	callbacks: {
 		async jwt({ token, user }) {
 			if (user) {
+				console.log("JWT Callback - User: ", user);
 				token.id = user.id;
-				token.email = user.email;
+				token.userId = user.userId;
+				token.dwollaCustomerUrl = user.dwollaCustomerUrl;
+				token.dwollaCustomerId = user.dwollaCustomerId;
 				token.name = user.name;
 				token.firstName = user.firstName;
 				token.lastName = user.lastName;
@@ -61,11 +66,14 @@ export const authOptions: NextAuthOptions = {
 		},
 		async session({ session, token }) {
 			if (session.user) {
-				session.user.id = token.id as string;
-				session.user.email = token.email as string;
-				session.user.name = token.name as string | null;
-				session.user.firstName = token.firstName as string | null;
-				session.user.lastName = token.lastName as string | null;
+				console.log("Session Callback - Token: ", token);
+				session.user.id = token.id;
+				session.user.userId = token.userId;
+				session.user.dwollaCustomerUrl = token.dwollaCustomerUrl;
+				session.user.dwollaCustomerId = token.dwollaCustomerId;
+				session.user.name = token.name;
+				session.user.firstName = token.firstName;
+				session.user.lastName = token.lastName;
 			}
 			return session;
 		},

@@ -1,4 +1,4 @@
-import { authFormSchema } from "@/app/validationSchemas";
+import { authFormSchema, profileFormSchema } from "@/app/validationSchemas";
 import { FormField, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import React from "react";
@@ -7,9 +7,10 @@ import { z } from "zod";
 
 const formSchema = authFormSchema("sign-up");
 const customerSchema = authFormSchema("customer");
+const profileSchema = profileFormSchema();
 
 interface CustomInputProps {
-	control: Control<z.infer<typeof formSchema | typeof customerSchema>>;
+	control: Control<z.infer<typeof formSchema | typeof customerSchema | typeof profileSchema>>;
 	name: FieldPath<z.infer<typeof formSchema>>;
 	label: string;
 	placeholder: string;

@@ -2,10 +2,11 @@ import Link from "next/link";
 import Image from "next/image";
 import BankCard from "./BankCard";
 import { RightSidebarProps } from "@/types";
+import PlaidLink from "./PlaidLink";
 
 const RightSidebar: React.FC<RightSidebarProps> = ({ user, transactions, banks }) => {
 	if (!user) {
-		return;
+		return null;
 	}
 
 	return (
@@ -27,10 +28,7 @@ const RightSidebar: React.FC<RightSidebarProps> = ({ user, transactions, banks }
 			<section className="banks">
 				<div className="flex w-full justify-between">
 					<h2 className="header-2">My Banks</h2>
-					<Link href="/" className="flex gap-2">
-						<Image src="/icons/plus.svg" width={20} height={20} alt="plus" />
-						<h2 className="text-14 font-semibold text-grey-600">Add Bank</h2>
-					</Link>
+					<PlaidLink user={user} variant="primary" />
 				</div>
 
 				{banks?.length > 0 && (
