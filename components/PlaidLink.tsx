@@ -7,6 +7,7 @@ import { PlaidLinkOnSuccessMetadata, PlaidLinkOptions, usePlaidLink } from "reac
 import { useRouter } from "next/navigation";
 import axios from "axios";
 import { addFundingSource } from "@/lib/actions/dwolla.actions";
+import { Spinner } from "@radix-ui/themes";
 
 const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 	const [token, setToken] = useState<string | null>(null);
@@ -84,6 +85,7 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 						customerId: dwollaCustomerId,
 						customerUrl: user.dwollaCustomerUrl,
 						processorToken,
+						accountId: accountId,
 						bankName: metadata?.institution?.name,
 						bankAccountType: "business",
 					},
@@ -94,7 +96,7 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 				} else if (!("data" in fundingSourceRes)) {
 					throw new Error("Invalid data from 'addFundingSource': missing 'data'. ");
 				}
-				const fundingSourceUrl = fundingSourceRes.data; // now TypeScript knows that 'fundingSourceRes' has a 'data' property of type 'any' (or the known type if provided in function definition)
+				const fundingSourceUrl = fundingSourceRes.data.fundingSourceUrl; // now TypeScript knows that 'fundingSourceRes' has a 'data' property of type 'any' (or the known type if provided in function definition)
 
 				// Step 6: Optionally save funding source URL to your database
 
@@ -116,7 +118,7 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 	const { open, ready, error } = usePlaidLink(config);
 
 	if (!token || !ready) {
-		return <div>Loading...</div>;
+		return <Spinner />;
 	}
 
 	return (

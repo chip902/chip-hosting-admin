@@ -1,9 +1,12 @@
+// app/api/dwolla/create-funding-source/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import { dwollaClient } from "@/lib/actions/dwolla.actions";
+import dwollaClient from "@/lib/dwolla";
+import prisma from "@/prisma/client";
+import { Bank } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
 	try {
-		const { customerUrl, processorToken, bankName, bankAccountType } = await request.json();
+		const { accountId, customerUrl, processorToken, bankName, bankAccountType } = await request.json();
 
 		console.log("Received customerUrl:", customerUrl);
 		console.log("Received processorToken:", processorToken);
@@ -18,7 +21,10 @@ export async function POST(request: NextRequest) {
 		const fundingSourceResponse = await dwollaClient.post(`${customerUrl}/funding-sources`, requestBody);
 
 		const fundingSourceUrl = fundingSourceResponse.headers.get("location");
-
+		if (!fundingSourceUrl) {
+			throw new Error("Failed to retrieve funding source URL from Dwolla response");
+		}
+		await updateFundingSourceURL(accountId, fundingSourceUrl);
 		return NextResponse.json({ fundingSourceUrl }, { status: 201 });
 	} catch (error: any) {
 		console.error("Error creating funding source in Dwolla:", error);
@@ -27,4 +33,10 @@ export async function POST(request: NextRequest) {
 		}
 		return NextResponse.json({ error: "Error creating funding source in Dwolla" }, { status: 500 });
 	}
+}
+export async function updateFundingSourceURL(accountId: Bank["accountId"], fundingSourceUrl: string): Promise<Bank> {
+	return prisma.bank.update({
+		where: { accountId },
+		data: { fundingSourceUrl },
+	});
 }

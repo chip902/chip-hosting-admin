@@ -1,13 +1,11 @@
 /* eslint-disable no-unused-vars */
 
-declare type SearchParamProps = {
+export type SearchParamProps = {
 	params: { [key: string]: string };
 	searchParams: { [key: string]: string | string[] | undefined };
 };
 
-// ========================================
-
-declare type SignUpParams = {
+export type SignUpParams = {
 	firstName: string;
 	lastName: string;
 	address: string;
@@ -20,22 +18,22 @@ declare type SignUpParams = {
 	password: string;
 };
 
-declare type LoginUser = {
+export type LoginUser = {
 	id: number;
 	email: string;
 	password: string;
 };
 
-declare type User = {
-	id?: number | string;
-	$id?: string | null;
-	email: string;
+export type User = {
+	id?: string;
+	name?: string | null;
+	email?: string | null;
+	image?: string | null;
 	userId?: string | null;
 	dwollaCustomerUrl?: string | null;
-	dwollaCustomerId?: ?(string | null);
+	dwollaCustomerId?: string | null;
 	firstName?: string | null;
 	lastName?: string | null;
-	name?: string | null;
 	address?: string | null;
 	city?: string | null;
 	state?: string | null;
@@ -44,28 +42,47 @@ declare type User = {
 	ssn?: string | null;
 };
 
-declare type NewUserParams = {
+export type NewUserParams = {
 	userId: string;
 	email: string;
 	name: string;
 	password: string;
 };
 
-declare type Account = {
+export interface Account {
 	id: string;
 	availableBalance: number;
 	currentBalance: number;
-	officialName: string;
-	mask: string;
-	institutionId: string;
+	institutionId: string | number;
 	name: string;
+	officialName: string | null;
+	mask: string;
 	type: string;
 	subtype: string;
-	appwriteItemId: string;
+	bankId: string;
 	sharableId: string;
-};
+}
 
-declare type Transaction = {
+export interface AccountBase {
+	id: string;
+	availableBalance: number;
+	currentBalance: number;
+	name: string;
+	officialName: string;
+	institution_id?: number; // Assuming this might not always be present, hence it is optional.
+}
+
+export interface BankAccount extends AccountBase {
+	institutionId: number; // For properties only available in some accounts, consider adding them to the extension interface.
+}
+
+export interface GetAccountsResult {
+	accounts: Account[];
+	totalBanks: number;
+	totalCurrentBalance: number;
+}
+
+export type Transaction = {
 	id: string;
 	$id: string;
 	name: string;
@@ -77,14 +94,13 @@ declare type Transaction = {
 	category: string;
 	date: string;
 	image: string;
-	type: string;
 	$createdAt: string;
 	channel: string;
 	senderBankId: string;
 	receiverBankId: string;
 };
 
-declare type Bank = {
+export type Bank = {
 	$id: string;
 	accountId: string;
 	bankId: string;
@@ -94,35 +110,35 @@ declare type Bank = {
 	sharableId: string;
 };
 
-declare type AccountTypes = "depository" | "credit" | "loan " | "investment" | "other";
+export type AccountTypes = "depository" | "credit" | "loan" | "investment" | "other";
 
-declare type Category = "Food and Drink" | "Travel" | "Transfer";
+export type Category = "Food and Drink" | "Travel" | "Transfer";
 
-declare type CategoryCount = {
+export type CategoryCount = {
 	name: string;
 	count: number;
 	totalCount: number;
 };
 
-declare type Receiver = {
+export type Receiver = {
 	firstName: string;
 	lastName: string;
 };
 
-declare type TransferParams = {
+export type TransferParams = {
 	sourceFundingSourceUrl: string;
 	destinationFundingSourceUrl: string;
 	amount: string;
 };
 
-declare type AddFundingSourceParams = {
+export type AddFundingSourceParams = {
 	dwollaCustomerUrl: string;
 	dwollaCustomerId: string;
 	processorToken: string;
 	bankName: string;
 };
 
-declare type NewDwollaCustomerParams = {
+export type NewDwollaCustomerParams = {
 	firstName: string;
 	lastName: string;
 	email: string;
@@ -135,30 +151,30 @@ declare type NewDwollaCustomerParams = {
 	ssn: string;
 };
 
-declare interface CreditCardProps {
+export interface CreditCardProps {
 	account: Account;
 	userName: string;
 	showBalance?: boolean;
 }
 
-declare interface BankInfoProps {
+export interface BankInfoProps {
 	account: Account;
 	appwriteItemId?: string;
 	type: "full" | "card";
 }
 
-declare interface HeaderBoxProps {
+export interface HeaderBoxProps {
 	type?: "title" | "greeting";
 	title: string;
 	subtext: string;
 	user?: string;
 }
 
-declare interface MobileNavProps {
+export interface MobileNavProps {
 	user: User;
 }
 
-declare interface PageHeaderProps {
+export interface PageHeaderProps {
 	topTitle: string;
 	bottomTitle: string;
 	topDescription: string;
@@ -166,7 +182,7 @@ declare interface PageHeaderProps {
 	connectBank?: boolean;
 }
 
-declare interface PaginationProps {
+export interface PaginationProps {
 	page: number;
 	totalPages: number;
 }
@@ -177,108 +193,104 @@ export interface PlaidLinkProps {
 	dwollaCustomerId?: string;
 }
 
-// declare type User = sdk.Models.Document & {
-//   accountId: string;
-//   email: string;
-//   name: string;
-//   items: string[];
-//   accessToken: string;
-//   image: string;
-// };
-
-declare interface AuthFormProps {
+export interface AuthFormProps {
 	type: "sign-in" | "sign-up";
 }
 
-declare interface BankDropdownProps {
+export interface BankDropdownProps {
 	accounts: Account[];
 	setValue?: UseFormSetValue<any>;
 	otherStyles?: string;
 }
 
-declare interface BankTabItemProps {
+export interface BankTabItemProps {
 	account: Account;
 	appwriteItemId?: string;
 }
 
-declare interface TotlaBalanceBoxProps {
+export interface TotalBalanceBoxProps {
 	accounts: Account[];
 	totalBanks: number;
 	totalCurrentBalance: number;
 }
 
-declare interface FooterProps {
+export interface FooterProps {
 	user: User | null;
 }
 
-declare interface RightSidebarProps {
+export interface RightSidebarProps {
 	user: User;
 	transactions: Transaction[];
 	banks: Bank[] & Account[];
 }
 
-declare interface SiderbarProps {
+export interface SiderbarProps {
 	user?: User | null;
 }
 
-declare interface RecentTransactionsProps {
+export interface RecentTransactionsProps {
 	accounts: Account[];
 	transactions: Transaction[];
 	appwriteItemId: string;
 	page: number;
 }
 
-declare interface TransactionHistoryTableProps {
+export interface TransactionHistoryTableProps {
 	transactions: Transaction[];
 	page: number;
 }
 
-declare interface CategoryBadgeProps {
+export interface CategoryBadgeProps {
 	category: string;
 }
 
-declare interface TransactionTableProps {
+export interface TransactionTableProps {
 	transactions: Transaction[];
 }
 
-declare interface CategoryProps {
+export interface CategoryProps {
 	category: CategoryCount;
 }
 
-declare interface DoughnutChartProps {
+export interface DoughnutChartProps {
 	accounts: Account[];
 }
 
-declare interface PaymentTransferFormProps {
+export interface PaymentTransferFormProps {
 	accounts: Account[];
 }
 
-// Actions
-declare interface getAccountsProps {
+export interface GetAccountsProps {
 	userId: string;
 }
 
-declare interface getAccountProps {
-	appwriteItemId: string;
+export interface GetAccountsResult {
+	accounts: Account[];
+	totalBanks: number;
+	totalCurrentBalance: number;
 }
 
-declare interface getInstitutionProps {
+export interface GetAccountProps {
+	bankId: string;
+}
+
+export interface GetInstitutionProps {
 	institutionId: string;
 }
 
-declare interface getTransactionsProps {
+export interface GetTransactionsProps {
 	accessToken: string;
 }
 
-declare interface CreateFundingSourceOptions {
-	customerId: string; // Dwolla Customer ID
-	customerUrl: string; //Dwolla Customer URL
-	fundingSourceName: string; // Dwolla Funding Source Name
-	plaidToken: string; // Plaid Account Processor Token
-	_links: object; // Dwolla On Demand Authorization Link
+export interface CreateFundingSourceOptions {
+	customerId: string;
+	customerUrl: string;
+	fundingSourceName: string;
+	plaidToken: string;
+	_links: object;
 }
 
-declare interface CreateTransactionProps {
+export interface CreateTransactionProps {
 	name: string;
 	amount: string;
 	senderId: string;
@@ -288,25 +300,25 @@ declare interface CreateTransactionProps {
 	email: string;
 }
 
-declare interface getTransactionsByBankIdProps {
+export interface GetTransactionsByBankIdProps {
 	bankId: string;
 }
 
-declare interface signInProps {
+export interface SignInProps {
 	email: string;
 	password: string;
 }
 
-declare interface getUserInfoProps {
+export interface GetUserInfoProps {
 	userId: string;
 }
 
-declare interface exchangePublicTokenProps {
+export interface ExchangePublicTokenProps {
 	publicToken: string;
 	user: User;
 }
 
-declare interface createBankAccountProps {
+export interface CreateBankAccountProps {
 	accessToken: string;
 	userId: string;
 	accountId: string;
@@ -315,15 +327,15 @@ declare interface createBankAccountProps {
 	sharableId: string;
 }
 
-declare interface getBanksProps {
+export interface GetBanksProps {
 	userId: string;
 }
 
-declare interface getBankProps {
-	documentId: string;
+export interface GetBankProps {
+	bankId: string;
 }
 
-declare interface getBankByAccountIdProps {
+export interface GetBankByAccountIdProps {
 	accountId: string;
 }
 
@@ -343,7 +355,7 @@ export interface Project {
 	name: string;
 	customerId: number;
 	dateCreated: string;
-	description: string | null; // Changed from string | undefined to string | null
+	description: string | null;
 	rate: number | null;
 }
 
@@ -352,7 +364,7 @@ export interface Task {
 	name: string;
 	projectId: number;
 	dateCreated: string;
-	description: string | null; // Changed from string | undefined to string | null
+	description: string | null;
 	rate: number | null;
 }
 
@@ -374,10 +386,9 @@ export interface TimeEntryData extends TimeEntryBase {
 	Customer?: Partial<Customer> | null;
 	Project?: Partial<Project> | null;
 	Task?: Partial<Task> | null;
-	User?: Partial<User> | null; // Change this line
+	User?: Partial<User> | null;
 	startTime?: string;
 	endTime?: string;
-	// Additional properties for rendering
 	width?: number;
 	left?: number;
 	startSlot?: number;
@@ -385,12 +396,13 @@ export interface TimeEntryData extends TimeEntryBase {
 }
 
 export interface TimeEntry extends Omit<TimeEntryData, "date"> {
-	date: Date; // Convert to Date for frontend use
+	date: Date;
 	name: string;
 	Customer: Customer;
 	Project: Project;
 	Task: Task;
 }
+
 export interface TimeEntryProps {
 	entry: TimeEntry;
 	startSlot: number;

@@ -1,7 +1,7 @@
 // /app/api/dwolla/create-customer/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import { dwollaClient } from "@/lib/actions/dwolla.actions";
+import dwollaClient from "@/lib/dwolla";
 import prisma from "@/prisma/client";
 import { User } from "@prisma/client";
 

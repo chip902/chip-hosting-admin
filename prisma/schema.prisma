@@ -157,7 +157,7 @@ model VerificationToken {
 
 model Bank {
   id               Int    @id @unique @default(autoincrement())
-  userId           String
+  userId           String @unique
   bankId           String
   accountId        String
   accessToken      String

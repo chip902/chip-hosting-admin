@@ -9,4 +9,4 @@ export async function auth(...args: [GetServerSidePropsContext["req"], GetServer
 	return getServerSession(...args, authOptions);
 }
 
-export { handler as GET, handler as POST };
+export { handler as GET, handler as POST, authOptions };
