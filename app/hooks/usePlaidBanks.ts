@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAccounts } from "@/lib/actions/bank.actions";
+import axios from "axios";
+import { GetAccountsResult } from "@/types";
 
 export const usePlaidBanks = (userId: string) => {
-	return useQuery({
+	return useQuery<GetAccountsResult>({
 		queryKey: ["plaidBanks", userId],
-		queryFn: () => getAccounts(userId),
+		queryFn: async () => {
+			const response = await axios.get<GetAccountsResult>(`/api/bank/get-accounts?userId=${userId}`);
+			return response.data;
+		},
 		enabled: !!userId,
 	});
 };

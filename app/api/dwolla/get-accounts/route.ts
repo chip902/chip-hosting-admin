@@ -12,8 +12,11 @@ export async function GET(request: NextRequest) {
 	try {
 		const accounts = await getDwollaAccounts(userId);
 		return NextResponse.json(accounts, { status: 200 });
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error fetching Dwolla accounts: ", error);
-		return NextResponse.json({ error: "Error fetching Dwolla accounts" }, { status: 500 });
+		if (error.message.includes("DWOLLA_APP_KEY and DWOLLA_APP_SECRET must be set")) {
+			return NextResponse.json({ error: "Dwolla configuration error. Please try again later." }, { status: 503 });
+		}
+		return NextResponse.json({ error: "Error fetching Dwolla accounts", details: error.message }, { status: 500 });
 	}
 }

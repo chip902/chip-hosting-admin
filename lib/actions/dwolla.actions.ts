@@ -1,4 +1,4 @@
-import dwollaClient from "@/lib/dwolla";
+import createDwollaClient from "@/lib/dwolla";
 import prisma from "@/prisma/client";
 
 // Custom type to work around missing typings
@@ -21,7 +21,7 @@ type DwollaClient = {
 };
 
 const getAppToken = async (): Promise<DwollaClient> => {
-	return dwollaClient as unknown as DwollaClient;
+	return createDwollaClient as unknown as DwollaClient;
 };
 
 export const createDwollaCustomer = async (userId: string, customerData: any) => {
@@ -74,14 +74,18 @@ export const getDwollaAccounts = async (userId: string) => {
 
 		if (!user || !user.dwollaCustomerUrl) {
 			console.log(`Dwolla customer not found for user ID: ${userId}`);
-			return []; // Return an empty array instead of throwing an error
+			return [];
 		}
 
-		const appToken = await getAppToken();
-		const response = await appToken.get(`${user.dwollaCustomerUrl}/funding-sources`);
-		return response.body._embedded["funding-sources"];
+		console.log("Dwolla Customer URL:", user.dwollaCustomerUrl);
+
+		const dwollaClient = await createDwollaClient;
+		const response = await dwollaClient.get(`${user.dwollaCustomerUrl}/funding-sources`);
+		console.log("Dwolla API Response:", response);
+
+		return response.body._embedded["funding-sources"] || [];
 	} catch (error) {
 		console.error("Error fetching Dwolla accounts: ", error);
-		return []; // Return an empty array in case of any error
+		throw error;
 	}
 };

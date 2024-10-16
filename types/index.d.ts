@@ -1,5 +1,5 @@
 /* eslint-disable no-unused-vars */
-
+import { PersonalFinanceCategory } from "plaid";
 export type SearchParamProps = {
 	params: { [key: string]: string };
 	searchParams: { [key: string]: string | string[] | undefined };
@@ -91,7 +91,7 @@ export type Transaction = {
 	accountId: string;
 	amount: number;
 	pending: boolean;
-	category: string;
+	category: string | PersonalFinanceCategory;
 	date: string;
 	image: string;
 	$createdAt: string;
@@ -231,8 +231,7 @@ export interface SiderbarProps {
 export interface RecentTransactionsProps {
 	accounts: Account[];
 	transactions: Transaction[];
-	appwriteItemId: string;
-	page: number;
+	page?: number;
 }
 
 export interface TransactionHistoryTableProps {

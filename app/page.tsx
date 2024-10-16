@@ -18,7 +18,6 @@ export default async function Home() {
 					<HeaderBox type="greeting" title="Welcome" user={userName} subtext="Make that money!" />
 				</header>
 				{user && user.userId ? <ClientHome userId={user.userId} /> : <TotalBalanceBox accounts={[]} totalBanks={0} totalCurrentBalance={0} />}
-				<div>RECENT TRANSACTIONS</div>
 			</div>
 			{user ? <RightSidebar user={user} transactions={[]} banks={[]} /> : "Loading User Data ..."}
 		</section>
