@@ -3,12 +3,6 @@ import prisma from "@/prisma/client";
 import { CountryCode } from "plaid";
 import { Account } from "@/types";
 
-interface GetAccountsResult {
-	accounts: Account[];
-	totalBanks: number;
-	totalCurrentBalance: number;
-}
-
 export const getAccounts = async (userId: string): Promise<Account[]> => {
 	const response = await fetch(`/api/bank/get-accounts?userId=${userId}`);
 	if (!response.ok) {
@@ -75,6 +69,7 @@ export const getTransactions = async (accessToken: string) => {
 		const response = await plaidClient.transactionsSync({
 			access_token: accessToken,
 		});
+		console.log("TRANSACTION DEBUG: ", response);
 
 		return response.data.added.map((transaction) => ({
 			id: transaction.transaction_id,

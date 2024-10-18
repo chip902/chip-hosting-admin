@@ -33,9 +33,12 @@ export async function POST(request: NextRequest) {
 				client_user_id: String(user.$id),
 			},
 			client_name: `${user.firstName} ${user.lastName}`,
-			products: ["auth"] as Products[],
+			products: ["auth", "transactions", "identity"] as Products[],
 			language: "en",
 			country_codes: ["US"] as CountryCode[],
+			update: {
+				account_selection_enabled: true,
+			},
 		};
 
 		const response = await plaidClient.linkTokenCreate(tokenParams);
