@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { GetAccountsResult } from "@/types";
 
-export const usePlaidBanks = (userId: string) => {
+export const usePlaidBanks = (userId: string | null | undefined) => {
 	return useQuery<GetAccountsResult>({
 		queryKey: ["plaidBanks", userId],
 		queryFn: async () => {

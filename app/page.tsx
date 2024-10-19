@@ -19,7 +19,7 @@ export default async function Home() {
 				</header>
 				{user && user.userId ? <ClientHome userId={user.userId} /> : <TotalBalanceBox accounts={[]} totalBanks={0} totalCurrentBalance={0} />}
 			</div>
-			{user ? <RightSidebar user={user} transactions={[]} banks={[]} /> : "Loading User Data ..."}
+			{user ? <RightSidebar user={user} /> : "Loading User Data ..."}
 		</section>
 	);
 }

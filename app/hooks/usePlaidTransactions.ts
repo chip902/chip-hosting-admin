@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { Transaction } from "@/types";
 
-export const usePlaidTransactions = (userId: string) => {
+export const usePlaidTransactions = (userId: string | null | undefined) => {
 	return useQuery<Transaction[], Error>({
 		queryKey: ["plaidTransactions", userId],
 		queryFn: async () => {

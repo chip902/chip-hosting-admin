@@ -1,12 +1,11 @@
 // PlaidLink.tsx
 "use client";
-import { AddFundingSourceParams, PlaidLinkProps } from "@/types";
+import { PlaidLinkProps } from "@/types";
 import React, { useCallback, useEffect, useState } from "react";
 import { Button } from "./ui/button";
 import { PlaidLinkOnSuccessMetadata, PlaidLinkOptions, usePlaidLink } from "react-plaid-link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { addFundingSource } from "@/lib/actions/dwolla.actions";
 import { Spinner } from "@radix-ui/themes";
 
 const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
@@ -44,13 +43,16 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 	const onSuccess = useCallback(
 		async (public_token: string, metadata: PlaidLinkOnSuccessMetadata) => {
 			try {
+				if (!user) {
+					throw new Error("User is undefined");
+				}
 				console.log("onSuccess - public_token:", public_token);
 				console.log("onSuccess - user:", user);
 
 				// Step 1: Exchange public token with Plaid
 				const exchangeRes = await axios.post(
 					"/api/plaid/exchange-public-token",
-					{ publicToken: public_token, userID: user.userId },
+					{ publicToken: public_token, userID: user },
 					{ headers: { "Content-Type": "application/json" } }
 				);
 				if (!exchangeRes) throw new Error("Failed to exchange public token");

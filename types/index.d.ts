@@ -221,9 +221,7 @@ export interface FooterProps {
 }
 
 export interface RightSidebarProps {
-	user: User;
-	transactions: Transaction[];
-	banks: Bank[] & Account[];
+	user: User | null;
 }
 
 export interface SiderbarProps {
