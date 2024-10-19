@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { plaidClient } from "@/lib/plaid";
-import { Account } from "@/types";
+import { AccountBase } from "@/types";
 
+interface PlaidAccount extends AccountBase {}
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const userId = searchParams.get("userId");
@@ -14,32 +15,33 @@ export async function GET(request: NextRequest) {
 	try {
 		const banks = await prisma.bank.findMany({ where: { userId } });
 
-		const accounts: Account[] = await Promise.all(
-			banks.map(async (bank) => {
-				const accountsResponse = await plaidClient.accountsGet({
-					access_token: bank.accessToken,
-				});
-				const accountData = accountsResponse.data.accounts[0];
+		const accountsPromises = banks.map(async (bank) => {
+			const response = await plaidClient.accountsGet({ access_token: bank.accessToken });
+			return response.data.accounts as PlaidAccount[];
+		});
 
-				return {
-					id: accountData.account_id,
-					availableBalance: accountData.balances.available || 0,
-					currentBalance: accountData.balances.current || 0,
-					institutionId: bank.bankId,
-					name: accountData.name,
-					officialName: accountData.official_name || null,
-					mask: accountData.mask || "",
-					type: accountData.type,
-					subtype: accountData.subtype || "",
-					bankId: bank.id.toString(),
-					appwriteItemId: bank.id.toString(),
-					sharableId: bank.sharableId,
-				};
-			})
-		);
+		const accountArrays: PlaidAccount[][] = await Promise.all(accountsPromises);
+
+		const accounts = accountArrays.flatMap((accountArray, index) => {
+			const bank = banks[index];
+			return accountArray.map((accountData) => ({
+				id: accountData.id || "",
+				availableBalance: accountData.available_balance || null,
+				currentBalance: accountData.current_balance || null,
+				bankId: accountData.institution_id ? accountData.institution_id.toString() : bank.id,
+				institution_id: accountData.institution_id || null,
+				name: accountData.name || "",
+				officialName: accountData.official_name || null,
+				sharableId: accountData.persistent_account_id || null,
+				balances: {
+					available: accountData.available_balance || null,
+					current: accountData.current_balance || null,
+				},
+			}));
+		});
 
 		const totalBanks = accounts.length;
-		const totalCurrentBalance = accounts.reduce((total, account) => total + account.currentBalance, 0);
+		const totalCurrentBalance = accounts.reduce((total, account) => total + (account.currentBalance || 0), 0);
 
 		return NextResponse.json({ accounts, totalBanks, totalCurrentBalance }, { status: 200 });
 	} catch (error) {

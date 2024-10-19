@@ -49,31 +49,44 @@ export type NewUserParams = {
 	password: string;
 };
 
-export interface Account {
-	id: string;
-	availableBalance: number;
-	currentBalance: number;
-	institutionId: string | number;
-	name: string;
-	officialName: string | null;
-	mask: string;
-	type: string;
-	subtype: string;
-	bankId: string;
-	sharableId: string;
+export interface Balances {
+	available: number | null;
+	current: number;
+	iso_currency_code: string;
+	limit: number | null;
+	unofficial_currency_code: string | null;
 }
 
 export interface AccountBase {
 	id: string;
-	availableBalance: number;
-	currentBalance: number;
+	available_balance: number;
+	current_balance: number;
+	institution_id: string | null;
+	account_id: string;
+	availableBalance: number | null;
+	balances: Balances;
+	holder_category: string; // 'personal' or other Plaid types
+	mask: string;
 	name: string;
-	officialName: string;
-	institution_id?: number; // Assuming this might not always be present, hence it is optional.
+	official_name: string | null;
+	persistent_account_id?: string; // May not always be present
+	subtype: string;
+	type: "depository" | "investment" | "loan" | string; // Include all relevant Plaid types
 }
 
-export interface BankAccount extends AccountBase {
-	institutionId: number; // For properties only available in some accounts, consider adding them to the extension interface.
+export interface Account extends AccountBase {
+	id: string;
+	currentBalance: number | null;
+	bankId: string | null;
+	appwriteItemId?: string;
+	availableBalance: number | null;
+	name: string;
+	officialName: string | null;
+	sharableId?: string | null | undefined; // Plaid sharable account ID
+	balances: {
+		available: number | null;
+		current: number | null;
+	};
 }
 
 export interface GetAccountsResult {
