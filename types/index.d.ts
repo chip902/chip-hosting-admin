@@ -58,35 +58,24 @@ export interface Balances {
 }
 
 export interface AccountBase {
-	id: string;
-	available_balance: number;
-	current_balance: number;
-	institution_id: string | null;
 	account_id: string;
-	availableBalance: number | null;
 	balances: Balances;
-	holder_category: string; // 'personal' or other Plaid types
+	institution_id: string | null;
 	mask: string;
 	name: string;
 	official_name: string | null;
 	persistent_account_id?: string; // May not always be present
 	subtype: string;
-	type: "depository" | "investment" | "loan" | string; // Include all relevant Plaid types
+	type: "depository" | "investment" | "loan" | string;
 }
 
 export interface Account extends AccountBase {
 	id: string;
+	availableBalance: number | null;
 	currentBalance: number | null;
 	bankId: string | null;
-	appwriteItemId?: string;
-	availableBalance: number | null;
-	name: string;
-	officialName: string | null;
-	sharableId?: string | null | undefined; // Plaid sharable account ID
-	balances: {
-		available: number | null;
-		current: number | null;
-	};
+	fundingSourceUrl?: string;
+	sharableId?: string | null;
 }
 
 export interface GetAccountsResult {

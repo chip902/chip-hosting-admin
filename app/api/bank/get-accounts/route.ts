@@ -16,7 +16,9 @@ export async function GET(request: NextRequest) {
 		const banks = await prisma.bank.findMany({ where: { userId } });
 
 		const accountsPromises = banks.map(async (bank) => {
-			const response = await plaidClient.accountsGet({ access_token: bank.accessToken });
+			const response = await plaidClient.accountsGet({
+				access_token: bank.accessToken,
+			});
 			return response.data.accounts as PlaidAccount[];
 		});
 
@@ -25,22 +27,20 @@ export async function GET(request: NextRequest) {
 		const accounts = accountArrays.flatMap((accountArray, index) => {
 			const bank = banks[index];
 			return accountArray.map((accountData) => ({
-				id: accountData.id || "",
-				availableBalance: accountData.available_balance || null,
-				currentBalance: accountData.current_balance || null,
-				bankId: accountData.institution_id ? accountData.institution_id.toString() : bank.id,
+				id: accountData.account_id || "",
+				availableBalance: accountData.balances.available || null,
+				currentBalance: accountData.balances.current || null,
+				bankId: accountData.institution_id ? accountData.institution_id.toString() : bank.id.toString(),
 				institution_id: accountData.institution_id || null,
 				name: accountData.name || "",
 				officialName: accountData.official_name || null,
+				fundingSourceUrl: bank.fundingSourceUrl,
 				sharableId: accountData.persistent_account_id || null,
-				balances: {
-					available: accountData.available_balance || null,
-					current: accountData.current_balance || null,
-				},
+				balances: accountData.balances,
 			}));
 		});
 
-		const totalBanks = accounts.length;
+		const totalBanks = banks.length; // Corrected to use the number of banks
 		const totalCurrentBalance = accounts.reduce((total, account) => total + (account.currentBalance || 0), 0);
 
 		return NextResponse.json({ accounts, totalBanks, totalCurrentBalance }, { status: 200 });

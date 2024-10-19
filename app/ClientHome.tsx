@@ -19,7 +19,7 @@ export default function ClientHome({ userId }: ClientHomeProps) {
 	const { toast } = useToast();
 
 	const accounts = plaidData?.accounts || [];
-	const totalBanks = dwollaAccounts?.totalBanks || 0;
+	const totalBanks = plaidData?.totalBanks || 0;
 	const totalCurrentBalance = plaidData?.totalCurrentBalance || 0;
 
 	useEffect(() => {
