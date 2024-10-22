@@ -207,7 +207,7 @@ export interface BankDropdownProps {
 
 export interface BankTabItemProps {
 	account: Account;
-	appwriteItemId?: string;
+	transactionId?: string;
 }
 
 export interface TotalBalanceBoxProps {
@@ -245,6 +245,7 @@ export interface CategoryBadgeProps {
 
 export interface TransactionTableProps {
 	transactions: Transaction[];
+	filterByBank?: boolean;
 }
 
 export interface CategoryProps {

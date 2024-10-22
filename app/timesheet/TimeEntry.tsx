@@ -31,7 +31,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 	const handleUpdate = () => {
 		setLoading(true);
 		updateTimeEntry(
-			{ id: entry.id, data: { duration: formState.duration, description: formState.description } },
+			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description } },
 			{
 				onSuccess: () => {
 					setIsOpen(false);

@@ -2,13 +2,18 @@ import { plaidClient } from "../plaid";
 import prisma from "@/prisma/client";
 import { CountryCode } from "plaid";
 import { Account } from "@/types";
+import axios from "axios";
 
 export const getAccounts = async (userId: string): Promise<Account[]> => {
-	const response = await fetch(`/api/bank/get-accounts?userId=${userId}`);
-	if (!response.ok) {
+	let baseURL = "";
+	if (process.env.NODE_ENV === "development") {
+		baseURL = "http://localhost:3000";
+	}
+	const response = await axios.get(`${baseURL}/api/bank/get-accounts?userId=${encodeURIComponent(userId)}`);
+	if (!response) {
 		throw new Error("Failed to fetch accounts");
 	}
-	return response.json();
+	return response.data;
 };
 
 export const getAccount = async (bankId: number) => {

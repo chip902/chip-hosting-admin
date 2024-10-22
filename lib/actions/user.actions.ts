@@ -1,8 +1,8 @@
-import { getBankProps, getBanksProps } from "@/types";
+import { GetBankProps, GetBanksProps } from "@/types";
 import axios from "axios";
 import { parseStringify } from "../utils";
 
-export const getBanks = async ({ userId }: getBanksProps) => {
+export const getBanks = async ({ userId }: GetBanksProps) => {
 	try {
 		const request = await axios.get(`/api/bank/get-banks/${userId}`);
 		return parseStringify(request.data);
@@ -11,7 +11,7 @@ export const getBanks = async ({ userId }: getBanksProps) => {
 	}
 };
 
-export const getBank = async ({ bankId }: getBankProps) => {
+export const getBank = async ({ bankId }: GetBankProps) => {
 	try {
 		const request = await axios.get(`/api/bank/get-banks/${bankId}`);
 		return parseStringify(request.data);

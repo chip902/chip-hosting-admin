@@ -1,8 +1,9 @@
 // Sidebar.tsx
+
 import { Cog6ToothIcon, DocumentDuplicateIcon } from "@heroicons/react/20/solid";
 import { Building2, CalendarIcon, Clock, DollarSign, HomeIcon, PieChartIcon } from "lucide-react";
-import Link from "next/link";
 import Image from "next/image";
+import Link from "next/link";
 
 const navigation = [
 	{ name: "Dashboard", href: "/", icon: HomeIcon },

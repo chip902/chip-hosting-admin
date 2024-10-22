@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
 			bankAccountType: bankAccountType,
 		};
 
-		const fundingSourceResponse = await dwollaClient.post(`${customerUrl}/funding-sources`, requestBody);
+		const fundingSourceResponse = await (await dwollaClient).post(`${customerUrl}/funding-sources`, requestBody);
 
 		const fundingSourceUrl = fundingSourceResponse.headers.get("location");
 		if (!fundingSourceUrl) {
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
 }
 export async function updateFundingSourceURL(accountId: Bank["accountId"], fundingSourceUrl: string): Promise<Bank> {
 	return prisma.bank.update({
-		where: { accountId },
+		where: { id: Number(accountId) },
 		data: { fundingSourceUrl },
 	});
 }

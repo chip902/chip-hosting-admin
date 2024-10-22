@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
 		// Save accessToken and itemId to your database associated with the user
 		await prisma.bank.create({
 			data: {
-				userId: userID,
+				userId: userID.userId,
 				bankId: itemId,
 				accountId: accountId,
 				accessToken: accessToken,
