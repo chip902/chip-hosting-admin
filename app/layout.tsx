@@ -6,13 +6,13 @@ import { Bars3Icon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/20/s
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import { ChevronDownIcon } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { Poppins } from "next/font/google";
+import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import "./globals.css";
 import QueryClientProvider from "./QueryClientProvider";
-import Image from "next/image";
-import { signOut } from "next-auth/react";
 
 const poppins = Poppins({
 	subsets: ["latin"],

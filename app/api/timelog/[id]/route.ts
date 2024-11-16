@@ -7,18 +7,19 @@ import { parseISO } from "date-fns";
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
 		const body = await request.json();
-		const id = parseInt(params.id);
+		const id = await parseInt(params.id);
 
 		if (!id) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
 		}
 
-		const { description, duration, ...rest } = body;
+		const { description, duration, date, ...rest } = body;
 
 		const updatedEntry = await prisma.timeEntry.update({
 			where: { id },
 			data: {
 				...rest,
+				date,
 				description,
 				duration,
 			},
@@ -34,7 +35,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 // Delete a time entry
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
-		const id = parseInt(params.id);
+		const id = await parseInt(params.id);
 
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });

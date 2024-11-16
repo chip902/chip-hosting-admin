@@ -41,19 +41,25 @@ const InvoiceGenerator = () => {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
 
-	useEffect(() => {
-		const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
-		if (selectedEntries.length !== newSelectedEntries.length) {
-			setSelectedEntries(newSelectedEntries);
-		}
-	}, [isSelectAll, timeEntries, selectedEntries.length]);
+	// useEffect(() => {
+	// 	const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
+	// 	if (selectedEntries.length !== newSelectedEntries.length) {
+	// 		setSelectedEntries(newSelectedEntries);
+	// 	}
+	// }, [isSelectAll, timeEntries, selectedEntries.length]);
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
 	};
 
 	const handleSelectAll = () => {
-		setIsSelectAll(!isSelectAll);
+		if (isSelectAll) {
+			setSelectedEntries([]); // Deselect all items
+		} else {
+			const newSelectedEntries = timeEntries.map((entry) => entry.id);
+			setSelectedEntries(newSelectedEntries); // Select all items
+		}
+		setIsSelectAll(!isSelectAll); // Toggle select all state
 	};
 
 	const mutation = useMutation({
@@ -124,7 +130,7 @@ const InvoiceGenerator = () => {
 									</Table.Cell>
 									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
 									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.Customer.name}</Table.Cell>
+									<Table.Cell>{entry.Customer?.name}</Table.Cell>
 									<Table.Cell>{entry.duration} minutes</Table.Cell>
 								</Table.Row>
 							))}

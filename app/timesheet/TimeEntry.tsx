@@ -11,6 +11,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
+		entryDate: entry.date || "",
 	});
 
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
@@ -20,6 +21,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		setFormState({
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
+			entryDate: entry.date || "",
 		});
 	}, [entry]);
 
@@ -30,8 +32,10 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 
 	const handleUpdate = () => {
 		setLoading(true);
+		const isoDate = new Date(formState.entryDate).toISOString();
+
 		updateTimeEntry(
-			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description } },
+			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate } },
 			{
 				onSuccess: () => {
 					setIsOpen(false);
@@ -96,6 +100,17 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 							className="w-full h-24 px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date:</span>
+						<input
+							type="date"
+							name="entryDate"
+							value={(formState.entryDate as unknown as string) || (entry.date as unknown as string)}
+							onChange={handleFormChange}
+							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+						/>
+					</label>
+
 					<label className="flex flex-col">
 						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
 						<input
