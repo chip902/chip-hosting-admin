@@ -1,11 +1,8 @@
-import { Account, CategoryBadgeProps, RecentTransactionsProps, Transaction } from "@/types";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Account, RecentTransactionsProps } from "@/types";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from "react";
-import { format } from "date-fns";
 import Link from "next/link";
 import TransactionsTable from "./TransactionsTable";
-import BankInfo from "./BankInfo";
-import { cn } from "@/lib/utils";
 import { BankTabItem } from "./BankTabItem";
 
 const RecentTransactions = ({ accounts, transactions, page = 1 }: RecentTransactionsProps) => {

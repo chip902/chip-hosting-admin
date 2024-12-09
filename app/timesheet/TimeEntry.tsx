@@ -11,9 +11,10 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
-		entryDate: entry.date || "",
+		entryDate: new Date(entry.date).toISOString().split("T")[0],
+		startTime: entry.startTime || "",
+		endTime: entry.endTime || "",
 	});
-
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 
@@ -21,7 +22,9 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		setFormState({
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
-			entryDate: entry.date || "",
+			entryDate: new Date(entry.date).toISOString().split("T")[0],
+			startTime: entry.startTime || "",
+			endTime: entry.endTime || "",
 		});
 	}, [entry]);
 
@@ -32,10 +35,17 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 
 	const handleUpdate = () => {
 		setLoading(true);
-		const isoDate = new Date(formState.entryDate).toISOString();
+		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
+		const isoDate = new Date(isoDateStr);
+
+		if (isNaN(isoDate.getTime())) {
+			console.error("Invalid date or time format: ", isoDate.getTime());
+			setLoading(false);
+			return;
+		}
 
 		updateTimeEntry(
-			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate } },
+			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate.toISOString() } },
 			{
 				onSuccess: () => {
 					setIsOpen(false);

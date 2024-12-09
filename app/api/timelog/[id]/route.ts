@@ -3,25 +3,33 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { parseISO } from "date-fns";
 
-// Update a time entry
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
-		const body = await request.json();
-		const id = await parseInt(params.id);
-
-		if (!id) {
+		const { description, duration, date, startTime, endTime } = await request.json();
+		const idParam = await params;
+		const id = parseInt(idParam.id, 10);
+		if (isNaN(id)) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
 		}
 
-		const { description, duration, date, ...rest } = body;
+		const isoDateStr = `${date}T${startTime}`;
+		const isoDate = new Date(isoDateStr);
+
+		if (isNaN(isoDate.getTime())) {
+			return NextResponse.json({ error: "Invalid date or time format" }, { status: 400 });
+		}
+
+		// Ensure the ISO date is valid
+		if (!isoDate.toISOString()) {
+			return NextResponse.json({ error: "Invalid ISO date format" }, { status: 400 });
+		}
 
 		const updatedEntry = await prisma.timeEntry.update({
 			where: { id },
 			data: {
-				...rest,
-				date,
 				description,
 				duration,
+				date: isoDate, // Use the combined ISO-8601 DateTime string
 			},
 		});
 
@@ -52,7 +60,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 	}
 }
 export async function GET(request: NextRequest) {
-	const { searchParams } = new URL(request.url);
+	const { searchParams } = await new URL(request.url);
 	const startDate = searchParams.get("startDate");
 	const endDate = searchParams.get("endDate");
 	const customerId = searchParams.get("customerId");
