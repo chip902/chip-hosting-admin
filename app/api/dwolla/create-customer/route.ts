@@ -1,13 +1,14 @@
 // /app/api/dwolla/create-customer/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import dwollaClient from "@/lib/dwolla";
+import createDwollaClient from "@/lib/dwolla";
 import prisma from "@/prisma/client";
 import { User } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
 	try {
 		const { user } = await request.json();
+		const dwollaClient = await createDwollaClient();
 		console.log("Dwolla Create Customer API User Object received:", user);
 		const customerData = {
 			firstName: user.firstName,

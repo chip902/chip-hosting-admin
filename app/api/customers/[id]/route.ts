@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { customerSchema } from "@/app/validationSchemas";
+import { getParamsFromUrl } from "@/lib/utils";
 
 // DELETE request to delete a customer by ID
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
 	try {
-		const id = parseInt(params.id);
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
+
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid customer ID" }, { status: 400 });
 		}

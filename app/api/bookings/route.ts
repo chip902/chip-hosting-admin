@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { bookingSchema } from "@/app/validationSchemas";
 
-export async function POST(req: NextRequest, res: NextResponse) {
+export async function POST(req: NextRequest) {
 	try {
 		const body = await req.json();
 		console.log("Request Body:", body); // Log the received request body
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, res: NextResponse) {
 	}
 }
 
-export async function GET(req: NextRequest, res: NextResponse) {
+export async function GET(req: NextRequest) {
 	try {
 		const booking = await prisma.booking.findMany();
 

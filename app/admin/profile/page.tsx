@@ -1,16 +1,18 @@
-"use client";
-import ProfileForm from "@/components/ProfileForm";
-import React from "react";
 import PlaidLink from "@/components/PlaidLink";
-
-import { auth } from "@/auth";
-import { User } from "@/types/index";
-
-const session = await auth();
-const user = session?.user as User;
+import { useSession } from "next-auth/react";
 
 const ProfilePage = () => {
-	return <PlaidLink user={user} variant="primary" dwollaCustomerId={user.dwollaCustomerId || ""} />;
+	const { data: session, status } = useSession();
+
+	if (status === "loading") {
+		return <div>Loading...</div>; // Render a loading state or spinner
+	}
+
+	if (!session || !session.user) {
+		return <div>User not found</div>; // Handle the case where user is still null after loading
+	}
+
+	return <PlaidLink user={session.user} variant="primary" dwollaCustomerId={session.user.dwollaCustomerId || ""} />;
 };
 
 export default ProfilePage;

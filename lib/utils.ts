@@ -175,3 +175,13 @@ export const getTransactionStatus = (date: Date) => {
 
 	return date > twoDaysAgo ? "Processing" : "Success";
 };
+
+export function getParamsFromUrl(url: string): { params: { id: string } } {
+	const segments = url.split("/");
+	const possiblyId = segments[segments.length - 1];
+
+	// Ensure that `id` is a string and not empty, otherwise provide a default value (e.g., an empty string)
+	const id = typeof possiblyId === "string" && possiblyId.trim() !== "" ? possiblyId : "";
+
+	return { params: { id } };
+}

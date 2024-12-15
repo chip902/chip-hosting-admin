@@ -11,6 +11,20 @@ const RecentTransactions = ({ accounts, transactions, page = 1 }: RecentTransact
 	const endIndex = startIndex + transactionsPerPage;
 	const displayedTransactions = transactions.slice(startIndex, endIndex);
 
+	if (!accounts || accounts.length === 0) {
+		return (
+			<section className="recent-transactions">
+				<header className="flex items-center justify-between mb-4">
+					<h2 className="text-xl font-semibold">Recent Transactions</h2>
+					<Link className="view-all-btn" href={`/transaction-history/`}>
+						View All
+					</Link>
+				</header>
+				<p>No accounts available.</p>
+			</section>
+		);
+	}
+
 	return (
 		<section className="recent-transactions">
 			<header className="flex items-center justify-between mb-4">

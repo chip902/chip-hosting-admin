@@ -4,16 +4,29 @@ import { CountryCode } from "plaid";
 import { Account } from "@/types";
 import axios from "axios";
 
+const PLAID_API_URL = process.env.PLAID_API_URL || "https://sandbox.plaid.com";
+const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
+const PLAID_SECRET = process.env.PLAID_SECRET;
+
 export const getAccounts = async (userId: string): Promise<Account[]> => {
-	let baseURL = "";
-	if (process.env.NODE_ENV === "development") {
-		baseURL = "http://localhost:3000";
-	}
-	const response = await axios.get(`${baseURL}/api/bank/get-accounts?userId=${encodeURIComponent(userId)}`);
-	if (!response) {
+	try {
+		const accessToken = await getAccessTokenForUser(userId);
+
+		if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
+			throw new Error("Plaid client ID or secret is not set");
+		}
+
+		const response = await axios.post(`${PLAID_API_URL}/accounts/get`, {
+			client_id: PLAID_CLIENT_ID,
+			secret: PLAID_SECRET,
+			access_token: accessToken,
+		});
+
+		return response.data.accounts;
+	} catch (error) {
+		console.error("Error fetching accounts from Plaid:", error);
 		throw new Error("Failed to fetch accounts");
 	}
-	return response.data;
 };
 
 export const getAccount = async (bankId: number) => {
@@ -22,8 +35,8 @@ export const getAccount = async (bankId: number) => {
 			where: { id: bankId },
 		});
 
-		if (!bank) {
-			throw new Error("Bank not found");
+		if (!bank || !bank.accessToken) {
+			throw new Error("Bank not found or access token is missing");
 		}
 
 		const accountsResponse = await plaidClient.accountsGet({
@@ -74,7 +87,6 @@ export const getTransactions = async (accessToken: string) => {
 		const response = await plaidClient.transactionsSync({
 			access_token: accessToken,
 		});
-		console.log("TRANSACTION DEBUG: ", response);
 
 		return response.data.added.map((transaction) => ({
 			id: transaction.transaction_id,
@@ -93,3 +105,42 @@ export const getTransactions = async (accessToken: string) => {
 		throw error;
 	}
 };
+
+async function getUserWithBank(userId: string) {
+	const user = await prisma.user.findUnique({
+		where: { userId },
+		include: {
+			banks: true,
+		},
+	});
+
+	if (!user || !user.banks.length) {
+		throw new Error("User not found or no bank information available");
+	}
+
+	// Access the accessToken from the Bank model
+	const plaidAccessToken = user.banks[0].accessToken;
+
+	return {
+		userId: user.userId,
+		email: user.email,
+		plaid_access_token: plaidAccessToken,
+		// other fields may be required
+	};
+}
+
+// Function to fetch only the Plaid access token for a user
+async function getAccessTokenForUser(userId: string): Promise<string> {
+	const user = await prisma.user.findUnique({
+		where: { userId },
+		include: {
+			banks: true,
+		},
+	});
+
+	if (!user || !user.banks.length) {
+		throw new Error("Access token not found");
+	}
+
+	return user.banks[0].accessToken;
+}

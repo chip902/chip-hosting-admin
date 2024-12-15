@@ -44,7 +44,7 @@
 		"jspdf-autotable": "^3.8.3",
 		"lucide-react": "^0.453.0",
 		"moment-timezone": "^0.5.45",
-		"next": "^15.0.1",
+		"next": "^15.1.0",
 		"next-themes": "^0.3.0",
 		"nodemailer": "^6.9.15",
 		"pdf-lib": "^1.17.1",
@@ -64,6 +64,9 @@
 		"uuid": "^11.0.0",
 		"zod": "^3.23.8"
 	},
+	"resolutions": {
+		"**/cookie": "^0.7.2"
+	},
 	"devDependencies": {
 		"@types/bcryptjs": "^2.4.6",
 		"@types/lodash": "^4.17.11",
@@ -74,12 +77,13 @@
 		"autoprefixer": "^10.4.19",
 		"eslint": "^9.13.0",
 		"eslint-config-next": "^15.0.1",
-		"next-auth": "^4.24.7",
+		"next-auth": "^4.24.11",
 		"postcss": "^8.4.38",
 		"prisma": "^5.21.0",
 		"tailwindcss": "^3.4.4",
 		"ts-node": "^10.9.2",
 		"tsconfig-paths": "^4.2.0",
 		"typescript": "^5"
-	}
+	},
+	"packageManager": "yarn@1.22.21+sha1.1959a18351b811cdeedbd484a8f86c3cc3bbaf72"
 }
