@@ -36,6 +36,28 @@ const InvoiceGenerator = () => {
 	});
 
 	const timeEntries = data?.entries || [];
+	const transformedEntries: TimeEntryData[] = timeEntries.map((entry) => {
+		const startDate = new Date(entry.date);
+		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
+		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
+
+		return {
+			duration: entry.duration,
+			name: userName,
+			start: startDate,
+			end: endDate.toISOString(),
+			id: entry.id,
+			date: startDate,
+			startTime: startDate.toISOString(),
+			endTime: endDate.toISOString(),
+			customer: entry.customer?.name || "Unknown Customer",
+			project: entry.project?.name || "Unknown Project",
+			task: entry.task?.name || "Unknown Task",
+			user: { name: userName, id: entry.user?.id || 0 },
+			isClientInvoiced: entry.isInvoiced ?? false,
+			description: entry.description ?? "",
+		};
+	});
 
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -123,14 +145,14 @@ const InvoiceGenerator = () => {
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{timeEntries?.map((entry: TimeEntryData) => (
+							{transformedEntries?.map((entry: TimeEntryData) => (
 								<Table.Row key={entry.id}>
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
 									</Table.Cell>
 									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
 									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.Customer?.name}</Table.Cell>
+									<Table.Cell>{entry.customer.name}</Table.Cell>
 									<Table.Cell>{entry.duration} minutes</Table.Cell>
 								</Table.Row>
 							))}

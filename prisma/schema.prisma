@@ -96,17 +96,25 @@ model TimeEntry {
   date          DateTime
   userId        Int
   taskId        Int
+  endDate       DateTime?
   invoiceItemId Int?
   customerId    Int
   projectId     Int
   invoiceId     Int?
-  isInvoiced    Boolean      @default(false)
+  isInvoiced    Boolean?     @default(false)
+  isBillable    Boolean?     @default(true)
+  color         String?
+  startSlot     Int?
+  endSlot       Int?
+  totalHours    Float?
+  width         Int?
+  left          Int?
   invoice       Invoice?     @relation("InvoiceTimeEntries", fields: [invoiceId], references: [id], map: "TimeEntry_InvoiceTimeEntries_fkey")
-  Customer      Customer     @relation(fields: [customerId], references: [id])
-  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
-  Project       Project      @relation(fields: [projectId], references: [id])
-  Task          Task         @relation(fields: [taskId], references: [id])
-  User          User         @relation(fields: [userId], references: [id])
+  customer      Customer     @relation(fields: [customerId], references: [id])
+  invoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
+  project       Project      @relation(fields: [projectId], references: [id])
+  task          Task         @relation(fields: [taskId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
 }
 
 model InvoiceItem {

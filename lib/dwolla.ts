@@ -1,4 +1,6 @@
 // lib/dwolla-client.ts
+import prisma from "@/prisma/client";
+import { Bank, User } from "@prisma/client";
 import { Client } from "dwolla-v2";
 
 const MAX_RETRIES = 5;
@@ -58,4 +60,17 @@ async function createDwollaClient(retries = 0): Promise<Client> {
 	return client;
 }
 
+export async function updateUserDwollaCustomerId(userId: User["id"], dwollaCustomerUrl: string, dwollaCustomerId: string): Promise<User> {
+	return prisma.user.update({
+		where: { id: userId },
+		data: { dwollaCustomerUrl, dwollaCustomerId },
+	});
+}
+
+export async function updateFundingSourceURL(accountId: Bank["accountId"], fundingSourceUrl: string): Promise<Bank> {
+	return prisma.bank.update({
+		where: { id: Number(accountId) },
+		data: { fundingSourceUrl },
+	});
+}
 export default createDwollaClient;

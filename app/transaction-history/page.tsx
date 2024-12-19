@@ -1,12 +1,11 @@
 import { authOptions } from "@/auth";
 import HeaderBox from "@/components/HeaderBox";
-import TransactionsTable from "@/components/TransactionsTable";
 import { getAccounts } from "@/lib/actions/bank.actions";
-import { Account, SearchParamProps } from "@/types";
+import { Account } from "@/types";
 import { getServerSession } from "next-auth/next";
 import React from "react";
 
-const TransactionHistory = async ({ searchParams: { id, page } }: SearchParamProps) => {
+const TransactionHistory = async () => {
 	const session = await getServerSession(authOptions);
 
 	let accounts: Account[] = [];

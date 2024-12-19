@@ -3,6 +3,7 @@ import prisma from "@/prisma/client";
 import { generateInvoicePdf } from "@/app/utils/PdfService";
 import fs from "fs/promises";
 import path from "path";
+import { TimeEntryData } from "@/types";
 
 function logError(step: string, error: any) {
 	console.error(`Error in ${step}:`, error.message);
@@ -51,23 +52,37 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Error creating invoice in database" }, { status: 500 });
 		}
 
+		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry) => {
+			const userName = [entry.User?.firstName, entry.User?.lastName].filter(Boolean).join(" ");
+			const startDate = new Date(entry.date);
+			const endDate = entry.endDate ? new Date(entry.endDate) : new Date(startDate.getTime() + entry.duration * 60_000);
+
+			return {
+				duration: entry.duration,
+				name: userName || "No Name",
+				start: startDate,
+				end: endDate.toISOString(),
+				id: entry.id,
+				date: startDate,
+				startTime: startDate.toISOString(),
+				endTime: endDate.toISOString(),
+				Customer: { name: entry.Customer?.name || "Unknown Customer" },
+				Project: { name: entry.Project?.name || "Unknown Project" },
+				Task: { name: entry.Task?.name || "Unknown Task" },
+				User: {
+					name: userName,
+					id: entry.User.id,
+				},
+				isClientInvoiced: entry.isInvoiced ?? false,
+				description: entry.description ?? "",
+			};
+		});
+
+		// Now create pdfData using timeEntryDataArray
 		const pdfData = {
 			invoiceNumber: `${customer.shortName}-${invoice.id}`,
 			paymentTerms: customer.paymentTerms || "30",
-			timeEntries: timeEntries.map((entry) => ({
-				id: entry.id,
-				description: entry.description ?? "",
-				duration: entry.duration,
-				date: entry.date.toISOString(),
-				Customer: {
-					name: entry.Customer.name,
-					email: entry.Customer.email,
-					defaultRate: entry.Customer.defaultRate,
-					paymentTerms: entry.Customer.paymentTerms || "30",
-				},
-				Project: { name: entry.Project.name, rate: entry.Project.rate ?? entry.Customer.defaultRate },
-				Task: { name: entry.Task.name },
-			})),
+			timeEntries: timeEntryDataArray,
 		};
 
 		let pdfBytes;

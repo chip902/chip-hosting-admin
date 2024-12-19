@@ -1,9 +1,7 @@
 // /app/api/dwolla/create-customer/route.ts
 
 import { NextRequest, NextResponse } from "next/server";
-import createDwollaClient from "@/lib/dwolla";
-import prisma from "@/prisma/client";
-import { User } from "@prisma/client";
+import createDwollaClient, { updateUserDwollaCustomerId } from "@/lib/dwolla";
 
 export async function POST(request: NextRequest) {
 	try {
@@ -45,11 +43,4 @@ export async function POST(request: NextRequest) {
 		}
 		return NextResponse.json({ error: "Error creating Dwolla customer" }, { status: 500 });
 	}
-}
-
-export async function updateUserDwollaCustomerId(userId: User["id"], dwollaCustomerUrl: string, dwollaCustomerId: string): Promise<User> {
-	return prisma.user.update({
-		where: { id: userId },
-		data: { dwollaCustomerUrl, dwollaCustomerId },
-	});
 }

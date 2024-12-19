@@ -1,8 +1,8 @@
 // app/hooks/useGetTimeEntries.ts
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { format } from "date-fns";
-import { TimeEntryData } from "@/types";
+import { TimeEntry } from "@/types";
 
 interface QueryParams {
 	customerId?: number;
@@ -17,13 +17,11 @@ interface QueryParams {
 
 interface TimeEntryResponse {
 	length: number;
-	entries: TimeEntryData[];
+	entries: TimeEntry[];
 	totalEntries: number;
 }
 
 export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced, sortBy = "date", sortOrder = "desc" }: QueryParams) => {
-	const queryClient = useQueryClient();
-
 	const queryKey = [
 		"timeEntries",
 		page,

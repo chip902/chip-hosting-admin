@@ -1,5 +1,7 @@
 /* eslint-disable no-unused-vars */
 import { PersonalFinanceCategory } from "plaid";
+import { User as AuthUser } from "./next-auth.d.ts";
+
 export type SearchParamProps = {
 	params: { [key: string]: string };
 	searchParams: { [key: string]: string | string[] | undefined };
@@ -24,23 +26,24 @@ export type LoginUser = {
 	password: string;
 };
 
-export type User = {
-	id?: string;
-	name?: string | null;
-	email?: string | null;
-	image?: string | null;
-	userId?: string | null;
-	dwollaCustomerUrl?: string | null;
-	dwollaCustomerId?: string | null;
-	firstName?: string | null;
-	lastName?: string | null;
-	address?: string | null;
-	city?: string | null;
-	state?: string | null;
-	postalCode?: string | null;
-	dateOfBirth?: string | null;
-	ssn?: string | null;
-};
+export interface User {
+	id: number | string;
+	userId?: string;
+	userToken?: string;
+	email?: string;
+	firstName?: string;
+	lastName?: string;
+	passwordHash?: string;
+	createdAt?: Date;
+	updatedAt?: Date;
+	dateCreated?: Date;
+	sessionTokens?: Session[];
+	authenticators?: Authenticator[];
+	verificationTokens?: VerificationToken[];
+	banks?: Bank[];
+	timeEntries?: TimeEntry[];
+	projects?: Project[];
+}
 
 export type NewUserParams = {
 	userId: string;
@@ -190,7 +193,7 @@ export interface PaginationProps {
 }
 
 export interface PlaidLinkProps {
-	user: User;
+	user: AuthUser;
 	variant?: "primary" | "ghost";
 	dwollaCustomerId?: string;
 }
@@ -343,74 +346,162 @@ export interface Customer {
 	id: number;
 	name: string;
 	email: string;
-	dateCreated: string;
+	dateCreated: Date;
 	defaultRate: number;
-	color: string | null;
-	paymentTerms: string | null;
-	shortName: string | null;
+	color?: string;
+	shortName?: string;
+	paymentTerms?: string;
+	invoices?: Invoice[];
+	projects?: Project[];
+	timeEntries?: TimeEntry[];
+}
+
+export interface ProjectTasks {
+	projectId: number;
+	taskId: number;
+	project: Project;
+	task: Task;
 }
 
 export interface Project {
 	id: number;
 	name: string;
+	description?: string;
 	customerId: number;
-	dateCreated: string;
-	description: string | null;
-	rate: number | null;
+	dateCreated: Date;
+	rate?: number;
+	customer: Customer;
+	projectTasks?: ProjectTasks[];
+	tasks: Task[];
+	users: User[];
+	timeEntries?: TimeEntry[];
 }
 
 export interface Task {
 	id: number;
 	name: string;
-	projectId: number;
-	dateCreated: string;
-	description: string | null;
-	rate: number | null;
+	description?: string;
+	dateCreated: Date;
+	rate?: number;
+	projectTasks?: ProjectTasks[];
+	timeEntries?: TimeEntry[];
+	projects: Project[];
 }
 
-export interface TimeEntryBase {
+export interface TimeEntry {
+	startTime: string;
+	endTime: string;
 	id: number;
-	description: string | null;
+	description?: string;
 	duration: number;
-	date: string;
+	date: Date;
 	userId: number;
 	taskId: number;
 	customerId: number;
 	projectId: number;
-	invoiceItemId: number | null;
-	invoiceId: number | null;
+	invoiceItemId?: number | null;
+	invoiceId?: number | null;
 	isInvoiced: boolean;
+
+	// Relations to other models
+	customer: CustomerType;
+	project: ProjectType;
+	task: TaskType;
+	user: UserType;
+	invoice?: Invoice;
+	invoiceItem?: InvoiceItem;
 }
 
-export interface TimeEntryData extends TimeEntryBase {
-	Customer?: Partial<Customer> | null;
-	Project?: Partial<Project> | null;
-	Task?: Partial<Task> | null;
-	User?: Partial<User> | null;
-	startTime?: string;
-	endTime?: string;
-	width?: number;
-	left?: number;
-	startSlot?: number;
-	endSlot?: number;
-}
-
-export interface TimeEntry extends Omit<TimeEntryData, "date"> {
-	date: Date;
+export interface TimeEntryData {
+	duration: number;
 	name: string;
-	Customer: Customer;
-	Project: Project;
-	Task: Task;
+	start: string | Date;
+	end: string;
+	id: number;
+	date: Date;
+	startTime: string;
+	endTime: string;
+	customer: { name: string };
+	project: { name: string };
+	task: { name: string };
+	user: { name?: string; id: number };
+	isClientInvoiced: boolean;
+	description?: string;
+}
+
+export interface ProcessedTimeSlot {
+	width: number;
+	left: number;
+	startSlot: number;
+	endSlot: number;
+	date: Date;
+	dayIndex: number;
+	color: string;
+	entry: ProcessedTimeEntry; // Ensure this is the full object
 }
 
 export interface TimeEntryProps {
-	entry: TimeEntry;
+	date: Date;
 	startSlot: number;
 	endSlot: number;
 	dayIndex: number;
 	color: string;
 	width: number;
 	left: number;
+	entry: ProcessedTimeEntry; // Use ProcessedTimeEntry which includes both base and UI-specific data
+}
+
+export interface RawTimeEntry {
+	id: number;
+	date: Date | string;
+	startTime: string;
+	endTime: string;
+	customer?: { name: string };
+	project: { name: string };
+	task: { name: string };
+	isInvoiced: boolean;
+	isClientInvoiced: boolean;
+	isBillable: boolean;
+	color: string;
+	name?: string;
+	description?: string;
+	startSlot: number;
+	endSlot: number;
+}
+
+export interface ProcessedTimeEntry {
+	id: number;
+	date: Date | string;
+	startTime: string;
+	endTime: string;
+	customer: { name: string };
+	project: { name: string };
+	task: { name: string };
+	isInvoiced: boolean | null;
+	isBillable: boolean | null;
+	color: string;
+	name?: string;
+	customerName?: string;
+	projectName?: string;
+	taskName?: string;
+	width?: number;
+	left?: number;
+	startSlot?: number | null;
+	endSlot?: number | null;
+	duration: number;
+	description?: string;
+}
+
+export interface GridItem {
+	width: number;
+	left: number;
+	startSlot: number;
+	endSlot: number;
+	date: Date;
+	dayIndex: number;
+	color: string;
+	entry: ProcessedTimeEntry;
+	customerName: string;
 }
 
 export interface TimeGridProps {
@@ -424,7 +515,14 @@ export interface TimeGridProps {
 export interface PdfData {
 	invoiceNumber?: string;
 	paymentTerms: string | null;
-	timeEntries: TimeEntry[];
+	timeEntries: TimeEntryData[];
+}
+
+export interface PdfTimeEntry extends TimeEntry {
+	name: string;
+	Customer: { name: string; email: string };
+	Project: { name: string };
+	Task: { name: string };
 }
 
 export interface TableRow {
@@ -435,4 +533,15 @@ export interface TableRow {
 	hours: number;
 	rate: number;
 	amount: number;
+}
+
+export interface Invoice {
+	id: number;
+	customerId: number;
+	totalAmount: number;
+	dateCreated: Date;
+	pdfPath?: string;
+	customer: Customer;
+	invoiceItems?: InvoiceItem[];
+	timeEntries?: TimeEntry[];
 }

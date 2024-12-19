@@ -1,10 +1,31 @@
 import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import qs from "query-string";
-import { AccountTypes, CategoryCount, Transaction } from "@/types";
+import { AccountTypes, CategoryCount, RawTimeEntry, Transaction } from "@/types";
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
+export const formatTime = (time: string): string => {
+	// Format time as needed
+	return new Date(time).toLocaleTimeString();
+};
+
+export const calculateWidth = (entry: RawTimeEntry): number => {
+	// Calculate width based on start and end times or other logic
+	return 10; // Example value
+};
+
+export const calculateLeftPosition = (entry: RawTimeEntry): number => {
+	// Calculate left position based on some criteria
+	return 20; // Example value
+};
+
+export const calculateDuration = (startTime: string, endTime: string): number => {
+	const start = new Date(startTime);
+	const end = new Date(endTime);
+	return (end.getTime() - start.getTime()) / 1000 / 60; // Duration in minutes
+};
+
 // FORMAT DATE TIME
 export const formatDateTime = (dateString: Date) => {
 	const dateTimeOptions: Intl.DateTimeFormatOptions = {
@@ -123,7 +144,7 @@ export function countTransactionCategories(transactions: Transaction[]): Categor
 	transactions &&
 		transactions.forEach((transaction) => {
 			// Extract the category from the transaction
-			const category = transaction.category;
+			const category = transaction.category as string;
 
 			// If the category exists in the categoryCounts object, increment its count
 			if (categoryCounts.hasOwnProperty(category)) {

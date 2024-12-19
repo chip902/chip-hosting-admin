@@ -54,7 +54,7 @@ const LogTime = () => {
 			}
 		};
 		fetchData();
-	}, []);
+	}, [error]);
 
 	const startTime = watch("startTime");
 	const endTime = watch("endTime");
@@ -70,7 +70,7 @@ const LogTime = () => {
 		} else {
 			setValue("duration", undefined as unknown as number, { shouldValidate: true });
 		}
-	}, [startTime, endTime, setValue]);
+	}, [startTime, endTime]);
 
 	useEffect(() => {
 		const durationValue = watch("duration");
@@ -81,7 +81,7 @@ const LogTime = () => {
 			const minutes = end.getMinutes().toString().padStart(2, "0");
 			setValue("endTime", `${hours}:${minutes}`, { shouldValidate: true });
 		}
-	}, [startTime, watch("duration"), setValue]);
+	}, [startTime, endTime]);
 
 	const onSubmit = async (data: TimeLogSchema) => {
 		try {

@@ -2,12 +2,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { parseISO } from "date-fns";
+import { getParamsFromUrl } from "@/lib/utils";
 
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest) {
 	try {
 		const { description, duration, date, startTime, endTime } = await request.json();
-		const idParam = await params;
-		const id = parseInt(idParam.id, 10);
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
 		}
@@ -41,9 +43,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // Delete a time entry
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
 	try {
-		const id = await parseInt(params.id);
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
 
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -60,7 +64,7 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 	}
 }
 export async function GET(request: NextRequest) {
-	const { searchParams } = await new URL(request.url);
+	const { searchParams } = new URL(request.url);
 	const startDate = searchParams.get("startDate");
 	const endDate = searchParams.get("endDate");
 	const customerId = searchParams.get("customerId");
@@ -83,7 +87,7 @@ export async function GET(request: NextRequest) {
 			},
 		});
 
-		return NextResponse.json(entries, { status: 201 });
+		return NextResponse.json(entries, { status: 200 }); // Corrected from 201 to 200
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}

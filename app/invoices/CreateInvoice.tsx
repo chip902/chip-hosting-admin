@@ -28,10 +28,37 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 		pageSize: pageSize,
 		page: page,
 	});
-	const timeEntries = data?.entries || [];
+
 	const totalEntries = data?.length || 0;
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
+	const timeEntries = data?.entries || [];
+
+	// Transform TimeEntry[] to TimeEntryData[]
+	const transformedEntries: TimeEntryData[] = timeEntries.map((entry) => {
+		// Adjust this transformation based on actual fields in `TimeEntry` vs `TimeEntryData`.
+		// For example, if `entry` is a `TimeEntry` from Prisma:
+		const startDate = new Date(entry.date);
+		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
+		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
+
+		return {
+			duration: entry.duration,
+			name: userName,
+			start: startDate,
+			end: endDate.toISOString(),
+			id: entry.id,
+			date: startDate,
+			startTime: startDate.toISOString(),
+			endTime: endDate.toISOString(),
+			Customer: { name: entry.customer?.name || "Unknown Customer" },
+			Project: { name: entry.project?.name || "Unknown Project" },
+			Task: { name: entry.task?.name || "Unknown Task" },
+			User: { name: userName, id: entry.user?.id || 0 },
+			isClientInvoiced: entry.isInvoiced ?? false,
+			description: entry.description ?? "",
+		};
+	});
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
@@ -101,7 +128,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 				</Table.Header>
 
 				<Table.Body>
-					{timeEntries.map((entry: TimeEntryData) => (
+					{transformedEntries.map((entry: TimeEntryData) => (
 						<Table.Row key={entry.id}>
 							<Table.Cell>
 								<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
