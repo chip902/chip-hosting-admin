@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
-import { parseISO, isValid } from "date-fns";
+import { parseISO, isValid, startOfDay } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";
 import { format } from "date-fns-tz";

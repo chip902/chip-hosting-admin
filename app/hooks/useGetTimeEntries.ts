@@ -46,7 +46,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 				...(isInvoiced !== undefined && { isInvoiced: isInvoiced.toString() }),
 				sortBy,
 				sortOrder,
-			};
+			});
 			const queryString = new URLSearchParams(params).toString();
 			console.log("Request URL to Endpoint: ", `/api/timelog?${queryString}`);
 			const response = await axios.get(`/api/timelog?${queryString}`);
