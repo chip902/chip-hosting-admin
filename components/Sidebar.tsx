@@ -1,6 +1,8 @@
 // Sidebar.tsx
+
 import { Cog6ToothIcon, DocumentDuplicateIcon } from "@heroicons/react/20/solid";
 import { Building2, CalendarIcon, Clock, DollarSign, HomeIcon, PieChartIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 
 const navigation = [
@@ -26,7 +28,9 @@ export default function Sidebar({ currentPath, className }: Props) {
 	return (
 		<div className={classNames("flex flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-4", className || "")}>
 			<div className="flex h-16 shrink-0 items-center mt-2">
-				<img className="h-12 w-auto rounded-full" src="/CHS_Logo.png" alt="Chip Hosting Solutions" />
+				<div className="h-12 w-auto rounded-full">
+					<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" />
+				</div>
 			</div>
 			<nav className="flex flex-1 flex-col">
 				<ul role="list" className="flex flex-1 flex-col gap-y-7">

@@ -36,24 +36,54 @@ const InvoiceGenerator = () => {
 	});
 
 	const timeEntries = data?.entries || [];
+	const transformedEntries: TimeEntryData[] = timeEntries.map((entry) => {
+		const startDate = new Date(entry.date);
+		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
+		const customerName = entry.customer.name;
+		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
+
+		return {
+			duration: entry.duration,
+			name: userName,
+			start: startDate,
+			end: endDate.toISOString(),
+			id: entry.id,
+			date: startDate,
+			startTime: startDate.toISOString(),
+			endTime: endDate.toISOString(),
+			customerName,
+			project: entry.project?.name || "Unknown Project",
+			customer: { name: customerName, defaultRate: entry.customer.defaultRate },
+			task: entry.task?.name || "Unknown Task",
+			user: { name: userName, id: entry.user?.id || 0 },
+			isClientInvoiced: entry.isInvoiced ?? false,
+			description: entry.description ?? "",
+		};
+	});
 
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
 
-	useEffect(() => {
-		const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
-		if (selectedEntries.length !== newSelectedEntries.length) {
-			setSelectedEntries(newSelectedEntries);
-		}
-	}, [isSelectAll, timeEntries]);
+	// useEffect(() => {
+	// 	const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
+	// 	if (selectedEntries.length !== newSelectedEntries.length) {
+	// 		setSelectedEntries(newSelectedEntries);
+	// 	}
+	// }, [isSelectAll, timeEntries, selectedEntries.length]);
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
 	};
 
 	const handleSelectAll = () => {
-		setIsSelectAll(!isSelectAll);
+		if (isSelectAll) {
+			setSelectedEntries([]); // Deselect all items
+		} else {
+			const newSelectedEntries = timeEntries.map((entry) => entry.id);
+			setSelectedEntries(newSelectedEntries); // Select all items
+		}
+		setIsSelectAll(!isSelectAll); // Toggle select all state
 	};
 
 	const mutation = useMutation({
@@ -117,14 +147,14 @@ const InvoiceGenerator = () => {
 							</Table.Row>
 						</Table.Header>
 						<Table.Body>
-							{timeEntries?.map((entry: TimeEntryData) => (
+							{transformedEntries?.map((entry: TimeEntryData) => (
 								<Table.Row key={entry.id}>
 									<Table.Cell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
 									</Table.Cell>
 									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
 									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.Customer.name}</Table.Cell>
+									<Table.Cell>{entry.customerName}</Table.Cell>
 									<Table.Cell>{entry.duration} minutes</Table.Cell>
 								</Table.Row>
 							))}

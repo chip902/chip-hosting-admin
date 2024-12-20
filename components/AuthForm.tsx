@@ -14,6 +14,9 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import CustomInput from "./CustomInput";
 import React from "react";
+import PlaidLink from "./PlaidLink";
+import { extractCustomerIdFromUrl } from "@/lib/utils";
+import { createDwollaCustomer } from "@/lib/actions/dwolla.actions";
 
 const AuthForm = ({ type }: { type: string }) => {
 	const [user, setUser] = useState(null);
@@ -34,9 +37,31 @@ const AuthForm = ({ type }: { type: string }) => {
 		try {
 			console.log(data);
 			if (type === "sign-up") {
+				const userData = {
+					firstName: data.firstName!,
+					lastName: data.lastName!,
+					address: data.address!,
+					city: data.city!,
+					postalCode: data.postalCode!,
+					dob: data.dob!,
+					ssn: data.ssn!,
+					email: data.email!,
+					password: data.password!,
+					address1: data.address!,
+					dateOfBirth: data.dob!,
+				};
+				// const dwollaCustomerUrl = createDwollaCustomer({
+				// 	...data,
+				// 	type: "personal",
+				// 	address1: data.address!,
+				// 	dateOfBirth: data.dob!,
+				// });
+				// const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
 				const response = await axios.post("/api/user/new-user/", {
 					...data,
 					type: type,
+					// dwollaCustomerID,
+					// dwollaCustomerUrl,
 				});
 				if (response.status === 201) {
 					router.push("/sign-in/");
@@ -45,7 +70,7 @@ const AuthForm = ({ type }: { type: string }) => {
 				const result = await signIn("credentials", {
 					email: data.email,
 					password: data.password,
-					callbackUrl: "/admin/",
+					callbackUrl: "/",
 				});
 			}
 		} catch (error) {
@@ -71,7 +96,9 @@ const AuthForm = ({ type }: { type: string }) => {
 				</div>
 			</header>
 			{user ? (
-				<div className="flex flex-col gap-4">{/** PLAID LINK ACCOUNT */}</div>
+				<div className="flex flex-col gap-4">
+					<PlaidLink user={user} variant="primary" />
+				</div>
 			) : (
 				<>
 					<Form {...form}>

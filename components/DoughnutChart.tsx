@@ -6,16 +6,27 @@ import { Doughnut } from "react-chartjs-2";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 const DoughnutChart = ({ accounts }: DoughnutChartProps) => {
+	// Generate a color for each account
+	const generateColors = (numColors: number) => {
+		const colors = [];
+		for (let i = 0; i < numColors; i++) {
+			const hue = (i * 137.5) % 360; // Use golden angle approximation for distribution
+			colors.push(`hsl(${hue}, 70%, 60%)`);
+		}
+		return colors;
+	};
+
 	const data = {
 		datasets: [
 			{
-				label: "Banks",
-				data: [2314, 9843, 2318],
-				backgroundColor: ["#0747b6", "#2265d8", "#2f91fa"],
+				label: "Account Balance",
+				data: accounts.map((account) => account.currentBalance),
+				backgroundColor: generateColors(accounts.length),
 			},
 		],
-		labels: ["Bank A", "Bank B", "Bank C"],
+		labels: accounts.map((account) => account.name),
 	};
+
 	return (
 		<Doughnut
 			options={{
@@ -23,6 +34,15 @@ const DoughnutChart = ({ accounts }: DoughnutChartProps) => {
 				plugins: {
 					legend: {
 						display: false,
+					},
+					tooltip: {
+						callbacks: {
+							label: (context) => {
+								const label = context.label || "";
+								const value = context.formattedValue;
+								return `${label}: $${value}`;
+							},
+						},
 					},
 				},
 			}}

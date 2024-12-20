@@ -30,11 +30,14 @@ const LogTime = () => {
 		handleSubmit,
 		watch,
 		setValue,
+		reset,
 		formState: { errors },
 	} = useForm<TimeLogSchema>({
 		resolver: zodResolver(timeLogSchema),
 		defaultValues: {
 			date: new Date().toISOString().split("T")[0],
+			startTime: "09:00",
+			endTime: "17:00",
 		},
 	});
 
@@ -51,44 +54,45 @@ const LogTime = () => {
 			}
 		};
 		fetchData();
-	}, []);
+	}, [error]);
 
 	const startTime = watch("startTime");
 	const endTime = watch("endTime");
-	const duration = watch("duration");
 
 	useEffect(() => {
 		if (startTime && endTime) {
 			const start = new Date(`1970-01-01T${startTime}:00`);
 			const end = new Date(`1970-01-01T${endTime}:00`);
 			const diff = (end.getTime() - start.getTime()) / 60000;
-			if (diff > 0) setValue("duration", diff);
+			if (diff > 0) {
+				setValue("duration", diff, { shouldValidate: true });
+			}
+		} else {
+			setValue("duration", undefined as unknown as number, { shouldValidate: true });
 		}
-	}, [startTime, endTime, setValue]);
+	}, [startTime, endTime, setValue, watch]);
 
 	useEffect(() => {
-		if (startTime && duration) {
+		const durationValue = watch("duration");
+		if (startTime && durationValue !== undefined) {
 			const start = new Date(`1970-01-01T${startTime}:00`);
-			const end = new Date(start.getTime() + duration * 60000);
+			const end = new Date(start.getTime() + durationValue * 60000);
 			const hours = end.getHours().toString().padStart(2, "0");
 			const minutes = end.getMinutes().toString().padStart(2, "0");
-			setValue("endTime", `${hours}:${minutes}`);
+			setValue("endTime", `${hours}:${minutes}`, { shouldValidate: true });
 		}
-	}, [startTime, duration, setValue]);
+	}, [startTime, endTime, setValue, watch]);
 
 	const onSubmit = async (data: TimeLogSchema) => {
 		try {
 			setSubmitting(true);
-
 			const { repeatInterval, ...logData } = data;
 			const logEntries = [];
-
 			const parsedRepeatInterval = repeatInterval ? parseInt(repeatInterval as unknown as string, 10) : undefined;
 			const logDataWithDate = {
 				...logData,
 				date: new Date(logData.date),
 			};
-
 			if (parsedRepeatInterval) {
 				let currentDate = new Date(logDataWithDate.date);
 				for (let i = 0; i < parsedRepeatInterval; i++) {
@@ -98,7 +102,6 @@ const LogTime = () => {
 						startTime: logDataWithDate.startTime,
 						endTime: logDataWithDate.endTime,
 					};
-
 					logEntries.push(newEntry);
 					currentDate.setDate(currentDate.getDate() + 1);
 				}
@@ -112,9 +115,8 @@ const LogTime = () => {
 			}
 
 			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
-
 			setOpen(false);
-			router.push("/timesheet");
+			reset();
 			router.refresh();
 		} catch (error) {
 			setSubmitting(false);
@@ -122,14 +124,7 @@ const LogTime = () => {
 			setError("An unexpected error occurred");
 		} finally {
 			setSubmitting(false);
-			router.push("/timesheet");
-			router.refresh();
 		}
-	};
-
-	const handleSelectChange = <T extends keyof TimeLogSchema>(name: T, value: TimeLogSchema[T]) => {
-		// @ts-ignore
-		setValue(name, value, { shouldValidate: true });
 	};
 
 	return (
@@ -145,7 +140,7 @@ const LogTime = () => {
 							<Form.Field name="customerId">
 								<Form.Label>Customer</Form.Label>
 								<Form.Control asChild>
-									<Select.Root onValueChange={(value) => handleSelectChange("customerId", parseInt(value))}>
+									<Select.Root onValueChange={(value) => setValue("customerId", parseInt(value, 10), { shouldValidate: true })}>
 										<Select.Trigger className="w-full" placeholder="Select a Customer" />
 										<Select.Content>
 											{customers.map((customer) => (
@@ -161,7 +156,7 @@ const LogTime = () => {
 							<Form.Field name="projectId">
 								<Form.Label>Project</Form.Label>
 								<Form.Control asChild>
-									<Select.Root onValueChange={(value) => handleSelectChange("projectId", parseInt(value, 10))}>
+									<Select.Root onValueChange={(value) => setValue("projectId", parseInt(value, 10), { shouldValidate: true })}>
 										<Select.Trigger className="w-full" placeholder="Select a Project" />
 										<Select.Content>
 											{projects.map((project) => (
@@ -177,7 +172,7 @@ const LogTime = () => {
 							<Form.Field name="taskId">
 								<Form.Label>Task</Form.Label>
 								<Form.Control asChild>
-									<Select.Root onValueChange={(value) => handleSelectChange("taskId", parseInt(value, 10))}>
+									<Select.Root onValueChange={(value) => setValue("taskId", parseInt(value, 10), { shouldValidate: true })}>
 										<Select.Trigger className="w-full" placeholder="Select a Task" />
 										<Select.Content>
 											{tasks.map((task) => (
@@ -193,7 +188,7 @@ const LogTime = () => {
 							<Form.Field name="userId">
 								<Form.Label>Employee</Form.Label>
 								<Form.Control asChild>
-									<Select.Root onValueChange={(value) => handleSelectChange("userId", parseInt(value, 10))}>
+									<Select.Root onValueChange={(value) => setValue("userId", parseInt(value, 10), { shouldValidate: true })}>
 										<Select.Trigger className="w-full" placeholder="Select an Employee" />
 										<Select.Content>
 											{users.map((user) => (

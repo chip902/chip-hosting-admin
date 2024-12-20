@@ -1,69 +1,93 @@
 /* eslint-disable no-unused-vars */
+import { PersonalFinanceCategory } from "plaid";
+import { User as AuthUser } from "./next-auth.d.ts";
 
-declare type SearchParamProps = {
+export type SearchParamProps = {
 	params: { [key: string]: string };
 	searchParams: { [key: string]: string | string[] | undefined };
 };
 
-// ========================================
-
-declare type SignUpParams = {
+export type SignUpParams = {
 	firstName: string;
 	lastName: string;
-	address1: string;
+	address: string;
 	city: string;
 	state: string;
 	postalCode: string;
-	dateOfBirth: string;
+	dob: string;
 	ssn: string;
 	email: string;
 	password: string;
 };
 
-declare type LoginUser = {
+export type LoginUser = {
 	id: number;
 	email: string;
 	password: string;
 };
 
-declare type User = {
-	$id?: string;
-	email: string;
+export interface User {
+	id: number | string;
 	userId?: string;
-	dwollaCustomerUrl?: string;
-	dwollaCustomerId?: string;
-	firstName: string;
-	lastName: string;
-	address?: string;
-	city?: string;
-	state?: string;
-	postalCode?: string;
-	dateOfBirth?: string;
-	ssn?: string;
-};
+	userToken?: string;
+	email?: string;
+	firstName?: string;
+	lastName?: string;
+	passwordHash?: string;
+	createdAt?: Date;
+	updatedAt?: Date;
+	dateCreated?: Date;
+	sessionTokens?: Session[];
+	authenticators?: Authenticator[];
+	verificationTokens?: VerificationToken[];
+	banks?: Bank[];
+	timeEntries?: TimeEntry[];
+	projects?: Project[];
+}
 
-declare type NewUserParams = {
+export type NewUserParams = {
 	userId: string;
 	email: string;
 	name: string;
 	password: string;
 };
 
-declare type Account = {
-	id: string;
-	availableBalance: number;
-	currentBalance: number;
-	officialName: string;
-	mask: string;
-	institutionId: string;
-	name: string;
-	type: string;
-	subtype: string;
-	appwriteItemId: string;
-	sharableId: string;
-};
+export interface Balances {
+	available: number | null;
+	current: number;
+	iso_currency_code: string;
+	limit: number | null;
+	unofficial_currency_code: string | null;
+}
 
-declare type Transaction = {
+export interface AccountBase {
+	account_id: string;
+	balances: Balances;
+	institution_id: string | null;
+	mask: string;
+	name: string;
+	official_name: string | null;
+	persistent_account_id?: string; // May not always be present
+	subtype: string;
+	type: "depository" | "investment" | "loan" | string;
+}
+
+export interface Account extends AccountBase {
+	id: string;
+	availableBalance: number | null;
+	currentBalance: number | null;
+	bankId: string | null;
+	fundingSourceUrl?: string;
+	sharableId?: string | null;
+}
+
+export interface GetAccountsResult {
+	accounts: Account[];
+	totalBanks: number;
+	totalCurrentBalance: number;
+}
+
+export type Transaction = {
 	id: string;
 	$id: string;
 	name: string;
@@ -72,17 +96,16 @@ declare type Transaction = {
 	accountId: string;
 	amount: number;
 	pending: boolean;
-	category: string;
+	category: string | PersonalFinanceCategory;
 	date: string;
 	image: string;
-	type: string;
 	$createdAt: string;
 	channel: string;
 	senderBankId: string;
 	receiverBankId: string;
 };
 
-declare type Bank = {
+export type Bank = {
 	$id: string;
 	accountId: string;
 	bankId: string;
@@ -92,34 +115,35 @@ declare type Bank = {
 	sharableId: string;
 };
 
-declare type AccountTypes = "depository" | "credit" | "loan " | "investment" | "other";
+export type AccountTypes = "depository" | "credit" | "loan" | "investment" | "other";
 
-declare type Category = "Food and Drink" | "Travel" | "Transfer";
+export type Category = "Food and Drink" | "Travel" | "Transfer";
 
-declare type CategoryCount = {
+export type CategoryCount = {
 	name: string;
 	count: number;
 	totalCount: number;
 };
 
-declare type Receiver = {
+export type Receiver = {
 	firstName: string;
 	lastName: string;
 };
 
-declare type TransferParams = {
+export type TransferParams = {
 	sourceFundingSourceUrl: string;
 	destinationFundingSourceUrl: string;
 	amount: string;
 };
 
-declare type AddFundingSourceParams = {
+export type AddFundingSourceParams = {
+	dwollaCustomerUrl: string;
 	dwollaCustomerId: string;
 	processorToken: string;
 	bankName: string;
 };
 
-declare type NewDwollaCustomerParams = {
+export type NewDwollaCustomerParams = {
 	firstName: string;
 	lastName: string;
 	email: string;
@@ -132,30 +156,30 @@ declare type NewDwollaCustomerParams = {
 	ssn: string;
 };
 
-declare interface CreditCardProps {
+export interface CreditCardProps {
 	account: Account;
 	userName: string;
 	showBalance?: boolean;
 }
 
-declare interface BankInfoProps {
+export interface BankInfoProps {
 	account: Account;
 	appwriteItemId?: string;
 	type: "full" | "card";
 }
 
-declare interface HeaderBoxProps {
+export interface HeaderBoxProps {
 	type?: "title" | "greeting";
 	title: string;
 	subtext: string;
 	user?: string;
 }
 
-declare interface MobileNavProps {
+export interface MobileNavProps {
 	user: User;
 }
 
-declare interface PageHeaderProps {
+export interface PageHeaderProps {
 	topTitle: string;
 	bottomTitle: string;
 	topDescription: string;
@@ -163,118 +187,113 @@ declare interface PageHeaderProps {
 	connectBank?: boolean;
 }
 
-declare interface PaginationProps {
+export interface PaginationProps {
 	page: number;
 	totalPages: number;
 }
 
-declare interface PlaidLinkProps {
-	user: User;
+export interface PlaidLinkProps {
+	user: AuthUser;
 	variant?: "primary" | "ghost";
 	dwollaCustomerId?: string;
 }
 
-// declare type User = sdk.Models.Document & {
-//   accountId: string;
-//   email: string;
-//   name: string;
-//   items: string[];
-//   accessToken: string;
-//   image: string;
-// };
-
-declare interface AuthFormProps {
+export interface AuthFormProps {
 	type: "sign-in" | "sign-up";
 }
 
-declare interface BankDropdownProps {
+export interface BankDropdownProps {
 	accounts: Account[];
 	setValue?: UseFormSetValue<any>;
 	otherStyles?: string;
 }
 
-declare interface BankTabItemProps {
+export interface BankTabItemProps {
 	account: Account;
-	appwriteItemId?: string;
+	transactionId?: string;
 }
 
-declare interface TotlaBalanceBoxProps {
+export interface TotalBalanceBoxProps {
 	accounts: Account[];
 	totalBanks: number;
 	totalCurrentBalance: number;
 }
 
-declare interface FooterProps {
-	user: User;
+export interface FooterProps {
+	user: User | null;
 }
 
-declare interface RightSidebarProps {
-	user: User;
-	transactions: Transaction[];
-	banks: Bank[] & Account[];
+export interface RightSidebarProps {
+	user: User | null;
 }
 
-declare interface SiderbarProps {
-	user: User;
+export interface SiderbarProps {
+	user?: User | null;
 }
 
-declare interface RecentTransactionsProps {
+export interface RecentTransactionsProps {
 	accounts: Account[];
 	transactions: Transaction[];
-	appwriteItemId: string;
-	page: number;
+	page?: number;
 }
 
-declare interface TransactionHistoryTableProps {
+export interface TransactionHistoryTableProps {
 	transactions: Transaction[];
 	page: number;
 }
 
-declare interface CategoryBadgeProps {
+export interface CategoryBadgeProps {
 	category: string;
 }
 
-declare interface TransactionTableProps {
+export interface TransactionTableProps {
 	transactions: Transaction[];
+	filterByBank?: boolean;
 }
 
-declare interface CategoryProps {
+export interface CategoryProps {
 	category: CategoryCount;
 }
 
-declare interface DoughnutChartProps {
+export interface DoughnutChartProps {
 	accounts: Account[];
 }
 
-declare interface PaymentTransferFormProps {
+export interface PaymentTransferFormProps {
 	accounts: Account[];
 }
 
-// Actions
-declare interface getAccountsProps {
+export interface GetAccountsProps {
 	userId: string;
 }
 
-declare interface getAccountProps {
-	appwriteItemId: string;
+export interface GetAccountsResult {
+	accounts: Account[];
+	totalBanks: number;
+	totalCurrentBalance: number;
 }
 
-declare interface getInstitutionProps {
+export interface GetAccountProps {
+	bankId: string;
+}
+
+export interface GetInstitutionProps {
 	institutionId: string;
 }
 
-declare interface getTransactionsProps {
+export interface GetTransactionsProps {
 	accessToken: string;
 }
 
-declare interface CreateFundingSourceOptions {
-	customerId: string; // Dwolla Customer ID
-	fundingSourceName: string; // Dwolla Funding Source Name
-	plaidToken: string; // Plaid Account Processor Token
-	_links: object; // Dwolla On Demand Authorization Link
+export interface CreateFundingSourceOptions {
+	customerId: string;
+	customerUrl: string;
+	fundingSourceName: string;
+	plaidToken: string;
+	_links: object;
 }
 
-declare interface CreateTransactionProps {
+export interface CreateTransactionProps {
 	name: string;
 	amount: string;
 	senderId: string;
@@ -284,25 +303,25 @@ declare interface CreateTransactionProps {
 	email: string;
 }
 
-declare interface getTransactionsByBankIdProps {
+export interface GetTransactionsByBankIdProps {
 	bankId: string;
 }
 
-declare interface signInProps {
+export interface SignInProps {
 	email: string;
 	password: string;
 }
 
-declare interface getUserInfoProps {
+export interface GetUserInfoProps {
 	userId: string;
 }
 
-declare interface exchangePublicTokenProps {
+export interface ExchangePublicTokenProps {
 	publicToken: string;
 	user: User;
 }
 
-declare interface createBankAccountProps {
+export interface CreateBankAccountProps {
 	accessToken: string;
 	userId: string;
 	accountId: string;
@@ -311,25 +330,37 @@ declare interface createBankAccountProps {
 	sharableId: string;
 }
 
-declare interface getBanksProps {
+export interface GetBanksProps {
 	userId: string;
 }
 
-declare interface getBankProps {
-	documentId: string;
+export interface GetBankProps {
+	bankId: string;
 }
 
-declare interface getBankByAccountIdProps {
+export interface GetBankByAccountIdProps {
 	accountId: string;
 }
 
-export interface Task {
+export interface Customer {
 	id: number;
 	name: string;
-	description?: string;
+	email: string;
+	dateCreated: Date;
+	defaultRate: number;
+	color?: string;
+	shortName?: string;
+	paymentTerms?: string;
+	invoices?: Invoice[];
+	projects?: Project[];
+	timeEntries?: TimeEntry[];
+}
+
+export interface ProjectTasks {
 	projectId: number;
-	dateCreated: string;
-	rate?: number;
+	taskId: number;
+	project: Project;
+	task: Task;
 }
 
 export interface Project {
@@ -337,44 +368,162 @@ export interface Project {
 	name: string;
 	description?: string;
 	customerId: number;
-	dateCreated: string;
+	dateCreated: Date;
 	rate?: number;
+	customer: Customer;
+	projectTasks?: ProjectTasks[];
+	tasks: Task[];
+	users: User[];
+	timeEntries?: TimeEntry[];
 }
 
-export interface Customer {
+export interface Task {
 	id: number;
-	name?: string;
-	email: string;
-	dateCreated: string;
-	defaultRate: number;
-	color: string;
-	paymentTerms: string;
+	name: string;
+	description?: string;
+	dateCreated: Date;
+	rate?: number;
+	projectTasks?: ProjectTasks[];
+	timeEntries?: TimeEntry[];
+	projects: Project[];
 }
 
 export interface TimeEntry {
+	startTime: string;
+	endTime: string;
 	id: number;
-	description: string;
+	description?: string;
 	duration: number;
-	date: string;
-	Customer: {
-		name: string;
-		email: string;
-		defaultRate: number;
-		paymentTerms: string;
-	};
-	Project: {
-		name: string;
-		rate: number;
-	};
-	Task: {
-		name: string;
+	date: Date;
+	userId: number;
+	taskId: number;
+	customerId: number;
+	projectId: number;
+	invoiceItemId?: number | null;
+	invoiceId?: number | null;
+	isInvoiced: boolean;
+
+	// Relations to other models
+	customer: CustomerType;
+	project: ProjectType;
+	task: TaskType;
+	user: UserType;
+	invoice?: Invoice;
+	invoiceItem?: InvoiceItem;
+}
+
+export interface TimeEntryData {
+	duration: number;
+	name: string;
+	start: string | Date;
+	end: string;
+	id: number;
+	date: Date;
+	startTime: string;
+	endTime: string;
+	customerName: string;
+	customer: { name: string; defaultRate: number };
+	project: { name: string; rate: number };
+	task: { name: string };
+	user: { name?: string; id: number };
+	isClientInvoiced: boolean;
+	description?: string;
+}
+
+export interface ProcessedTimeSlot {
+	width: number;
+	left: number;
+	startSlot: number;
+	endSlot: number;
+	date: Date;
+	dayIndex: number;
+	color: string;
+	entry: ProcessedTimeEntry; // Ensure this is the full object
+}
+
+export interface TimeEntryProps {
+	date: Date;
+	startSlot: number;
+	endSlot: number;
+	dayIndex: number;
+	color: string;
+	width: number;
+	left: number;
+	entry: ProcessedTimeEntry; // Use ProcessedTimeEntry which includes both base and UI-specific data
+}
+
+export interface RawTimeEntry {
+	id: number;
+	date: Date | string;
+	startTime: string;
+	endTime: string;
+	customer?: { name: string };
+	project: { name: string };
+	task: { name: string };
+	isInvoiced: boolean;
+	isClientInvoiced: boolean;
+	isBillable: boolean;
+	color: string;
+	name?: string;
+	description?: string;
+	startSlot: number;
+	endSlot: number;
+}
+
+export interface ProcessedTimeEntry {
+	id: number;
+	date: Date | string;
+	startTime: string;
+	endTime: string;
+	customer: { name: string };
+	project: { name: string };
+	task: { name: string };
+	isInvoiced: boolean | null;
+	isBillable: boolean | null;
+	color: string;
+	name: string;
+	customerName?: string;
+	projectName?: string;
+	taskName?: string;
+	width?: number;
+	left?: number;
+	startSlot?: number | null;
+	endSlot?: number | null;
+	duration: number;
+	description?: string;
+}
+
+export interface GridItem {
+	width: number;
+	left: number;
+	startSlot: number;
+	endSlot: number;
+	date: Date;
+	dayIndex: number;
+	color: string;
+	entry: ProcessedTimeEntry;
+	customerName: string;
+}
+
+export interface TimeGridProps {
+	filters: {
+		startDate?: Date;
+		endDate?: Date;
+		customerId?: number;
 	};
 }
 
 export interface PdfData {
 	invoiceNumber?: string;
 	paymentTerms: string | null;
-	timeEntries: TimeEntry[];
+	timeEntries: TimeEntryData[];
+}
+
+export interface PdfTimeEntry extends TimeEntry {
+	name: string;
+	Customer: { name: string; email: string };
+	Project: { name: string };
+	Task: { name: string };
 }
 
 export interface TableRow {
@@ -387,41 +536,13 @@ export interface TableRow {
 	amount: number;
 }
 
-export interface TimeGridProps {
-	filters: {
-		startDate?: Date;
-		endDate?: Date;
-		customerId?: number;
-	};
-}
-export interface TimeEntryData {
+export interface Invoice {
 	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: string;
-	userId: number;
-	taskId: number;
 	customerId: number;
-	projectId: number;
-	invoiceItemId: number | null;
-	isInvoiced: boolean;
-	shortname: string;
-	Customer: {
-		id: number;
-		name: string;
-		color: string;
-		shortname: string;
-	};
-	Project: {
-		id: number;
-		name: string;
-	};
-	Task: {
-		id: number;
-		name: string;
-	};
-	User: {
-		id: number;
-		name: string;
-	};
+	totalAmount: number;
+	dateCreated: Date;
+	pdfPath?: string;
+	customer: Customer;
+	invoiceItems?: InvoiceItem[];
+	timeEntries?: TimeEntry[];
 }

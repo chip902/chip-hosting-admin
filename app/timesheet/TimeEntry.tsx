@@ -3,39 +3,18 @@ import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
+import { TimeEntryProps } from "@/types";
 
-export interface TimeEntry {
-	id: number;
-	description: string | null;
-	duration: number | undefined;
-	date: Date;
-	userId: number;
-	taskId: number;
-	customerId: number;
-	name: string;
-	projectId: number;
-	invoiceItemId: number | null;
-	startTime?: string;
-	endTime?: string;
-	repeatInterval?: number;
-}
-
-export interface TimeEntryProps {
-	entry: TimeEntry;
-	startSlot: number;
-	endSlot: number;
-	dayIndex: number;
-	color: string;
-}
-
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, dayIndex, color }) => {
+const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
+		entryDate: new Date(entry.date).toISOString().split("T")[0],
+		startTime: entry.startTime || "",
+		endTime: entry.endTime || "",
 	});
-
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 
@@ -43,6 +22,9 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		setFormState({
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
+			entryDate: new Date(entry.date).toISOString().split("T")[0],
+			startTime: entry.startTime || "",
+			endTime: entry.endTime || "",
 		});
 	}, [entry]);
 
@@ -53,8 +35,17 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 
 	const handleUpdate = () => {
 		setLoading(true);
+		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
+		const isoDate = new Date(isoDateStr);
+
+		if (isNaN(isoDate.getTime())) {
+			console.error("Invalid date or time format: ", isoDate.getTime());
+			setLoading(false);
+			return;
+		}
+
 		updateTimeEntry(
-			{ id: entry.id, data: { duration: parseInt(formState.duration), description: formState.description } },
+			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate.toISOString() } },
 			{
 				onSuccess: () => {
 					setIsOpen(false);
@@ -79,51 +70,80 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		});
 	};
 
+	const calculatePosition = (start: number, end: number) => {
+		const top = (start / 1440) * 100;
+		let height = ((end - start) / 1440) * 100;
+		if (height < 0) {
+			height += 100; // Adjust for entries that cross midnight
+		}
+		return { top, height: Math.max(height, 1) };
+	};
+
+	const { top, height } = calculatePosition(startSlot, endSlot);
+
 	return (
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Popover.Trigger asChild>
 				<div
-					className="time-entry absolute bg-blue-500 text-white p-1 rounded-xl cursor-pointer"
+					className="absolute time-entry bg-opacity-80 text-black-1 p-1 rounded-lg cursor-pointer overflow-hidden"
 					style={{
-						gridColumn: `${dayIndex + 1} / ${dayIndex - 1}`,
-						top: `${(startSlot / 1440) * 100}%`,
-						height: `${((endSlot - startSlot) / 1440) * 100}%`,
-						width: "90%",
-						left: "5%",
+						top: `${top}%`,
+						height: `${height}%`,
+						left: `${left * 100}%`,
+						width: `${width * 100}%`,
 						backgroundColor: color,
+						zIndex: 10,
 					}}>
-					<Text>{entry.duration && entry.duration / 60} Hours</Text>
+					<Text className="text-sm">{(entry.duration / 60).toFixed(1)} Hours</Text>
 					<br />
-					<Text>{entry.name}</Text>
+					<Text className="text-sm">{entry.name}</Text>
 				</div>
 			</Popover.Trigger>
-			<Popover.Content className="p-4 bg-gray-500 rounded shadow-lg z-20">
-				<form className="flex flex-col space-y-2">
-					<label>
-						Description:
-						<input
-							type="text"
+			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">
+				<form className="flex flex-col space-y-4">
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description:</span>
+						<textarea
 							name="description"
 							value={formState.description}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 rounded text-black-1"
+							className="w-full h-24 px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
-					<label>
-						Duration:
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date:</span>
+						<input
+							type="date"
+							name="entryDate"
+							value={(formState.entryDate as unknown as string) || (entry.date as unknown as string)}
+							onChange={handleFormChange}
+							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+						/>
+					</label>
+
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
 						<input
 							type="number"
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="block w-full mt-1 border border-gray-300 text-black-1"
+							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
 					<div className="flex space-x-2">
-						<button type="button" onClick={handleUpdate} disabled={isLoading} className="px-4 py-2 text-white bg-blue-500 rounded">
+						<button
+							type="button"
+							onClick={handleUpdate}
+							disabled={isLoading}
+							className="flex-1 px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
 							{isLoading ? <Spinner /> : "Update"}
 						</button>
-						<button type="button" onClick={handleDelete} disabled={isLoading} className="px-4 py-2 text-white bg-red-500 rounded">
+						<button
+							type="button"
+							onClick={handleDelete}
+							disabled={isLoading}
+							className="flex-1 px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
 							{isLoading ? <Spinner /> : "Delete"}
 						</button>
 					</div>

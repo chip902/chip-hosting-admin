@@ -3,6 +3,7 @@ import prisma from "@/prisma/client";
 import { generateInvoicePdf } from "@/app/utils/PdfService";
 import fs from "fs/promises";
 import path from "path";
+import { TimeEntryData } from "@/types";
 
 function logError(step: string, error: any) {
 	console.error(`Error in ${step}:`, error.message);
@@ -20,7 +21,7 @@ export async function POST(request: NextRequest) {
 		try {
 			timeEntries = await prisma.timeEntry.findMany({
 				where: { id: { in: timeEntryIds } },
-				include: { Customer: true, Task: true, User: true, Project: true },
+				include: { customer: true, task: true, user: true, project: true },
 			});
 			console.log(`Retrieved ${timeEntries.length} time entries`);
 		} catch (dbError) {
@@ -33,8 +34,8 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "No time entries found" }, { status: 400 });
 		}
 
-		const customer = timeEntries[0].Customer;
-		const totalAmount = timeEntries.reduce((total, entry) => total + (entry.duration * (entry.Project.rate ?? 0)) / 60, 0);
+		const customer = timeEntries[0].customer;
+		const totalAmount = timeEntries.reduce((total, entry) => total + (entry.duration * (entry.project.rate ?? 0)) / 60, 0);
 
 		let invoice;
 		try {
@@ -51,23 +52,39 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Error creating invoice in database" }, { status: 500 });
 		}
 
+		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry) => {
+			const userName = [entry.user?.firstName, entry.user?.lastName].filter(Boolean).join(" ");
+			const startDate = new Date(entry.date);
+			const customerName = entry.customer.name;
+			const endDate = entry.endDate ? new Date(entry.endDate) : new Date(startDate.getTime() + entry.duration * 60_000);
+
+			return {
+				duration: entry.duration,
+				name: userName || "No Name",
+				start: startDate,
+				end: endDate.toISOString(),
+				id: entry.id,
+				date: startDate,
+				startTime: startDate.toISOString(),
+				endTime: endDate.toISOString(),
+				customerName,
+				customer: { name: entry.customer?.name, defaultRate: entry.customer.defaultRate },
+				project: { name: entry.project?.name || "Unknown Project", rate: entry.project.rate ?? 0 },
+				task: { name: entry.task?.name || "Unknown Task" },
+				user: {
+					name: userName,
+					id: entry.user.id,
+				},
+				isClientInvoiced: entry.isInvoiced ?? false,
+				description: entry.description ?? "",
+			};
+		});
+
+		// Now create pdfData using timeEntryDataArray
 		const pdfData = {
 			invoiceNumber: `${customer.shortName}-${invoice.id}`,
 			paymentTerms: customer.paymentTerms || "30",
-			timeEntries: timeEntries.map((entry) => ({
-				id: entry.id,
-				description: entry.description ?? "",
-				duration: entry.duration,
-				date: entry.date.toISOString(),
-				Customer: {
-					name: entry.Customer.name,
-					email: entry.Customer.email,
-					defaultRate: entry.Customer.defaultRate,
-					paymentTerms: entry.Customer.paymentTerms || "30",
-				},
-				Project: { name: entry.Project.name, rate: entry.Project.rate ?? entry.Customer.defaultRate },
-				Task: { name: entry.Task.name },
-			})),
+			timeEntries: timeEntryDataArray,
 		};
 
 		let pdfBytes;

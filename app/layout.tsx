@@ -6,8 +6,10 @@ import { Bars3Icon, MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/20/s
 import { Theme } from "@radix-ui/themes";
 import "@radix-ui/themes/styles.css";
 import { ChevronDownIcon } from "lucide-react";
+import { signOut } from "next-auth/react";
 import { Poppins } from "next/font/google";
-import { usePathname } from "next/navigation";
+import Image from "next/image";
+import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 import "./globals.css";
 import QueryClientProvider from "./QueryClientProvider";
@@ -18,16 +20,23 @@ const poppins = Poppins({
 	weight: "100",
 });
 
-const userNavigation = [
-	{ name: "Your profile", href: "#" },
-	{ name: "Sign out", href: "/sign-out" },
-];
-
 function classNames(...classes: string[]) {
 	return classes.filter(Boolean).join(" ");
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+	const router = useRouter();
+	const userNavigation = [
+		{ name: "Your profile", href: "/admin/profile" },
+		{
+			name: "Sign out",
+			onClick: async () => {
+				await signOut();
+				router.push("/");
+			},
+		},
+		{ name: "Sign In", href: "/sign-in" },
+	];
 	const [sidebarOpen, setSidebarOpen] = useState(false);
 	const pathname = usePathname();
 
@@ -107,7 +116,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 										<Menu as="div" className="relative">
 											<MenuButton className="-m-1.5 flex items-center p-1.5">
 												<span className="sr-only">Open user menu</span>
-												<img className="h-8 w-8 rounded-md bg-gray-50" src="/headshot.jpeg" alt="" />
+												<div className="h-8 w-8 rounded-md bg-gray-50">
+													<Image alt="headshot" src="/headshot.jpeg" width="50" height="50" />
+												</div>
 												<span className="hidden lg:flex lg:items-center">
 													<span className="ml-4 text-sm font-semibold leading-6 text-gray-900">Andrew Chepurny</span>
 													<ChevronDownIcon className="ml-2 h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -127,8 +138,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 															{({ focus }) => (
 																<a
 																	href={item.href}
+																	onClick={item.onClick}
 																	className={classNames(
-																		focus ? "bg-gray-50" : "",
+																		focus ? "bg-gray-50 dark:bg-slate-500" : "",
 																		"block px-3 py-1 text-sm leading-6 text-gray-900"
 																	)}>
 																	{item.name}

@@ -2,25 +2,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { parseISO } from "date-fns";
+import { getParamsFromUrl } from "@/lib/utils";
 
-// Update a time entry
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(request: NextRequest) {
 	try {
-		const body = await request.json();
-		const id = parseInt(params.id);
-
-		if (!id) {
+		const { description, duration, date, startTime, endTime } = await request.json();
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
+		if (isNaN(id)) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
 		}
 
-		const { description, duration, ...rest } = body;
+		const isoDateStr = `${date}T${startTime}`;
+		const isoDate = new Date(isoDateStr);
+
+		if (isNaN(isoDate.getTime())) {
+			return NextResponse.json({ error: "Invalid date or time format" }, { status: 400 });
+		}
+
+		// Ensure the ISO date is valid
+		if (!isoDate.toISOString()) {
+			return NextResponse.json({ error: "Invalid ISO date format" }, { status: 400 });
+		}
 
 		const updatedEntry = await prisma.timeEntry.update({
 			where: { id },
 			data: {
-				...rest,
 				description,
 				duration,
+				date: isoDate, // Use the combined ISO-8601 DateTime string
 			},
 		});
 
@@ -32,9 +43,11 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // Delete a time entry
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(request: NextRequest) {
 	try {
-		const id = parseInt(params.id);
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
 
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
@@ -67,14 +80,14 @@ export async function GET(request: NextRequest) {
 		const entries = await prisma.timeEntry.findMany({
 			where: whereClause,
 			include: {
-				Customer: true,
-				Project: true,
-				Task: true,
-				User: true,
+				customer: true,
+				project: true,
+				task: true,
+				user: true,
 			},
 		});
 
-		return NextResponse.json(entries, { status: 201 });
+		return NextResponse.json(entries, { status: 200 }); // Corrected from 201 to 200
 	} catch (error) {
 		return NextResponse.json({ error: "Error fetching time entries" }, { status: 500 });
 	}

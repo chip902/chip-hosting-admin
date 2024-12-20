@@ -8,22 +8,26 @@ datasource db {
 }
 
 model User {
-  id            Int             @id @default(autoincrement())
-  email         String          @unique
-  password      String?
-  firstName     String?
-  lastName      String?
-  address       String?
-  city          String?
-  state         String?
-  postalCode    String?
-  dob           String?
-  ssn           String?
-  role          String?
-  timeEntries   TimeEntry[]
-  projects      Project[]       @relation("ProjectUser")
-  Session       Session[]
-  Authenticator Authenticator[]
+  id                Int             @id @default(autoincrement())
+  userId            String?         @unique
+  dwollaCustomerId  String?         @unique
+  dwollaCustomerUrl String?         @unique
+  email             String          @unique
+  password          String?
+  firstName         String?
+  lastName          String?
+  address           String?
+  city              String?
+  state             String?
+  postalCode        String?
+  dob               String?
+  ssn               String?
+  role              String?
+  timeEntries       TimeEntry[]
+  projects          Project[]       @relation("ProjectUser")
+  Session           Session[]
+  Authenticator     Authenticator[]
+  banks             Bank[]
 }
 
 model Customer {
@@ -92,17 +96,25 @@ model TimeEntry {
   date          DateTime
   userId        Int
   taskId        Int
+  endDate       DateTime?
   invoiceItemId Int?
   customerId    Int
   projectId     Int
   invoiceId     Int?
-  isInvoiced    Boolean      @default(false)
+  isInvoiced    Boolean?     @default(false)
+  isBillable    Boolean?     @default(true)
+  color         String?
+  startSlot     Int?
+  endSlot       Int?
+  totalHours    Float?
+  width         Int?
+  left          Int?
   invoice       Invoice?     @relation("InvoiceTimeEntries", fields: [invoiceId], references: [id], map: "TimeEntry_InvoiceTimeEntries_fkey")
-  Customer      Customer     @relation(fields: [customerId], references: [id])
-  InvoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
-  Project       Project      @relation(fields: [projectId], references: [id])
-  Task          Task         @relation(fields: [taskId], references: [id])
-  User          User         @relation(fields: [userId], references: [id])
+  customer      Customer     @relation(fields: [customerId], references: [id])
+  invoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])
+  project       Project      @relation(fields: [projectId], references: [id])
+  task          Task         @relation(fields: [taskId], references: [id])
+  user          User         @relation(fields: [userId], references: [id])
 }
 
 model InvoiceItem {
@@ -149,4 +161,15 @@ model VerificationToken {
   expires    DateTime
 
   @@unique([identifier, token])
+}
+
+model Bank {
+  id               Int    @id @unique @default(autoincrement())
+  userId           String @unique
+  bankId           String
+  accountId        String
+  accessToken      String
+  fundingSourceUrl String
+  sharableId       String
+  User             User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
 }

@@ -1,4 +1,4 @@
-import { TimeEntryData } from "@/types";
+import { TimeEntry } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
@@ -15,7 +15,7 @@ const fetchTimeEntry = async (userId: number, filters: any, isInvoiced: boolean)
 
 export const useGetTimeEntry = (startDate?: string, endDate?: string, customerId?: number, page?: number, pageSize?: number, isInvoiced: boolean = false) => {
 	return useQuery<{
-		entries: TimeEntryData[];
+		entries: TimeEntry[];
 		totalEntries: number;
 	}>({
 		queryKey: ["time-entries", startDate, endDate, customerId, isInvoiced, page, pageSize],

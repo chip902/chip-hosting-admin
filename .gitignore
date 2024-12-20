@@ -45,3 +45,5 @@ next-env.d.ts
 # Output
 *.pdf
 .aider*
+latest_backup_data_only.sql
+latest_backup.sql

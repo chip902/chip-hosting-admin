@@ -1,7 +1,8 @@
+// app/hooks/useGetTimeEntries.ts
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { format } from "date-fns";
-import { TimeEntryData } from "@/types";
+import { TimeEntry } from "@/types";
 
 interface QueryParams {
 	customerId?: number;
@@ -16,12 +17,22 @@ interface QueryParams {
 
 interface TimeEntryResponse {
 	length: number;
-	entries: TimeEntryData[];
+	entries: TimeEntry[];
 	totalEntries: number;
 }
 
 export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced, sortBy = "date", sortOrder = "desc" }: QueryParams) => {
-	const queryKey = ["timeEntries", page, pageSize, startDate?.toISOString(), endDate?.toISOString(), customerId, isInvoiced, sortBy, sortOrder];
+	const queryKey = [
+		"timeEntries",
+		page,
+		pageSize,
+		startDate ? format(startDate, "yyyy-MM-dd") : undefined,
+		endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+		customerId,
+		isInvoiced,
+		sortBy,
+		sortOrder,
+	];
 
 	return useQuery<TimeEntryResponse>({
 		queryKey,
@@ -29,25 +40,20 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 			const params = new URLSearchParams({
 				page: page.toString(),
 				pageSize: pageSize.toString(),
-				sortBy,
-				sortOrder,
 				...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }),
 				...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }),
 				...(customerId !== undefined && { customerId: customerId.toString() }),
 				...(isInvoiced !== undefined && { isInvoiced: isInvoiced.toString() }),
+				sortBy,
+				sortOrder,
 			});
-
-			const url = `/api/timelog?${params.toString()}`;
-
-			const response = await axios.get<TimeEntryResponse>(url);
-
-			if (!response.data || !Array.isArray(response.data.entries)) {
-				throw new Error("Invalid response format");
-			}
-
+			const queryString = new URLSearchParams(params).toString();
+			console.log("Request URL to Endpoint: ", `/api/timelog?${queryString}`);
+			const response = await axios.get(`/api/timelog?${queryString}`);
 			return response.data;
 		},
+		staleTime: 5 * 60 * 1000, // 5 minutes
 		refetchOnWindowFocus: false,
-		retry: 3,
+		refetchOnMount: false,
 	});
 };
