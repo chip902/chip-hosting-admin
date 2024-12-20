@@ -5,7 +5,11 @@ import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
 declare module "next-auth" {
 	interface User extends DefaultUser {
 		id: number;
+<<<<<<< HEAD
 		userId: string | null;
+=======
+		userId: string;
+>>>>>>> 671938d (Banking-feature (#3))
 		email: string;
 		dwollaCustomerUrl?: string | null;
 		dwollaCustomerId?: string | null;
@@ -18,7 +22,11 @@ declare module "next-auth" {
 	interface Session {
 		user: {
 			id: string;
+<<<<<<< HEAD
 			userId: string | null;
+=======
+			userId: string;
+>>>>>>> 671938d (Banking-feature (#3))
 			dwollaCustomerUrl?: string | null;
 			dwollaCustomerId?: string | null;
 			firstName?: string | null;

@@ -1,4 +1,7 @@
+<<<<<<< HEAD
 // /auth.ts
+=======
+>>>>>>> 671938d (Banking-feature (#3))
 import NextAuth from "next-auth";
 import { authOptions } from "./auth.config";
 import { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next";

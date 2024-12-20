@@ -418,7 +418,11 @@ export interface TimeEntryData {
 	start: string | Date;
 	end: string;
 	id: number;
+<<<<<<< HEAD
 	date: string;
+=======
+	date: Date;
+>>>>>>> 671938d (Banking-feature (#3))
 	startTime: string;
 	endTime: string;
 	customerName: string;
@@ -429,6 +433,7 @@ export interface TimeEntryData {
 	isClientInvoiced: boolean;
 	description?: string;
 }
+<<<<<<< HEAD
 export interface UpdateTimeEntryParams {
 	id: number;
 	data: Partial<TimeEntryData>;
@@ -437,6 +442,8 @@ export interface UpdateTimeEntryParams {
 export interface DeleteTimeEntryParams {
 	id: number;
 }
+=======
+>>>>>>> 671938d (Banking-feature (#3))
 
 export interface ProcessedTimeSlot {
 	width: number;
@@ -495,8 +502,13 @@ export interface ProcessedTimeEntry {
 	taskName?: string;
 	width?: number;
 	left?: number;
+<<<<<<< HEAD
 	startSlot?: number;
 	endSlot?: number;
+=======
+	startSlot?: number | null;
+	endSlot?: number | null;
+>>>>>>> 671938d (Banking-feature (#3))
 	duration: number;
 	description?: string;
 }

@@ -6,6 +6,7 @@ import { getParamsFromUrl } from "@/lib/utils";
 
 export async function PATCH(request: NextRequest) {
 	try {
+<<<<<<< HEAD
 		const { description, duration, date } = await request.json();
 		console.log("Received Date:", date);
 
@@ -26,6 +27,26 @@ export async function PATCH(request: NextRequest) {
 		const id = Number.parseInt(idString, 10);
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
+=======
+		const { description, duration, date, startTime, endTime } = await request.json();
+		const params = getParamsFromUrl(request.url);
+		const idString = params.params.id;
+		const id = Number.parseInt(idString, 10);
+		if (isNaN(id)) {
+			return NextResponse.json({ error: "ID is required" }, { status: 400 });
+		}
+
+		const isoDateStr = `${date}T${startTime}`;
+		const isoDate = new Date(isoDateStr);
+
+		if (isNaN(isoDate.getTime())) {
+			return NextResponse.json({ error: "Invalid date or time format" }, { status: 400 });
+		}
+
+		// Ensure the ISO date is valid
+		if (!isoDate.toISOString()) {
+			return NextResponse.json({ error: "Invalid ISO date format" }, { status: 400 });
+>>>>>>> 671938d (Banking-feature (#3))
 		}
 
 		const updatedEntry = await prisma.timeEntry.update({
@@ -33,7 +54,11 @@ export async function PATCH(request: NextRequest) {
 			data: {
 				description,
 				duration,
+<<<<<<< HEAD
 				date: `${date}Z`,
+=======
+				date: isoDate, // Use the combined ISO-8601 DateTime string
+>>>>>>> 671938d (Banking-feature (#3))
 			},
 		});
 

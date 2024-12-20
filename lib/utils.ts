@@ -2,12 +2,15 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import qs from "query-string";
 import { AccountTypes, CategoryCount, RawTimeEntry, Transaction } from "@/types";
+<<<<<<< HEAD
 import { DateTime } from "luxon";
 
 export const calculateLocalDate = (utcDateString: string) => {
 	return DateTime.fromISO(utcDateString).setZone("America/New_York").toFormat("yyyy-MM-dd HH:mm:ss");
 };
 
+=======
+>>>>>>> 671938d (Banking-feature (#3))
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }

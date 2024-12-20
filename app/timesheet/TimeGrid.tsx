@@ -4,6 +4,7 @@ import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
+<<<<<<< HEAD
 import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay, setHours, setMinutes, setSeconds } from "date-fns";
 import { ProcessedTimeEntry, TimeGridProps } from "@/types";
 import { calculateWidth, calculateLeftPosition, calculateDuration } from "@/lib/utils";
@@ -74,12 +75,51 @@ const transformToTimeEntry = (entry: any): ProcessedTimeEntry => {
 		description: entry.description ?? "",
 	};
 };
+=======
+import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay } from "date-fns";
+import { ProcessedTimeEntry, TimeGridProps } from "@/types";
+import { calculateDuration, calculateLeftPosition, calculateWidth } from "@/lib/utils";
+
+const transformToTimeEntry = (entry: any): ProcessedTimeEntry => ({
+	id: entry.id,
+	date: entry.date,
+	startTime: entry.startTime,
+	endTime: entry.endTime,
+	customer: entry.Customer || {},
+	project: {
+		...entry.Project,
+		name: entry.Project?.name || "Unknown Project",
+	},
+	task: {
+		...entry.Task,
+		name: entry.Task?.name || "Unknown Task",
+	},
+	isInvoiced: entry.isInvoiced ?? false,
+	isBillable: entry.isBillable ?? true,
+	color: entry.color || "#000000",
+	name: entry.name || `${entry.Project?.name} - ${entry.Task?.name}`,
+	customerName: entry.Customer?.name,
+	projectName: entry.Project?.name,
+	taskName: entry.Task?.name,
+	width: calculateWidth(entry),
+	left: calculateLeftPosition(entry),
+	startSlot: entry.startSlot,
+	endSlot: entry.endSlot,
+	duration: calculateDuration(entry.startTime, entry.endTime),
+	description: entry.description ?? "",
+});
+>>>>>>> 671938d (Banking-feature (#3))
 
 interface OverlappingEntry extends ProcessedTimeEntry {
 	width: number;
 	left: number;
+<<<<<<< HEAD
 	startSlot: number; // Ensure startSlot is a number
 	endSlot: number; // Ensure endSlot is a number
+=======
+	startSlot: number;
+	endSlot: number;
+>>>>>>> 671938d (Banking-feature (#3))
 	date: Date; // Ensuring date is a Date object after processing
 }
 
@@ -161,6 +201,7 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 
 	if (isLoading) {
 		return <Skeleton />;
+		return <Skeleton />;
 	}
 
 	const start = startDate ? new Date(startDate) : new Date();
@@ -216,8 +257,13 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 										key={entry.id}
 										entry={entry}
 										date={entry.date}
+<<<<<<< HEAD
 										startSlot={entry.startSlot} // Ensure startSlot is a number
 										endSlot={entry.endSlot} // Ensure endSlot is a number
+=======
+										startSlot={entry.startSlot}
+										endSlot={entry.endSlot}
+>>>>>>> 671938d (Banking-feature (#3))
 										dayIndex={dayIndex}
 										color={entry.color || "#000000"}
 										width={entry.width}

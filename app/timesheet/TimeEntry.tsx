@@ -3,7 +3,11 @@ import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
+<<<<<<< HEAD
 import { TimeEntryProps, UpdateTimeEntryParams, DeleteTimeEntryParams } from "@/types"; // Import the type definitions
+=======
+import { TimeEntryProps } from "@/types";
+>>>>>>> 671938d (Banking-feature (#3))
 
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -12,9 +16,16 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
+<<<<<<< HEAD
 		startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
 	});
 
+=======
+		startTime: entry.startTime || "",
+		endTime: entry.endTime || "",
+	});
+	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
+>>>>>>> 671938d (Banking-feature (#3))
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 
@@ -23,7 +34,12 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
 			entryDate: new Date(entry.date).toISOString().split("T")[0],
+<<<<<<< HEAD
 			startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
+=======
+			startTime: entry.startTime || "",
+			endTime: entry.endTime || "",
+>>>>>>> 671938d (Banking-feature (#3))
 		});
 	}, [entry]);
 
@@ -37,15 +53,21 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
 		const isoDate = new Date(isoDateStr);
 
+<<<<<<< HEAD
 		console.log(`ISO Date String: ${isoDateStr}`); // Debugging line
 		console.log(`Parsed Date: ${isoDate.toString()}`); // Debugging line
 
 		if (isNaN(isoDate.getTime())) {
 			console.error("Invalid date or time format: ", isoDateStr);
+=======
+		if (isNaN(isoDate.getTime())) {
+			console.error("Invalid date or time format: ", isoDate.getTime());
+>>>>>>> 671938d (Banking-feature (#3))
 			setLoading(false);
 			return;
 		}
 
+<<<<<<< HEAD
 		const localISOString = isoDate.toISOString(); // Convert to ISO string in UTC
 		console.log(`Local ISO String: ${localISOString}`); // Debugging line
 		const localISOStringWithoutZ = localISOString.replace("Z", "");
@@ -65,6 +87,21 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 				setLoading(false);
 			},
 		});
+=======
+		updateTimeEntry(
+			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate.toISOString() } },
+			{
+				onSuccess: () => {
+					setIsOpen(false);
+					setLoading(false);
+				},
+				onError: (error) => {
+					console.error("Failed to update time entry:", error);
+					setLoading(false);
+				},
+			}
+		);
+>>>>>>> 671938d (Banking-feature (#3))
 	};
 
 	const handleDelete = () => {
@@ -126,6 +163,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 						<input
 							type="date"
 							name="entryDate"
+<<<<<<< HEAD
 							value={formState.entryDate}
 							onChange={handleFormChange}
 							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
@@ -137,10 +175,17 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 							type="time"
 							name="startTime"
 							value={formState.startTime}
+=======
+							value={(formState.entryDate as unknown as string) || (entry.date as unknown as string)}
+>>>>>>> 671938d (Banking-feature (#3))
 							onChange={handleFormChange}
 							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
+<<<<<<< HEAD
+=======
+
+>>>>>>> 671938d (Banking-feature (#3))
 					<label className="flex flex-col">
 						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
 						<input
