@@ -37,7 +37,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 	return useQuery<TimeEntryResponse>({
 		queryKey,
 		queryFn: async () => {
-			const params: Record<string, string> = {
+			const params = new URLSearchParams({
 				page: page.toString(),
 				pageSize: pageSize.toString(),
 				...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }),

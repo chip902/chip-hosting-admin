@@ -9,6 +9,7 @@ export const customerSchema = z.object({
 	defaultRate: z.number().positive(),
 	color: z.string().max(7).nullable().optional(),
 	paymentTerms: z.string().optional(),
+	paymentTerms: z.string().optional(),
 });
 
 export const timeLogSchema = z.object({
@@ -95,7 +96,16 @@ export const authFormSchema = (type: string) =>
 		postalCode: type === "sign-in" || type === "customer" ? z.string().optional() : z.string(),
 		dob: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
 		role: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
+		firstName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		lastName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		address: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(100),
+		city: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
+		state: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(2),
+		postalCode: type === "sign-in" || type === "customer" ? z.string().optional() : z.string(),
+		dob: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
+		role: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
 		ssn:
+			type === "sign-in" || type === "customer"
 			type === "sign-in" || type === "customer"
 				? z.string().optional()
 				: z.string().min(4, "Should only be the last 4 digits of your SSN or TIN").max(4, "Should only be the last 4 digits of your SSN or TIN"),

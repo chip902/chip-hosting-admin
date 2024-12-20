@@ -1,4 +1,3 @@
-// app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { parseISO, isValid } from "date-fns";
@@ -23,10 +22,7 @@ export async function GET(request: NextRequest) {
 		} = {};
 
 		if (startDate) {
-			const parsedStartDate = parseISO(startDate);
-			if (!isValid(parsedStartDate)) {
-				throw new Error("Invalid start date");
-			}
+			const parsedStartDate = startOfDay(parseISO(startDate));
 			whereClause.date = { ...whereClause.date, gte: parsedStartDate };
 		}
 

@@ -3,6 +3,7 @@ import React, { useEffect, useRef } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
+import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay } from "date-fns";
 import { ProcessedTimeEntry, TimeGridProps } from "@/types";
@@ -86,6 +87,7 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 const TimeGrid = ({ filters }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
+
 	const { data, error, isLoading } = useGetTimeEntries({
 		pageSize: 50,
 		page: 1,
@@ -121,6 +123,7 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 	}
 
 	if (isLoading) {
+		return <Skeleton />;
 		return <Skeleton />;
 	}
 
