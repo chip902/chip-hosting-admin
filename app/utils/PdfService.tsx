@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
-import { PdfData, TableRow, TimeEntry } from "@/types";
+import { PdfData, TableRow, TimeEntry, TimeEntryData } from "@/types";
 
 export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> {
 	const doc = new jsPDF({
@@ -68,15 +68,15 @@ export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> 
 	}
 
 	// Prepare table data
-	const tableData: TableRow[] = pdfData.timeEntries.map((entry: TimeEntry) => {
-		const rate = entry.Project.rate ?? entry.Customer.defaultRate ?? 0;
+	const tableData: TableRow[] = pdfData.timeEntries.map((entry: TimeEntryData) => {
+		const rate = entry.project.rate ?? entry.customer.defaultRate ?? 0;
 		const hours = roundToQuarterHour(entry.duration / 60);
 		const amount = hours * rate;
 
 		return {
 			date: new Date(entry.date).toLocaleDateString(),
-			projectName: entry.Project.name,
-			description: entry.description,
+			projectName: entry.project.name,
+			description: entry.description ?? "",
 			hours: hours,
 			rate: rate,
 			amount: amount,
@@ -107,13 +107,13 @@ export async function generateInvoicePdf(pdfData: PdfData): Promise<Uint8Array> 
 	doc.text(`Payment Terms: Net ${pdfData.paymentTerms} days`, 10, 65);
 	doc.text(`Due Date: ${pdfData.paymentTerms ? dueDate(parseInt(pdfData.paymentTerms)) : "Upon Receipt"}`, 10, 70);
 
-	const customer = pdfData.timeEntries[0].Customer;
+	const customer = pdfData.timeEntries[0].customer;
 	doc.text(`Invoice No. ${pdfData.invoiceNumber || "N/A"}`, 140, 50);
 	doc.text(`Bill To: ${customer.name}`, 140, 55);
 	doc.text(`Date: ${new Date().toLocaleDateString()}`, 140, 60);
-	doc.text(`Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.Project.name))).join(", ")}`, 140, 65);
+	doc.text(`Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.project.name))).join(", ")}`, 140, 65);
 
-	const projectsText = `Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.Project.name))).join(", ")}`;
+	const projectsText = `Project: ${Array.from(new Set(pdfData.timeEntries.map((e) => e.project.name))).join(", ")}`;
 	const wrappedProjects = wrapText(projectsText, 60);
 	wrappedProjects.forEach((line, index) => {
 		doc.text(line, 140, 65 + index * 5);

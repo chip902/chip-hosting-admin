@@ -8,7 +8,7 @@ import { User } from "@/types";
 export default async function MyBanks() {
 	const session = await getServerSession(authOptions);
 	const user = session?.user as User | undefined;
-	const userName = user?.name || user?.email || "Guest";
+	const userName = user?.firstName || user?.email || "Guest";
 	if (!user) throw new Error("You must be logged in.");
 
 	return (

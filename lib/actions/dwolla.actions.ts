@@ -80,7 +80,8 @@ export const getDwollaAccounts = async (userId: string) => {
 		console.log("Dwolla Customer URL:", user.dwollaCustomerUrl);
 
 		const dwollaClient = await createDwollaClient;
-		const response = await dwollaClient.get(`${user.dwollaCustomerUrl}/funding-sources`);
+		const clientInstance = await dwollaClient();
+		const response = await clientInstance.get(`${user.dwollaCustomerUrl}/funding-sources`);
 		console.log("Dwolla API Response:", response);
 
 		return response.body._embedded["funding-sources"] || [];

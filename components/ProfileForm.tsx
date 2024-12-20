@@ -11,16 +11,13 @@ import router from "next/router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import CustomInput from "./CustomInput";
 import React from "react";
 import PlaidLink from "./PlaidLink";
-import { extractCustomerIdFromUrl } from "@/lib/utils";
-import { createDwollaCustomer } from "@/lib/actions/dwolla.actions";
 import { auth } from "@/auth";
 import { User } from "next-auth";
 
 const session = await auth();
-const user = session?.user as User;
+const user = session?.user as unknown as User;
 
 const ProfileForm = () => {
 	const [loading, setLoading] = useState(false);

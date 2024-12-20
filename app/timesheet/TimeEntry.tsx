@@ -96,7 +96,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 					}}>
 					<Text className="text-sm">{(entry.duration / 60).toFixed(1)} Hours</Text>
 					<br />
-					<Text className="text-sm">{entry.Customer?.name}</Text>
+					<Text className="text-sm">{entry.name}</Text>
 				</div>
 			</Popover.Trigger>
 			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">

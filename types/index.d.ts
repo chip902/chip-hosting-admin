@@ -421,8 +421,9 @@ export interface TimeEntryData {
 	date: Date;
 	startTime: string;
 	endTime: string;
-	customer: { name: string };
-	project: { name: string };
+	customerName: string;
+	customer: { name: string; defaultRate: number };
+	project: { name: string; rate: number };
 	task: { name: string };
 	user: { name?: string; id: number };
 	isClientInvoiced: boolean;
@@ -480,7 +481,7 @@ export interface ProcessedTimeEntry {
 	isInvoiced: boolean | null;
 	isBillable: boolean | null;
 	color: string;
-	name?: string;
+	name: string;
 	customerName?: string;
 	projectName?: string;
 	taskName?: string;

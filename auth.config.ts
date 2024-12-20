@@ -34,7 +34,7 @@ export const authOptions: NextAuthOptions = {
 					}
 
 					return {
-						id: user.id.toString(),
+						id: user.id,
 						userId: user.userId || "",
 						dwollaCustomerUrl: user.dwollaCustomerUrl || null,
 						dwollaCustomerId: user.dwollaCustomerId || null,
@@ -54,7 +54,7 @@ export const authOptions: NextAuthOptions = {
 		async jwt({ token, user }) {
 			if (user) {
 				console.log("JWT Callback - User: ", user);
-				token.id = user.id;
+				token.id = user.id.toString();
 				token.userId = user.userId;
 				token.dwollaCustomerUrl = user.dwollaCustomerUrl;
 				token.dwollaCustomerId = user.dwollaCustomerId;

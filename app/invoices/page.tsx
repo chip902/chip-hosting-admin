@@ -39,6 +39,7 @@ const InvoiceGenerator = () => {
 	const transformedEntries: TimeEntryData[] = timeEntries.map((entry) => {
 		const startDate = new Date(entry.date);
 		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
+		const customerName = entry.customer.name;
 		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
 
 		return {
@@ -50,8 +51,9 @@ const InvoiceGenerator = () => {
 			date: startDate,
 			startTime: startDate.toISOString(),
 			endTime: endDate.toISOString(),
-			customer: entry.customer?.name || "Unknown Customer",
+			customerName,
 			project: entry.project?.name || "Unknown Project",
+			customer: { name: customerName, defaultRate: entry.customer.defaultRate },
 			task: entry.task?.name || "Unknown Task",
 			user: { name: userName, id: entry.user?.id || 0 },
 			isClientInvoiced: entry.isInvoiced ?? false,
@@ -152,7 +154,7 @@ const InvoiceGenerator = () => {
 									</Table.Cell>
 									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
 									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.customer.name}</Table.Cell>
+									<Table.Cell>{entry.customerName}</Table.Cell>
 									<Table.Cell>{entry.duration} minutes</Table.Cell>
 								</Table.Row>
 							))}

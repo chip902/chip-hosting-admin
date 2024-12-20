@@ -9,7 +9,7 @@ import { User } from "@/types";
 export default async function Home() {
 	const session = await getServerSession(authOptions);
 	const user = session?.user as User | undefined;
-	const userName = user?.name || user?.email || "Guest";
+	const userName = user?.firstName || user?.email || "Guest";
 
 	return (
 		<section className="home">

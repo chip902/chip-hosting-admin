@@ -80,10 +80,10 @@ export async function GET(request: NextRequest) {
 		const entries = await prisma.timeEntry.findMany({
 			where: whereClause,
 			include: {
-				Customer: true,
-				Project: true,
-				Task: true,
-				User: true,
+				customer: true,
+				project: true,
+				task: true,
+				user: true,
 			},
 		});
 

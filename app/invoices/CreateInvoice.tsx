@@ -40,6 +40,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 		// For example, if `entry` is a `TimeEntry` from Prisma:
 		const startDate = new Date(entry.date);
 		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
+		const customerName = entry.customer.name;
 		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
 
 		return {
@@ -49,12 +50,13 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 			end: endDate.toISOString(),
 			id: entry.id,
 			date: startDate,
+			customerName,
 			startTime: startDate.toISOString(),
 			endTime: endDate.toISOString(),
-			Customer: { name: entry.customer?.name || "Unknown Customer" },
-			Project: { name: entry.project?.name || "Unknown Project" },
-			Task: { name: entry.task?.name || "Unknown Task" },
-			User: { name: userName, id: entry.user?.id || 0 },
+			customer: { name: customerName, defaultRate: entry.customer.defaultRate },
+			project: { name: entry.project?.name || "Unknown Project", rate: entry.project.rate },
+			task: { name: entry.task?.name || "Unknown Task" },
+			user: { name: userName, id: entry.user?.id || 0 },
 			isClientInvoiced: entry.isInvoiced ?? false,
 			description: entry.description ?? "",
 		};

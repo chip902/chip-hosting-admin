@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
 		try {
 			timeEntries = await prisma.timeEntry.findMany({
 				where: { id: { in: timeEntryIds } },
-				include: { Customer: true, Task: true, User: true, Project: true },
+				include: { customer: true, task: true, user: true, project: true },
 			});
 			console.log(`Retrieved ${timeEntries.length} time entries`);
 		} catch (dbError) {
@@ -34,8 +34,8 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "No time entries found" }, { status: 400 });
 		}
 
-		const customer = timeEntries[0].Customer;
-		const totalAmount = timeEntries.reduce((total, entry) => total + (entry.duration * (entry.Project.rate ?? 0)) / 60, 0);
+		const customer = timeEntries[0].customer;
+		const totalAmount = timeEntries.reduce((total, entry) => total + (entry.duration * (entry.project.rate ?? 0)) / 60, 0);
 
 		let invoice;
 		try {
@@ -53,8 +53,9 @@ export async function POST(request: NextRequest) {
 		}
 
 		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry) => {
-			const userName = [entry.User?.firstName, entry.User?.lastName].filter(Boolean).join(" ");
+			const userName = [entry.user?.firstName, entry.user?.lastName].filter(Boolean).join(" ");
 			const startDate = new Date(entry.date);
+			const customerName = entry.customer.name;
 			const endDate = entry.endDate ? new Date(entry.endDate) : new Date(startDate.getTime() + entry.duration * 60_000);
 
 			return {
@@ -66,12 +67,13 @@ export async function POST(request: NextRequest) {
 				date: startDate,
 				startTime: startDate.toISOString(),
 				endTime: endDate.toISOString(),
-				Customer: { name: entry.Customer?.name || "Unknown Customer" },
-				Project: { name: entry.Project?.name || "Unknown Project" },
-				Task: { name: entry.Task?.name || "Unknown Task" },
-				User: {
+				customerName,
+				customer: { name: entry.customer?.name, defaultRate: entry.customer.defaultRate },
+				project: { name: entry.project?.name || "Unknown Project", rate: entry.project.rate ?? 0 },
+				task: { name: entry.task?.name || "Unknown Task" },
+				user: {
 					name: userName,
-					id: entry.User.id,
+					id: entry.user.id,
 				},
 				isClientInvoiced: entry.isInvoiced ?? false,
 				description: entry.description ?? "",
