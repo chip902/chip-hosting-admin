@@ -418,7 +418,7 @@ export interface TimeEntryData {
 	start: string | Date;
 	end: string;
 	id: number;
-	date: Date;
+	date: string;
 	startTime: string;
 	endTime: string;
 	customerName: string;
@@ -428,6 +428,14 @@ export interface TimeEntryData {
 	user: { name?: string; id: number };
 	isClientInvoiced: boolean;
 	description?: string;
+}
+export interface UpdateTimeEntryParams {
+	id: number;
+	data: Partial<TimeEntryData>;
+}
+
+export interface DeleteTimeEntryParams {
+	id: number;
 }
 
 export interface ProcessedTimeSlot {
@@ -487,8 +495,8 @@ export interface ProcessedTimeEntry {
 	taskName?: string;
 	width?: number;
 	left?: number;
-	startSlot?: number | null;
-	endSlot?: number | null;
+	startSlot?: number;
+	endSlot?: number;
 	duration: number;
 	description?: string;
 }

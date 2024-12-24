@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { format } from "date-fns";
 import { TimeEntry } from "@/types";
+import { DateTime } from "luxon";
 
 interface QueryParams {
 	customerId?: number;
@@ -26,8 +27,8 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 		"timeEntries",
 		page,
 		pageSize,
-		startDate ? format(startDate, "yyyy-MM-dd") : undefined,
-		endDate ? format(endDate, "yyyy-MM-dd") : undefined,
+		startDate ? DateTime.fromJSDate(startDate).setZone("America/New_York").toISO() : undefined,
+		endDate ? DateTime.fromJSDate(endDate).setZone("America/New_York").toISO() : undefined,
 		customerId,
 		isInvoiced,
 		sortBy,

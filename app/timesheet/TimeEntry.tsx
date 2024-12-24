@@ -3,7 +3,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-import { TimeEntryProps } from "@/types";
+import { TimeEntryProps, UpdateTimeEntryParams, DeleteTimeEntryParams } from "@/types"; // Import the type definitions
 
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -12,19 +12,18 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		startTime: entry.startTime || "",
-		endTime: entry.endTime || "",
+		startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
 	});
-	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
+
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
+	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 
 	useEffect(() => {
 		setFormState({
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
 			entryDate: new Date(entry.date).toISOString().split("T")[0],
-			startTime: entry.startTime || "",
-			endTime: entry.endTime || "",
+			startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
 		});
 	}, [entry]);
 
@@ -38,29 +37,41 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
 		const isoDate = new Date(isoDateStr);
 
+		console.log(`ISO Date String: ${isoDateStr}`); // Debugging line
+		console.log(`Parsed Date: ${isoDate.toString()}`); // Debugging line
+
 		if (isNaN(isoDate.getTime())) {
-			console.error("Invalid date or time format: ", isoDate.getTime());
+			console.error("Invalid date or time format: ", isoDateStr);
 			setLoading(false);
 			return;
 		}
 
-		updateTimeEntry(
-			{ id: entry.id, data: { duration: Number(formState.duration), description: formState.description, date: isoDate.toISOString() } },
-			{
-				onSuccess: () => {
-					setIsOpen(false);
-					setLoading(false);
-				},
-				onError: (error) => {
-					console.error("Failed to update time entry:", error);
-					setLoading(false);
-				},
-			}
-		);
+		const localISOString = isoDate.toISOString(); // Convert to ISO string in UTC
+		console.log(`Local ISO String: ${localISOString}`); // Debugging line
+		const localISOStringWithoutZ = localISOString.replace("Z", "");
+		const updateParams: UpdateTimeEntryParams = {
+			id: entry.id,
+			data: { duration: Number(formState.duration), description: formState.description, date: localISOStringWithoutZ },
+		};
+
+		console.log("Update Params:", updateParams); // Debugging line
+		updateTimeEntry(updateParams, {
+			onSuccess: () => {
+				setIsOpen(false);
+				setLoading(false);
+			},
+			onError: (error) => {
+				console.error("Failed to update time entry:", error);
+				setLoading(false);
+			},
+		});
 	};
 
 	const handleDelete = () => {
-		deleteTimeEntry(entry.id, {
+		const deleteParams: DeleteTimeEntryParams = { id: entry.id };
+
+		console.log("Delete Params:", deleteParams); // Debugging line
+		deleteTimeEntry(deleteParams, {
 			onSuccess: () => {
 				setIsOpen(false);
 			},
@@ -115,12 +126,21 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 						<input
 							type="date"
 							name="entryDate"
-							value={(formState.entryDate as unknown as string) || (entry.date as unknown as string)}
+							value={formState.entryDate}
 							onChange={handleFormChange}
 							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
 						/>
 					</label>
-
+					<label className="flex flex-col">
+						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time:</span>
+						<input
+							type="time"
+							name="startTime"
+							value={formState.startTime}
+							onChange={handleFormChange}
+							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+						/>
+					</label>
 					<label className="flex flex-col">
 						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
 						<input

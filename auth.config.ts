@@ -1,8 +1,9 @@
-import type { NextAuthOptions, User } from "next-auth";
+import type { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import prisma from "@/prisma/client";
 import bcrypt from "bcryptjs";
+import { User } from "@/types/index";
 
 export const authOptions: NextAuthOptions = {
 	adapter: PrismaAdapter(prisma),
@@ -13,78 +14,63 @@ export const authOptions: NextAuthOptions = {
 				email: { label: "Email", type: "email" },
 				password: { label: "Password", type: "password" },
 			},
-			async authorize(credentials): Promise<User | null> {
+			async authorize(credentials) {
 				if (!credentials?.email || !credentials?.password) {
 					return null;
 				}
 
 				try {
-					const user = await prisma.user.findUnique({
-						where: { email: credentials.email },
-					});
-
+					const user = await prisma.user.findUnique({ where: { email: credentials.email } });
 					if (!user || !user.password) {
-						return null;
+						return null; // User not found or no password hash
 					}
 
-					const isPasswordValid = await bcrypt.compare(credentials.password, user.password);
+					// Compare the provided password with the hashed password in the database
+					const isValidPassword = await bcrypt.compare(credentials.password, user.password);
 
-					if (!isPasswordValid) {
-						return null;
+					if (isValidPassword) {
+						return {
+							id: user.id,
+							userId: user.userId,
+							name: user.firstName ?? "Guest",
+							email: user.email,
+							firstName: user.firstName,
+							lastName: user.lastName,
+							dwollaCustomerUrl: user.dwollaCustomerUrl,
+							dwollaCustomerId: user.dwollaCustomerId,
+						};
 					}
-
-					return {
-						id: user.id,
-						userId: user.userId || "",
-						dwollaCustomerUrl: user.dwollaCustomerUrl || null,
-						dwollaCustomerId: user.dwollaCustomerId || null,
-						email: user.email,
-						name: user.firstName || user.email,
-						firstName: user.firstName || null,
-						lastName: user.lastName || null,
-					};
 				} catch (error) {
-					console.error("Auth error:", error);
-					return null;
+					console.error("Error finding user:", error);
 				}
+
+				return null;
 			},
 		}),
 	],
+	session: {
+		strategy: "jwt",
+	},
 	callbacks: {
-		async jwt({ token, user }) {
+		jwt({ token, user }) {
 			if (user) {
-				console.log("JWT Callback - User: ", user);
-				token.id = user.id.toString();
-				token.userId = user.userId;
-				token.dwollaCustomerUrl = user.dwollaCustomerUrl;
-				token.dwollaCustomerId = user.dwollaCustomerId;
-				token.name = user.name;
 				token.firstName = user.firstName;
 				token.lastName = user.lastName;
+				token.dwollaCustomerUrl = user.dwollaCustomerUrl;
+				token.dwollaCustomerId = user.dwollaCustomerId;
 			}
 			return token;
 		},
-		async session({ session, token }) {
+		session({ session, token }) {
 			if (session.user) {
-				console.log("Session Callback - Token: ", token);
-				session.user.id = token.id;
-				session.user.userId = token.userId;
-				session.user.dwollaCustomerUrl = token.dwollaCustomerUrl;
-				session.user.dwollaCustomerId = token.dwollaCustomerId;
-				session.user.name = token.name;
-				session.user.firstName = token.firstName;
-				session.user.lastName = token.lastName;
+				session.user.firstName = token.firstName as string;
+				session.user.lastName = token.lastName as string;
+				session.user.dwollaCustomerUrl = token.dwollaCustomerUrl as string;
+				session.user.dwollaCustomerId = token.dwollaCustomerId as string;
 			}
 			return session;
 		},
 	},
-	pages: {
-		signIn: "/auth/sign-in",
-		signOut: "/auth/sign-out",
-	},
-	secret: process.env.NEXTAUTH_SECRET,
-	session: {
-		strategy: "jwt",
-	},
-	debug: process.env.NODE_ENV === "development",
 };
+
+export default authOptions;

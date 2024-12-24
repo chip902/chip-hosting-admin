@@ -1,3 +1,4 @@
+// /auth.ts
 import NextAuth from "next-auth";
 import { authOptions } from "./auth.config";
 import { GetServerSidePropsContext, NextApiRequest, NextApiResponse } from "next";

@@ -9,20 +9,22 @@ import { signIn } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import router from "next/router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import CustomInput from "./CustomInput";
 import React from "react";
+import { useSession } from "next-auth/react";
 import PlaidLink from "./PlaidLink";
-import { extractCustomerIdFromUrl } from "@/lib/utils";
-import { createDwollaCustomer } from "@/lib/actions/dwolla.actions";
+import { User } from "next-auth";
 
 const AuthForm = ({ type }: { type: string }) => {
-	const [user, setUser] = useState(null);
+	const { data: session, status } = useSession();
+	const [user, setUser] = useState<User | null>(null);
 	const [password, setPassword] = useState("");
 	const [loading, setLoading] = useState(false);
 	const formSchema = authFormSchema(type);
+	const sessionResult = useSession();
 
 	const form = useForm<z.infer<typeof formSchema>>({
 		resolver: zodResolver(formSchema),
@@ -31,6 +33,21 @@ const AuthForm = ({ type }: { type: string }) => {
 			password: "",
 		},
 	});
+
+	useEffect(() => {
+		if (status === "authenticated" && session) {
+			setUser(session.user as unknown as User);
+		}
+	}, [session, status]);
+
+	if (sessionResult === undefined) {
+		// Handle the case where sessionResult is undefined
+		return <div>Session not available</div>;
+	}
+
+	if (status === "loading") {
+		return <div>Loading...</div>;
+	}
 
 	const onSubmit = async (data: z.infer<typeof formSchema>) => {
 		setLoading(true);
@@ -50,18 +67,10 @@ const AuthForm = ({ type }: { type: string }) => {
 					address1: data.address!,
 					dateOfBirth: data.dob!,
 				};
-				// const dwollaCustomerUrl = createDwollaCustomer({
-				// 	...data,
-				// 	type: "personal",
-				// 	address1: data.address!,
-				// 	dateOfBirth: data.dob!,
-				// });
-				// const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
 				const response = await axios.post("/api/user/new-user/", {
 					...data,
+					...userData,
 					type: type,
-					// dwollaCustomerID,
-					// dwollaCustomerUrl,
 				});
 				if (response.status === 201) {
 					router.push("/sign-in/");
@@ -72,6 +81,7 @@ const AuthForm = ({ type }: { type: string }) => {
 					password: data.password,
 					callbackUrl: "/",
 				});
+				console.log("CHIP DEBUG: ", result);
 			}
 		} catch (error) {
 			console.error(error);
