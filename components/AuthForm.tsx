@@ -5,7 +5,7 @@ import { Form } from "@/components/ui/form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Spinner } from "@radix-ui/themes";
 import axios from "axios";
-import { signIn } from "next-auth/react";
+import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import Link from "next/link";
 import router from "next/router";
@@ -14,15 +14,10 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 import CustomInput from "./CustomInput";
 import React from "react";
-<<<<<<< HEAD
-import { useSession } from "next-auth/react";
-import PlaidLink from "./PlaidLink";
-import { User } from "next-auth";
-=======
 import PlaidLink from "./PlaidLink";
 import { extractCustomerIdFromUrl } from "@/lib/utils";
 import { createDwollaCustomer } from "@/lib/actions/dwolla.actions";
->>>>>>> 671938d (Banking-feature (#3))
+import { User } from "next-auth";
 
 const AuthForm = ({ type }: { type: string }) => {
 	const { data: session, status } = useSession();
@@ -73,8 +68,6 @@ const AuthForm = ({ type }: { type: string }) => {
 					address1: data.address!,
 					dateOfBirth: data.dob!,
 				};
-<<<<<<< HEAD
-=======
 				// const dwollaCustomerUrl = createDwollaCustomer({
 				// 	...data,
 				// 	type: "personal",
@@ -82,7 +75,6 @@ const AuthForm = ({ type }: { type: string }) => {
 				// 	dateOfBirth: data.dob!,
 				// });
 				// const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
->>>>>>> 671938d (Banking-feature (#3))
 				const response = await axios.post("/api/user/new-user/", {
 					...data,
 					...userData,
