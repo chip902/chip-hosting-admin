@@ -1,23 +1,22 @@
-import { authFormSchema, profileFormSchema } from "@/app/validationSchemas";
-import { FormField, FormLabel, FormControl, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
+// components/CustomInput.tsx
 import React from "react";
+import { FormControl, FormField, FormLabel, FormMessage } from "./ui/form";
+import { Input } from "./ui/input";
+
 import { Control, FieldPath } from "react-hook-form";
 import { z } from "zod";
+import { authFormSchema } from "@/app/validationSchemas";
 
-const formSchema = authFormSchema("sign-up");
-const customerSchema = authFormSchema("customer");
-const profileSchema = profileFormSchema();
+const formSchema = authFormSchema("sign-in");
 
-interface CustomInputProps {
-	control: Control<z.infer<typeof formSchema | typeof customerSchema | typeof profileSchema>>;
+interface CustomInput {
+	control: Control<z.infer<typeof formSchema>>;
 	name: FieldPath<z.infer<typeof formSchema>>;
 	label: string;
 	placeholder: string;
-	onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-const CustomInput = ({ control, name, label, placeholder }: CustomInputProps) => {
+const CustomInput = ({ control, name, label, placeholder }: CustomInput) => {
 	return (
 		<FormField
 			control={control}
@@ -27,9 +26,16 @@ const CustomInput = ({ control, name, label, placeholder }: CustomInputProps) =>
 					<FormLabel className="form-label">{label}</FormLabel>
 					<div className="flex w-full flex-col">
 						<FormControl>
-							<Input type={name} placeholder={placeholder} className="input-class" {...field} />
+							<Input
+								placeholder={placeholder}
+								className="input-class"
+								type={name === "password" ? "password" : "text"}
+								{...field}
+								name={name as string}
+								value={field.value}
+							/>
 						</FormControl>
-						<FormMessage className="form-message mt-2"></FormMessage>
+						<FormMessage className="form-message mt-2" />
 					</div>
 				</div>
 			)}

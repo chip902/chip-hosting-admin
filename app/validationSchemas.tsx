@@ -85,21 +85,40 @@ export const bookingSchema = z.object({
 	updatedAt: z.string().nullable().optional(),
 });
 
+// Shared fields for "sign-in" and "customer" types (if applicable)
+const sharedFields = {
+	email: z.string().email().min(5), // adjusted min length
+	password: z.string().min(8), // remove optional() if not intended
+};
+
+// Extended fields for non-"sign-in" types
+const extendedFields = {
+	firstName: z.string().min(2).max(32),
+	lastName: z.string().min(2).max(32),
+	address: z.string().min(2).max(100),
+	city: z.string().min(2).max(32),
+	state: z.string().min(2).max(5), // adjusted max length for international support
+	postalCode: z.string(),
+	dob: z.string().max(10),
+	role: z.string().max(10),
+};
+
+// SSN field with improved naming and optional chaining
+const ssnField = {
+	ssnLastFour: z.string().min(4).max(4).optional(),
+};
+
+// Type-specific schemas
 export const authFormSchema = (type: string) =>
 	z.object({
-		firstName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
-		lastName: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
-		address: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(100),
-		city: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(32),
-		state: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().min(2).max(2),
-		postalCode: type === "sign-in" || type === "customer" ? z.string().optional() : z.string(),
-		dob: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
-		role: type === "sign-in" || type === "customer" ? z.string().optional() : z.string().max(10),
-		ssn: z.string().min(4, "Should only be the last 4 digits of your SSN or TIN").max(4, "Should only be the last 4 digits of your SSN or TIN"),
-		email: z.string().email().min(2, {
-			message: "Email must be at least 2 characters.",
-		}),
-		password: type === "customer" ? z.string().optional() : z.string().min(8, "Password must be at least 8 characters"),
+		...sharedFields,
+
+		...(type !== "sign-in" ? extendedFields : {}),
+
+		...ssnField, // include SSN field for all types, or conditionally if needed
+
+		// password is optional only for "customer" type
+		...(type === "customer" ? { password: z.string().min(8).optional() } : {}),
 	});
 
 export const profileFormSchema = () =>

@@ -10,7 +10,7 @@ const BookingForm = () => {
 	const [endTime, setEndTime] = useState("");
 
 	const handleSubmit = async (e: React.FormEvent) => {
-		e.preventDefault();
+		//e.preventDefault();
 
 		try {
 			const response = await axios.post("/api/bookings", {

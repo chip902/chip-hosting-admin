@@ -4,78 +4,6 @@ import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
-<<<<<<< HEAD
-import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay, setHours, setMinutes, setSeconds } from "date-fns";
-import { ProcessedTimeEntry, TimeGridProps } from "@/types";
-import { calculateWidth, calculateLeftPosition, calculateDuration } from "@/lib/utils";
-
-// Function to convert local time string to Date object in America/New_York timezone
-const localStringToDate = (localTimeString: string): Date => {
-	// Remove the 'Z' suffix if present and parse as a local date
-	const localDateString = localTimeString.replace("Z", "");
-	const options = { timeZone: "America/New_York" };
-	const formatter = new Intl.DateTimeFormat("en-US", {
-		...options,
-		year: "numeric",
-		month: "2-digit",
-		day: "2-digit",
-		hour: "2-digit",
-		minute: "2-digit",
-		second: "2-digit",
-		hour12: false,
-	});
-	const parts = formatter.formatToParts(new Date(localDateString));
-
-	const parsedDate = new Date(
-		parseInt(parts.find((p) => p.type === "year")?.value || "0", 10),
-		parseInt(parts.find((p) => p.type === "month")?.value || "0", 10) - 1, // Months are 0-based
-		parseInt(parts.find((p) => p.type === "day")?.value || "0", 10),
-		parseInt(parts.find((p) => p.type === "hour")?.value || "0", 10),
-		parseInt(parts.find((p) => p.type === "minute")?.value || "0", 10),
-		parseInt(parts.find((p) => p.type === "second")?.value || "0", 10)
-	);
-
-	return parsedDate;
-};
-
-const transformToTimeEntry = (entry: any): ProcessedTimeEntry => {
-	const localStartDate = localStringToDate(entry.startTime);
-	const localEndDate = localStringToDate(entry.endTime);
-
-	// Log for debugging
-	console.log(`Local Start Date: ${localStartDate.toString()}`);
-	console.log(`Local End Date: ${localEndDate.toString()}`);
-
-	return {
-		id: entry.id,
-		date: new Date(localStartDate), // Ensure date is a Date object
-		startTime: localStartDate.toISOString(),
-		endTime: localEndDate.toISOString(),
-		customer: entry.Customer || {},
-		project: {
-			...entry.Project,
-			name: entry.Project?.name || "Unknown Project",
-		},
-		task: {
-			...entry.Task,
-			name: entry.Task?.name || "Unknown Task",
-		},
-		isInvoiced: entry.isInvoiced ?? false,
-		isBillable: entry.isBillable ?? true,
-		color: entry.color || "#000000",
-		name: entry.name || `${entry.Project?.name} - ${entry.Task?.name}`,
-		customerName: entry.Customer?.name,
-		projectName: entry.Project?.name,
-		taskName: entry.Task?.name,
-		width: calculateWidth(entry),
-		left: calculateLeftPosition(entry),
-		startSlot: differenceInMinutes(localStartDate, setHours(setMinutes(setSeconds(new Date(localStartDate), 0), 0), 0)),
-		endSlot: differenceInMinutes(localEndDate, setHours(setMinutes(setSeconds(new Date(localStartDate), 0), 0), 0)),
-		duration: calculateDuration(localStartDate.toISOString(), localEndDate.toISOString()), // Convert to ISO string
-		description: entry.description ?? "",
-	};
-};
-=======
 import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay } from "date-fns";
 import { ProcessedTimeEntry, TimeGridProps } from "@/types";
 import { calculateDuration, calculateLeftPosition, calculateWidth } from "@/lib/utils";
@@ -108,18 +36,12 @@ const transformToTimeEntry = (entry: any): ProcessedTimeEntry => ({
 	duration: calculateDuration(entry.startTime, entry.endTime),
 	description: entry.description ?? "",
 });
->>>>>>> 671938d (Banking-feature (#3))
 
 interface OverlappingEntry extends ProcessedTimeEntry {
 	width: number;
 	left: number;
-<<<<<<< HEAD
-	startSlot: number; // Ensure startSlot is a number
-	endSlot: number; // Ensure endSlot is a number
-=======
 	startSlot: number;
 	endSlot: number;
->>>>>>> 671938d (Banking-feature (#3))
 	date: Date; // Ensuring date is a Date object after processing
 }
 
@@ -257,13 +179,8 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 										key={entry.id}
 										entry={entry}
 										date={entry.date}
-<<<<<<< HEAD
-										startSlot={entry.startSlot} // Ensure startSlot is a number
-										endSlot={entry.endSlot} // Ensure endSlot is a number
-=======
 										startSlot={entry.startSlot}
 										endSlot={entry.endSlot}
->>>>>>> 671938d (Banking-feature (#3))
 										dayIndex={dayIndex}
 										color={entry.color || "#000000"}
 										width={entry.width}
