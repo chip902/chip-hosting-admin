@@ -49,11 +49,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 			start: startDate,
 			end: endDate.toISOString(),
 			id: entry.id,
-<<<<<<< HEAD
 			date: startDate.toISOString(),
-=======
-			date: startDate,
->>>>>>> 671938d (Banking-feature (#3))
 			customerName,
 			startTime: startDate.toISOString(),
 			endTime: endDate.toISOString(),

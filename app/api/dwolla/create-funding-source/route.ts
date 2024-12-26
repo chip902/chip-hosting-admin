@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
 			bankAccountType: bankAccountType,
 		};
 
-		const fundingSourceResponse = await dwollaClient.post(`${customerUrl}/funding-sources`, requestBody);
+		const fundingSourceResponse = await dwollaClient.client.post(`${customerUrl}/funding-sources`, requestBody);
 
 		const fundingSourceUrl = fundingSourceResponse.headers.get("location");
 		if (!fundingSourceUrl) {

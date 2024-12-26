@@ -54,9 +54,9 @@ export async function POST(request: NextRequest) {
 
 		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry) => {
 			const userName = [entry.user?.firstName, entry.user?.lastName].filter(Boolean).join(" ");
-			const startDate = new Date(entry.date);
+			const startDate = new Date(entry.date).toISOString();
 			const customerName = entry.customer.name;
-			const endDate = entry.endDate ? new Date(entry.endDate) : new Date(startDate.getTime() + entry.duration * 60_000);
+			const endDate = entry.endDate ? new Date(entry.endDate) : new Date(startDate + entry.duration * 60_000);
 
 			return {
 				duration: entry.duration,
@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
 				end: endDate.toISOString(),
 				id: entry.id,
 				date: startDate,
-				startTime: startDate.toISOString(),
+				startTime: startDate,
 				endTime: endDate.toISOString(),
 				customerName,
 				customer: { name: entry.customer?.name, defaultRate: entry.customer.defaultRate },

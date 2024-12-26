@@ -22,7 +22,11 @@ export async function POST(request: NextRequest) {
 		};
 		console.log("Dwolla Customer Data:", customerData);
 
-		const response = await dwollaClient.post("customers", customerData);
+		//const response = await dwollaClient.post("customers", customerData);
+		console.log("Dwolla Customer Data:", customerData);
+
+		const headers = { Authorization: `Bearer ${dwollaClient.accessToken}` }; // Assuming accessToken is needed in headers
+		const response = await dwollaClient.client.post("customers", customerData, headers);
 		const customerUrl = response.headers.get("location");
 		const dwollaCustomerId = response.body.id;
 
