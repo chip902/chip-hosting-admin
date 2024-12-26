@@ -48,7 +48,7 @@ const InvoiceGenerator = () => {
 			start: startDate,
 			end: endDate.toISOString(),
 			id: entry.id,
-			date: startDate,
+			date: startDate.toISOString(),
 			startTime: startDate.toISOString(),
 			endTime: endDate.toISOString(),
 			customerName,
