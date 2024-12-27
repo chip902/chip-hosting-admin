@@ -14,7 +14,8 @@ export async function PATCH(request: NextRequest) {
 			return NextResponse.json({ error: "ID is required" }, { status: 400 });
 		}
 
-		const isoDateStr = `${date}T${startTime}`;
+		//const isoDateStr = `${date}T${startTime}`;
+		const isoDateStr = date;
 		const isoDate = new Date(isoDateStr);
 
 		if (isNaN(isoDate.getTime())) {

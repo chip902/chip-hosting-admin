@@ -51,9 +51,9 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 
 	// Sort entries by start time
 	const sortedEntries = [...entries].sort((a, b) => {
-		const aStart = parseISO(a.startTime);
-		const bStart = parseISO(b.startTime);
-		return aStart.getTime() - bStart.getTime();
+		const aStart = new Date(a.date).getTime();
+		const bStart = new Date(b.date).getTime();
+		return aStart - bStart;
 	});
 
 	const processedEntries = sortedEntries.map((entry, index) => {
@@ -122,7 +122,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 	}
 
 	if (isLoading) {
-		return <Skeleton />;
 		return <Skeleton />;
 	}
 

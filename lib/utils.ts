@@ -2,6 +2,7 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import qs from "query-string";
 import { AccountTypes, CategoryCount, RawTimeEntry, Transaction } from "@/types";
+import { differenceInMinutes, startOfDay } from "date-fns";
 export function cn(...inputs: ClassValue[]) {
 	return twMerge(clsx(inputs));
 }
@@ -18,6 +19,12 @@ export const calculateWidth = (entry: RawTimeEntry): number => {
 export const calculateLeftPosition = (entry: RawTimeEntry): number => {
 	// Calculate left position based on some criteria
 	return 20; // Example value
+};
+
+export const calculateStartSlot = (startTime: Date) => {
+	const startOfDayDate = startOfDay(startTime);
+	const minutesFromDayStart = differenceInMinutes(startTime, startOfDayDate);
+	return Math.floor(minutesFromDayStart / 60); // Each hour has 60 slots
 };
 
 export const calculateDuration = (startTime: string, endTime: string): number => {
