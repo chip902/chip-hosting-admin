@@ -30,7 +30,7 @@ export default function ClientHome({ userId }: ClientHomeProps) {
 				description: dwollaError?.message || plaidError?.message || transactionsError?.message || "An error occurred while fetching data.",
 			});
 		}
-	}, [dwollaError, plaidError, transactionsError, toast]);
+	}, [dwollaError, plaidError, transactionsError]);
 
 	if (isDwollaLoading || isPlaidLoading || isTransactionsLoading) {
 		return <Skeleton className="w-full h-full" />;

@@ -13,7 +13,6 @@ export const useBanks = () => {
 		queryKey: ["banks"],
 		queryFn: fetchBanks,
 		staleTime: 15 * 60, // Adjusted stale time to every 15 minutes
-		refetchOnMount: true,
 		refetchInterval: 30 * 60 * 1000, // Refetch every 30 minutes
 		retry: 3,
 	};

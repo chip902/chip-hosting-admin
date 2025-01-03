@@ -3,12 +3,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Configuration, CountryCode, PlaidApi, PlaidEnvironments, Products } from "plaid";
 
+const basePath = process.env.NODE_ENV === "production" ? PlaidEnvironments.production : PlaidEnvironments.sandbox;
+
 const configuration = new Configuration({
-	basePath: PlaidEnvironments.sandbox, // Use 'sandbox', 'development', or 'production' as needed
+	basePath,
 	baseOptions: {
 		headers: {
 			"PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
-			"PLAID-SECRET": process.env.PLAID_SECRET!,
+			"PLAID-SECRET": process.env.NODE_ENV !== "production" ? process.env.PLAID_SECRET : process.env.PLAID_PROD_SECRET,
 		},
 	},
 });

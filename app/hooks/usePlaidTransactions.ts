@@ -17,5 +17,8 @@ export const usePlaidTransactions = (userId: string | null | undefined) => {
 			}
 		},
 		enabled: !!userId,
+		staleTime: 15 * 60, // Adjusted stale time to every 15 minutes
+		refetchInterval: 30 * 60 * 1000, // Refetch every 30 minutes
+		retry: 3,
 	});
 };

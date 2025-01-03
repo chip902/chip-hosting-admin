@@ -12,7 +12,7 @@ function sleep(ms: number) {
 }
 
 async function authenticate(): Promise<string> {
-	const authUrl = process.env.NODE_ENV === "production" ? "https://www.dwolla.com/oauth/v2/token" : "https://sandbox.dwolla.com/oauth/v2/token";
+	const authUrl = process.env.NODE_ENV === "production" ? "https://api.dwolla.com/token" : "https://api-sandbox.dwolla.com/token";
 
 	const response = await axios.get(authUrl, {
 		params: {

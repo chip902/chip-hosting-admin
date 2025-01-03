@@ -11,6 +11,7 @@ import Image from "next/image";
 
 const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 	const [token, setToken] = useState<string | null>(null);
+	const [isLoading, setIsLoading] = useState(false);
 	const router = useRouter();
 
 	useEffect(() => {
@@ -32,7 +33,6 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 				setToken(data.linkToken);
 			} catch (error) {
 				console.error("Error getting link token:", error);
-				// Handle the error, e.g., set an error state or show a notification
 			}
 		};
 		getLinkToken();
@@ -40,18 +40,20 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 
 	const onSuccess = useCallback(
 		async (public_token: string, metadata: PlaidLinkOnSuccessMetadata) => {
+			setIsLoading(true);
 			try {
 				if (!user) {
 					throw new Error("User is undefined");
 				}
+
 				// Step 1: Exchange public token with Plaid
 				const exchangeRes = await axios.post(
 					"/api/plaid/exchange-public-token",
 					{ publicToken: public_token, userID: user },
 					{ headers: { "Content-Type": "application/json" } }
 				);
-				if (!exchangeRes) throw new Error("Failed to exchange public token");
-				const { accessToken, itemId } = exchangeRes.data;
+
+				const { accessToken, itemId, bankId } = exchangeRes.data;
 
 				// Step 2: Get account ID from metadata
 				const accountId = metadata.accounts[0]?.id;
@@ -63,20 +65,19 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 					{ accessToken, accountId },
 					{ headers: { "Content-Type": "application/json" } }
 				);
-				if (!processorRes) throw new Error("Failed to create processor token");
+
 				const { processorToken } = processorRes.data;
 
-				// Step 4: Create Dwolla customer if necessary
+				// Step 4: Create or get Dwolla customer
 				let dwollaCustomerId = user.dwollaCustomerId;
 				if (!dwollaCustomerId) {
 					const createCustomerRes = await axios.post("/api/dwolla/create-customer", { user }, { headers: { "Content-Type": "application/json" } });
-					if (!createCustomerRes) throw new Error("Failed to create Dwolla customer");
 					const { customerId } = createCustomerRes.data;
 					dwollaCustomerId = customerId;
 				}
 
 				// Step 5: Create funding source in Dwolla
-				let fundingSourceRes = await axios.post(
+				const fundingSourceRes = await axios.post(
 					"/api/dwolla/create-funding-source",
 					{
 						customerId: dwollaCustomerId,
@@ -88,20 +89,26 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 					},
 					{ headers: { "Content-Type": "application/json" } }
 				);
-				if (!fundingSourceRes) {
-					throw new Error("Failed to create funding source");
-				} else if (!("data" in fundingSourceRes)) {
-					throw new Error("Invalid data from 'addFundingSource': missing 'data'. ");
-				}
-				const fundingSourceUrl = fundingSourceRes.data.fundingSourceUrl; // now TypeScript knows that 'fundingSourceRes' has a 'data' property of type 'any' (or the known type if provided in function definition)
 
-				// Step 6: Optionally save funding source URL to your database
+				const { fundingSourceUrl } = fundingSourceRes.data;
 
-				console.log("Dwolla funding source created:", fundingSourceUrl);
+				// Step 6: Update bank record with funding source URL
+				await axios.post(
+					"/api/plaid/update-bank",
+					{
+						bankId,
+						accountId,
+						fundingSourceUrl,
+					},
+					{ headers: { "Content-Type": "application/json" } }
+				);
+
 				router.push("/");
 			} catch (error) {
 				console.error("Error in onSuccess:", error);
-				// Display an error message to the user if necessary
+				// You might want to show an error message to the user here
+			} finally {
+				setIsLoading(false);
 			}
 		},
 		[user, router]
@@ -120,14 +127,16 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 
 	return (
 		<>
-			{variant === "primary" ? (
+			{isLoading ? (
+				<Spinner />
+			) : variant === "primary" ? (
 				<Button onClick={() => open()} className="plaidlink-primary">
 					Connect Bank
 				</Button>
 			) : variant === "ghost" ? (
 				<Button onClick={() => open()} className="plaidlink-ghost">
 					<Image src="/icons/connect-bank.svg" alt="connect bank" height={24} width={24} />
-					<p className="hiddenl text-[16px] font-semibold text-black-2 xl:block">Connect Bank</p>
+					<p className="hidden text-[16px] font-semibold text-black-2 xl:block">Connect Bank</p>
 				</Button>
 			) : (
 				<Button onClick={() => open()} className="plaidlink-default">
