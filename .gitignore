@@ -47,3 +47,4 @@ next-env.d.ts
 .aider*
 latest_backup_data_only.sql
 latest_backup.sql
+backup.dump

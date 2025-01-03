@@ -12,7 +12,7 @@ const navigation = [
 	{ name: "Customers", href: "/customers", icon: Building2 },
 	{ name: "Calendar", href: "/calendar", icon: CalendarIcon },
 	{ name: "Projects", href: "/projects", icon: DocumentDuplicateIcon },
-	{ name: "Reports", href: "/reports", icon: PieChartIcon },
+	{ name: "Transaction Reporting", href: "/transactions", icon: PieChartIcon },
 ];
 
 function classNames(...classes: string[]) {

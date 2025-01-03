@@ -164,12 +164,31 @@ model VerificationToken {
 }
 
 model Bank {
-  id               Int    @id @unique @default(autoincrement())
-  userId           String @unique
+  id               Int           @id @unique @default(autoincrement())
+  userId           String        @unique
   bankId           String
   accountId        String
   accessToken      String
   fundingSourceUrl String
   sharableId       String
-  User             User   @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  User             User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  Transaction      Transaction[]
+}
+
+model Transaction {
+  id             String   @id
+  accountId      String
+  amount         Float
+  date           DateTime
+  name           String
+  paymentChannel String?
+  pending        Boolean  @default(false)
+  category       String
+  bankId         Int
+  userId         String
+  bank           Bank     @relation(fields: [bankId], references: [id])
+
+  @@index([userId])
+  @@index([bankId])
+  @@index([date])
 }

@@ -550,3 +550,55 @@ html {
 .time-label {
 	@apply dark:text-gray-500;
 }
+.calendar-wrapper {
+	@apply relative z-50;
+}
+
+.rdp {
+	--rdp-cell-size: 40px;
+	--rdp-accent-color: #2563eb; /* blue-600 */
+	--rdp-background-color: #2563eb;
+	--rdp-accent-color-dark: #3b82f6; /* blue-500 */
+	--rdp-background-color-dark: #3b82f6;
+	--rdp-outline: 2px solid var(--rdp-accent-color);
+	--rdp-outline-selected: 2px solid var(--rdp-accent-color);
+	margin: 1em;
+	border-radius: 0.5rem;
+	background-color: white;
+	box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.dark .rdp {
+	background-color: #1f2937; /* dark:bg-gray-800 */
+	border: 1px solid #374151; /* dark:border-gray-700 */
+}
+
+.rdp-month {
+	background-color: transparent;
+}
+
+.rdp-day_selected,
+.rdp-day_selected:focus-visible,
+.rdp-day_selected:hover {
+	color: white;
+	opacity: 1;
+	background-color: var(--rdp-accent-color);
+}
+
+.dark .rdp-day {
+	color: #e5e7eb; /* dark:text-gray-200 */
+}
+
+.dark .rdp-day_selected {
+	color: white;
+}
+
+.dark .rdp-caption_label,
+.dark .rdp-head_cell {
+	color: #e5e7eb; /* dark:text-gray-200 */
+}
+
+/* Update the PopoverContent styling */
+[data-radix-popper-content-wrapper] {
+	z-index: 50 !important;
+}

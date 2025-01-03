@@ -3,7 +3,7 @@ import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-import { TimeEntryProps, UpdateTimeEntryParams, DeleteTimeEntryParams } from "@/types"; // Import the type definitions
+import { TimeEntryProps, UpdateTimeEntryParams, DeleteTimeEntryParams } from "@/types";
 
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
