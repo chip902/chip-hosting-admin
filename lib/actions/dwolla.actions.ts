@@ -3,34 +3,85 @@ import createDwollaClient from "@/lib/dwolla";
 import prisma from "@/prisma/client";
 import { Client } from "dwolla-v2";
 
-// Custom type to work around missing typings
-type DwollaClient = Client;
+interface DwollaError {
+	code: string;
+	message: string;
+	_embedded?: {
+		errors?: Array<{
+			code: string;
+			message: string;
+			path?: string;
+		}>;
+	};
+}
 
-const getAppToken = async (): Promise<DwollaClient> => {
-	return createDwollaClient as unknown as DwollaClient;
-};
+async function makeAuthenticatedRequest(client: Client, accessToken: string, method: string, path: string, body?: any) {
+	const headers = {
+		Authorization: `Bearer ${accessToken}`,
+		Accept: "application/vnd.dwolla.v1.hal+json",
+		"Content-Type": "application/vnd.dwolla.v1.hal+json",
+	};
 
-async function makeAuthenticatedRequest(client: DwollaClient, accessToken: string, method: string, path: string, body?: any) {
-	const headers = { Authorization: `Bearer ${accessToken}` };
-	if (method.toUpperCase() === "POST") {
-		return client.post(path, body, headers); // Adjust params according to dwolla-v2's post method
-	} else if (method.toUpperCase() === "GET") {
-		return client.get(path, headers); // Adjust params according to dwolla-v2's get method
-	} else if (method.toUpperCase() === "DELETE") {
-		// For delete, might not need body, check dwolla-v2's docs
-		return client.delete(path);
-	} else {
-		throw new Error(`Unsupported HTTP method: ${method}`);
+	try {
+		switch (method.toUpperCase()) {
+			case "POST":
+				return await client.post(path, body, headers);
+			case "GET":
+				return await client.get(path, headers);
+			case "DELETE":
+				return await client.delete(path);
+			default:
+				throw new Error(`Unsupported HTTP method: ${method}`);
+		}
+	} catch (error) {
+		if (error instanceof Error) {
+			console.error("Dwolla API request failed:", {
+				method,
+				path,
+				errorMessage: error.message,
+				response: (error as any).response?.data as DwollaError,
+			});
+		} else {
+			console.error("Unknown error in Dwolla API request:", error);
+		}
+		throw error;
 	}
 }
+export const getDwollaAccounts = async (userId: string) => {
+	try {
+		const user = await prisma.user.findUnique({
+			where: { userId },
+			select: { dwollaCustomerUrl: true },
+		});
+
+		if (!user?.dwollaCustomerUrl) {
+			console.log(`Dwolla customer not found for user ID: ${userId}`);
+			return [];
+		}
+
+		console.log("Dwolla Customer URL:", user.dwollaCustomerUrl);
+
+		const { client, accessToken } = await createDwollaClient();
+
+		const response = await makeAuthenticatedRequest(client, accessToken, "GET", `${user.dwollaCustomerUrl}/funding-sources`);
+
+		if (!response.body._embedded?.["funding-sources"]) {
+			console.log("No funding sources found:", response.body);
+			return [];
+		}
+
+		return response.body._embedded["funding-sources"];
+	} catch (error) {
+		console.error("Error fetching Dwolla accounts:", error);
+		throw error;
+	}
+};
 
 export const createDwollaCustomer = async (userId: string, customerData: any) => {
 	try {
 		const { client, accessToken } = await createDwollaClient();
 		const response = await makeAuthenticatedRequest(client, accessToken, "POST", "customers", customerData);
 
-		//const appToken = await getAppToken();
-		//const response = await appToken.post("customers", customerData);
 		const customerUrl = response.headers.get("location");
 		const dwollaCustomerId = customerUrl?.split("/").pop();
 
@@ -48,8 +99,8 @@ export const createDwollaCustomer = async (userId: string, customerData: any) =>
 
 export const createFundingSource = async (customerUrl: string, fundingSourceData: any) => {
 	try {
-		const appToken = await getAppToken();
-		const response = await appToken.post(`${customerUrl}/funding-sources`, fundingSourceData);
+		const { client, accessToken } = await createDwollaClient();
+		const response = await makeAuthenticatedRequest(client, accessToken, "POST", `${customerUrl}/funding-sources`, fundingSourceData);
 		return response.headers.get("location");
 	} catch (error) {
 		console.error("Error creating funding source: ", error);
@@ -59,38 +110,11 @@ export const createFundingSource = async (customerUrl: string, fundingSourceData
 
 export const createTransfer = async (transferData: any) => {
 	try {
-		const appToken = await getAppToken();
-		const response = await appToken.post("transfers", transferData);
+		const { client, accessToken } = await createDwollaClient();
+		const response = await makeAuthenticatedRequest(client, accessToken, "POST", "transfers", transferData);
 		return response.headers.get("location");
 	} catch (error) {
 		console.error("Error creating transfer: ", error);
-		throw error;
-	}
-};
-
-export const getDwollaAccounts = async (userId: string) => {
-	try {
-		const user = await prisma.user.findUnique({
-			where: { userId: userId },
-			select: { dwollaCustomerUrl: true },
-		});
-
-		if (!user || !user.dwollaCustomerUrl) {
-			console.log(`Dwolla customer not found for user ID: ${userId}`);
-			return [];
-		}
-
-		console.log("Dwolla Customer URL:", user.dwollaCustomerUrl);
-
-		const dwollaClient = await createDwollaClient;
-		const clientInstance = await dwollaClient();
-		const appToken = await getAppToken();
-		const dwollaResponse = await appToken.get(`${user.dwollaCustomerUrl}/funding-sources`);
-		console.log("Dwolla API Response:", dwollaResponse);
-
-		return dwollaResponse.body._embedded["funding-sources"] || [];
-	} catch (error) {
-		console.error("Error fetching Dwolla accounts: ", error);
 		throw error;
 	}
 };
