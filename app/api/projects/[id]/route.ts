@@ -81,30 +81,61 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
 	try {
 		const body = await request.json();
+		console.log("Received body:", body);
+
 		const validation = projectSchema.safeParse(body);
 		if (!validation.success) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
 
-		const { id, ...data } = body;
+		const { id } = body;
 
 		if (!id) {
 			return NextResponse.json({ error: "Project ID is required" }, { status: 400 });
 		}
 
+		// First, get the existing project
+		const existingProject = await prisma.project.findUnique({
+			where: { id },
+			include: { customer: true },
+		});
+
+		if (!existingProject) {
+			return NextResponse.json({ error: "Project not found" }, { status: 404 });
+		}
+
+		console.log("Existing project:", existingProject);
+
+		// Try updating just the archived status first
 		const updatedProject = await prisma.project.update({
-			where: { id: id },
+			where: {
+				id,
+			},
 			data: {
-				name: data.name,
-				description: data.description,
-				rate: data.rate,
-				customerId: data.customerId,
+				archived: body.archived,
 			},
 		});
 
 		return NextResponse.json(updatedProject, { status: 200 });
 	} catch (error) {
 		console.error("Error updating project:", error);
+		if (error instanceof Error) {
+			console.error("Error details:", {
+				name: error.name,
+				message: error.message,
+				stack: error.stack,
+			});
+			return NextResponse.json(
+				{
+					error: error.message,
+					details: {
+						name: error.name,
+						message: error.message,
+					},
+				},
+				{ status: 500 }
+			);
+		}
 		return NextResponse.json({ error: "Error updating project" }, { status: 500 });
 	}
 }

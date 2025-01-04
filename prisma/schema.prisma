@@ -49,6 +49,7 @@ model Project {
   customerId   Int
   dateCreated  DateTime       @default(now())
   rate         Float?
+  archived     Boolean        @default(false)
   customer     Customer       @relation(fields: [customerId], references: [id])
   ProjectTasks ProjectTasks[]
   TimeEntry    TimeEntry[]

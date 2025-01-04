@@ -2,7 +2,7 @@
 import React, { useEffect, useRef } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
-import { AlertDialog, Button, Flex, Skeleton } from "@radix-ui/themes";
+import { AlertDialog, Button, Flex } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay } from "date-fns";
 import { ProcessedTimeEntry, TimeGridProps } from "@/types";
@@ -119,10 +119,6 @@ const TimeGrid = ({ filters }: TimeGridProps) => {
 				</AlertDialog.Content>
 			</AlertDialog.Root>
 		);
-	}
-
-	if (isLoading) {
-		return <Skeleton />;
 	}
 
 	const start = startDate ? new Date(startDate) : new Date();
