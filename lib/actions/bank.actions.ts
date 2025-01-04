@@ -46,22 +46,64 @@ const transformPlaidAccount = (plaidAccount: PlaidAccountBase, institutionId?: s
 
 export const getAccounts = async (userId: string): Promise<GetAccountsResult> => {
 	try {
-		const accessToken = await getAccessTokenForUser(userId);
-		const response = await plaidClient.accountsGet({ access_token: accessToken });
+		// Get all banks for the user
+		const user = await prisma.user.findUnique({
+			where: { userId },
+			include: { banks: true },
+		});
 
-		const accounts = response.data.accounts.map((account) => transformPlaidAccount(account, response.data.item.institution_id || undefined));
+		if (!user?.banks.length) {
+			return { accounts: [], totalBanks: 0, totalCurrentBalance: 0 };
+		}
 
-		const totalBanks = accounts.length;
-		const totalCurrentBalance = accounts.reduce((sum, account) => sum + (account.currentBalance || 0), 0);
+		// Get accounts for all banks
+		const allAccounts: Account[] = [];
+		let totalCurrentBalance = 0;
+
+		// Process each bank
+		for (const bank of user.banks) {
+			try {
+				const response = await plaidClient.accountsGet({
+					access_token: bank.accessToken,
+				});
+
+				const accounts = response.data.accounts.map((account) => ({
+					id: account.account_id,
+					account_id: account.account_id,
+					bankId: bank.id.toString(),
+					name: account.name,
+					mask: account.mask || "",
+					type: account.type,
+					subtype: account.subtype || "",
+					institution_id: bank.bankId,
+					balances: {
+						available: account.balances.available,
+						current: account.balances.current || 0,
+						iso_currency_code: account.balances.iso_currency_code || "USD",
+						limit: account.balances.limit,
+						unofficial_currency_code: account.balances.unofficial_currency_code,
+					},
+					availableBalance: account.balances.available,
+					currentBalance: account.balances.current,
+					official_name: account.official_name,
+				}));
+
+				allAccounts.push(...accounts);
+				totalCurrentBalance += accounts.reduce((sum, account) => sum + (account.currentBalance || 0), 0);
+			} catch (error) {
+				console.error(`Error fetching accounts for bank ${bank.id}:`, error);
+				// Continue with other banks if one fails
+			}
+		}
 
 		return {
-			accounts,
-			totalBanks,
+			accounts: allAccounts,
+			totalBanks: user.banks.length,
 			totalCurrentBalance,
 		};
 	} catch (error) {
-		handlePlaidError(error, "getAccounts");
-		throw new Error("Failed to fetch accounts");
+		console.error("Error in getAccounts:", error);
+		throw error;
 	}
 };
 

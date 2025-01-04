@@ -1,4 +1,4 @@
-import { GetBankProps, GetBanksProps, SignUpParams } from "@/types";
+import { GetBankProps, GetBanksProps } from "@/types";
 import axios from "axios";
 import { parseStringify } from "../utils";
 

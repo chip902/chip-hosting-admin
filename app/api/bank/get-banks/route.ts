@@ -1,6 +1,7 @@
 // app/api/bank/get-banks/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAccounts } from "@/lib/actions/bank.actions";
+import prisma from "@/prisma/client";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -11,10 +12,30 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		const result = await getAccounts(userId);
-		return NextResponse.json(result.accounts, { status: 200 });
+		// First get all banks from the database
+		const banks = await prisma.bank.findMany({
+			where: {
+				User: {
+					userId: userId,
+				},
+			},
+		});
+
+		// Then get the accounts from Plaid
+		const plaidAccounts = await getAccounts(userId);
+
+		// Combine the data
+		const result = plaidAccounts.accounts.map((account) => {
+			const bank = banks.find((b) => b.id.toString() === account.bankId);
+			return {
+				...account,
+				institutionName: bank?.institutionName,
+			};
+		});
+
+		return NextResponse.json(result, { status: 200 });
 	} catch (error) {
-		console.error("Error in Get Banks API: ", error);
+		console.error("Error in Get Banks API:", error);
 		return NextResponse.json({ error: "Error fetching banks" }, { status: 500 });
 	}
 }

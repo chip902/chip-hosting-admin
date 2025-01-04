@@ -4,6 +4,7 @@
 import { useEffect } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
+import { Separator } from "@radix-ui/react-dropdown-menu";
 
 export default function ErrorPage({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
 	useEffect(() => {
@@ -16,6 +17,7 @@ export default function ErrorPage({ error, reset }: { error: Error & { digest?: 
 				<AlertTitle>Something went wrong!</AlertTitle>
 				<AlertDescription>
 					{error.message}
+					<Separator />
 					<Button variant="outline" onClick={reset} className="mt-4">
 						Try again
 					</Button>

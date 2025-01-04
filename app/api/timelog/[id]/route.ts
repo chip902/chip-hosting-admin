@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 // Delete a time entry
-export async function DELETE(request: NextRequest) {
+async function DELETE(request: NextRequest) {
 	try {
 		const params = getParamsFromUrl(request.url);
 		const idString = params.params.id;
@@ -52,6 +52,15 @@ export async function DELETE(request: NextRequest) {
 
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
+		}
+
+		// Fetch time entries before attempting deletion
+		const allEntries = await prisma.timeEntry.findMany();
+		const foundEntry = allEntries.find((entry) => entry.id === id);
+
+		if (!foundEntry) {
+			// Return response in case the time entry is not found prior to delete
+			return NextResponse.json({ error: "Time entry not found" }, { status: 404 });
 		}
 
 		await prisma.timeEntry.delete({
@@ -64,6 +73,7 @@ export async function DELETE(request: NextRequest) {
 		return NextResponse.json({ error: "Error deleting time entry" }, { status: 500 });
 	}
 }
+
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
 	const startDate = searchParams.get("startDate");
