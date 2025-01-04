@@ -24,7 +24,7 @@ const ProjectsPage = () => {
 				name: project.name,
 				customerId: project.customerId,
 				description: project.description || "",
-				rate: project.rate,
+				rate: project.rate || 0,
 				archived: !project.archived,
 			};
 

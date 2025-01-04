@@ -112,6 +112,8 @@ export async function PATCH(request: NextRequest) {
 				id,
 			},
 			data: {
+				...body,
+				rate: body.rate || 0,
 				archived: body.archived,
 			},
 		});
