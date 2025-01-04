@@ -1,59 +1,75 @@
+// app/api/transactions/get-transactions/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
 import { plaidClient } from "@/lib/plaid";
-import { Transaction } from "@/types";
+import prisma from "@/prisma/client";
 
 export async function GET(request: NextRequest) {
-	const { searchParams } = new URL(request.url);
-	const userId = searchParams.get("userId");
-
-	if (!userId) {
-		return NextResponse.json({ error: "User ID is required" }, { status: 400 });
-	}
-
 	try {
-		const banks = await prisma.bank.findMany({ where: { userId } });
+		const searchParams = request.nextUrl.searchParams;
+		const userId = searchParams.get("userId");
 
-		const allTransactions: Transaction[] = [];
-
-		for (const bank of banks) {
-			const now = new Date();
-			const startDate = new Date(now.setMonth(now.getMonth() - 1)).toISOString().split("T")[0];
-			const endDate = new Date().toISOString().split("T")[0];
-
-			const transactionsResponse = await plaidClient.transactionsGet({
-				access_token: bank.accessToken,
-				start_date: startDate,
-				end_date: endDate,
-			});
-
-			const transactions: Transaction[] = transactionsResponse.data.transactions.map((t) => ({
-				id: t.transaction_id,
-				$id: t.transaction_id,
-				name: t.name,
-				paymentChannel: t.payment_channel,
-				type: t.payment_channel || "",
-				accountId: t.account_id,
-				amount: t.amount,
-				pending: t.pending,
-				category: t.personal_finance_category || t.personal_finance_category?.[0] || "Uncategorized",
-				date: t.date,
-				image: "",
-				$createdAt: t.date,
-				channel: t.payment_channel,
-				senderBankId: bank.id.toString(),
-				receiverBankId: "",
-			}));
-
-			allTransactions.push(...transactions);
+		if (!userId) {
+			return NextResponse.json({ error: "UserId is required" }, { status: 400 });
 		}
 
-		// Sort transactions by date, most recent first
+		// Get all banks for the user
+		const banks = await prisma.bank.findMany({
+			where: { userId },
+		});
+
+		if (!banks.length) {
+			return NextResponse.json({ transactions: [] });
+		}
+
+		let allTransactions = [];
+
+		// Get transactions for the last 30 days
+		const endDate = new Date().toISOString().split("T")[0];
+		const startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+
+		// Process each bank sequentially
+		for (const bank of banks) {
+			try {
+				const response = await plaidClient.transactionsSync({
+					access_token: bank.accessToken,
+				});
+
+				const transactions = response.data.added
+					.filter((transaction) => {
+						const transactionDate = new Date(transaction.date);
+						return transactionDate >= new Date(startDate) && transactionDate <= new Date(endDate);
+					})
+					.map((transaction) => ({
+						id: transaction.transaction_id,
+						name: transaction.name,
+						paymentChannel: transaction.payment_channel,
+						type: transaction.payment_channel,
+						accountId: transaction.account_id,
+						amount: transaction.amount,
+						pending: transaction.pending,
+						category: transaction.personal_finance_category?.primary ?? transaction.category?.[0] ?? "uncategorized",
+						date: transaction.date,
+						image: transaction.logo_url ?? "",
+						senderBankId: bank.id.toString(),
+						receiverBankId: bank.id.toString(),
+					}));
+
+				allTransactions.push(...transactions);
+			} catch (error: any) {
+				console.error(`Error fetching transactions for bank ${bank.id}:`, {
+					error: error.response?.data || error.message,
+					statusCode: error.response?.status,
+				});
+				// Continue with other banks even if one fails
+			}
+		}
+
+		// Sort transactions by date (newest first)
 		allTransactions.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
-		return NextResponse.json(allTransactions, { status: 200 });
-	} catch (error) {
+		return NextResponse.json({ transactions: allTransactions });
+	} catch (error: any) {
 		console.error("Error fetching transactions: ", error);
-		return NextResponse.json({ error: "Error fetching transactions" }, { status: 500 });
+		return NextResponse.json({ error: "Failed to fetch transactions" }, { status: 500 });
 	}
 }

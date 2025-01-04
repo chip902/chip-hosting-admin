@@ -1,5 +1,4 @@
 "use client";
-import { useDwollaAccounts } from "@/app/hooks/useDwollaAccounts";
 import { usePlaidBanks } from "@/app/hooks/usePlaidBanks";
 import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
 import { useEffect } from "react";
@@ -15,7 +14,6 @@ interface ClientPageProps {
 }
 
 export default function ClientHome({ userId, userName }: ClientPageProps) {
-	const { data: dwollaAccounts, isLoading: isDwollaLoading, error: dwollaError } = useDwollaAccounts(userId);
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(userId);
 	const { data: transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(userId);
 	const { toast } = useToast();
@@ -23,16 +21,16 @@ export default function ClientHome({ userId, userName }: ClientPageProps) {
 	const accounts = plaidData?.accounts || [];
 
 	useEffect(() => {
-		if (dwollaError || plaidError || transactionsError) {
+		if (plaidError || transactionsError) {
 			toast({
 				variant: "destructive",
 				title: "Error",
-				description: dwollaError?.message || plaidError?.message || transactionsError?.message || "An error occurred while fetching data.",
+				description: plaidError?.message || transactionsError?.message || "An error occurred while fetching data.",
 			});
 		}
-	}, [dwollaError, plaidError, transactionsError, toast]);
+	}, [plaidError, transactionsError, toast]);
 
-	if (isDwollaLoading || isPlaidLoading || isTransactionsLoading) {
+	if (isPlaidLoading || isTransactionsLoading) {
 		return <Skeleton className="w-full h-full" />;
 	}
 

@@ -1,9 +1,6 @@
 import { GetBankProps, GetBanksProps, SignUpParams } from "@/types";
 import axios from "axios";
-import { extractCustomerIdFromUrl, parseStringify } from "../utils";
-import { createDwollaCustomer } from "./dwolla.actions";
-import { cookies } from "next/headers";
-import prisma from "@/prisma/client";
+import { parseStringify } from "../utils";
 
 export const getBanks = async ({ userId }: GetBanksProps) => {
 	try {

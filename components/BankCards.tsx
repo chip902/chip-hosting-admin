@@ -4,7 +4,6 @@ import PlaidLink from "./PlaidLink";
 import BankCard from "./BankCard";
 import { User } from "@/types";
 import { useToast } from "@/app/hooks/useToast";
-import { useDwollaAccounts } from "@/app/hooks/useDwollaAccounts";
 import { usePlaidBanks } from "@/app/hooks/usePlaidBanks";
 import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
 
@@ -13,7 +12,6 @@ interface BankCardsProps {
 }
 
 const BankCards: React.FC<BankCardsProps> = ({ user }) => {
-	const { data: dwollaAccounts, isLoading: isDwollaLoading, error: dwollaError } = useDwollaAccounts(user.userId);
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(user.userId);
 	const { data: transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(user.userId);
 	const { toast } = useToast();

@@ -1,6 +1,6 @@
+// app/api/bank/get-banks/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAccounts } from "@/lib/actions/bank.actions";
-import { Account } from "@/types";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -11,13 +11,8 @@ export async function GET(request: NextRequest) {
 	}
 
 	try {
-		const accounts: Account[] = await getAccounts(userId);
-		const banks = accounts.map((account) => ({
-			id: account.id,
-			name: account.name,
-			institutionId: account.institution_id,
-		}));
-		return NextResponse.json(banks, { status: 200 });
+		const result = await getAccounts(userId);
+		return NextResponse.json(result.accounts, { status: 200 });
 	} catch (error) {
 		console.error("Error in Get Banks API: ", error);
 		return NextResponse.json({ error: "Error fetching banks" }, { status: 500 });

@@ -1,83 +1,133 @@
-import { plaidClient } from "../plaid";
+// lib/actions/bank.actions.ts
+import { plaidClient } from "@/lib/plaid";
 import prisma from "@/prisma/client";
-import { CountryCode } from "plaid";
-import { Account } from "@/types";
-import axios from "axios";
+import { Account, GetAccountsResult, Balances } from "@/types";
+import { AccountBase as PlaidAccountBase, CountryCode } from "plaid";
 
-const PLAID_API_URL = process.env.PLAID_API_URL || "https://sandbox.plaid.com";
-const PLAID_CLIENT_ID = process.env.PLAID_CLIENT_ID;
-const PLAID_SECRET = process.env.PLAID_SECRET;
+const handlePlaidError = (error: unknown, context: string) => {
+	if (error instanceof Error) {
+		const plaidError = error as any;
+		if (plaidError.error_code) {
+			console.error(`Plaid error in ${context}:`, {
+				error_code: plaidError.error_code,
+				error_message: plaidError.error_message,
+			});
+		} else {
+			console.error(`Error in ${context}:`, error.message);
+		}
+	} else {
+		console.error(`Unknown error in ${context}:`, error);
+	}
+	throw error;
+};
 
-export const getAccounts = async (userId: string): Promise<Account[]> => {
+const transformPlaidBalances = (plaidBalances: PlaidAccountBase["balances"]): Balances => ({
+	available: plaidBalances.available,
+	current: plaidBalances.current ?? 0, // Ensure current is never null
+	iso_currency_code: plaidBalances.iso_currency_code ?? "USD",
+	limit: plaidBalances.limit,
+	unofficial_currency_code: plaidBalances.unofficial_currency_code,
+});
+
+const transformPlaidAccount = (plaidAccount: PlaidAccountBase, institutionId?: string): Account => ({
+	account_id: plaidAccount.account_id,
+	id: plaidAccount.account_id,
+	balances: transformPlaidBalances(plaidAccount.balances),
+	institution_id: institutionId || plaidAccount.account_id,
+	mask: plaidAccount.mask || "",
+	name: plaidAccount.name,
+	official_name: plaidAccount.official_name,
+	subtype: plaidAccount.subtype || "",
+	type: plaidAccount.type,
+	availableBalance: plaidAccount.balances.available,
+	currentBalance: plaidAccount.balances.current,
+	bankId: null,
+});
+
+export const getAccounts = async (userId: string): Promise<GetAccountsResult> => {
 	try {
 		const accessToken = await getAccessTokenForUser(userId);
+		const response = await plaidClient.accountsGet({ access_token: accessToken });
 
-		if (!PLAID_CLIENT_ID || !PLAID_SECRET) {
-			throw new Error("Plaid client ID or secret is not set");
-		}
+		const accounts = response.data.accounts.map((account) => transformPlaidAccount(account, response.data.item.institution_id || undefined));
 
-		const response = await axios.post(`${PLAID_API_URL}/accounts/get`, {
-			client_id: PLAID_CLIENT_ID,
-			secret: PLAID_SECRET,
-			access_token: accessToken,
-		});
+		const totalBanks = accounts.length;
+		const totalCurrentBalance = accounts.reduce((sum, account) => sum + (account.currentBalance || 0), 0);
 
-		return response.data.accounts;
+		return {
+			accounts,
+			totalBanks,
+			totalCurrentBalance,
+		};
 	} catch (error) {
-		console.error("Error fetching accounts from Plaid:", error);
+		handlePlaidError(error, "getAccounts");
 		throw new Error("Failed to fetch accounts");
 	}
 };
 
 export const getAccount = async (bankId: number) => {
 	try {
+		// Get bank info from your database
 		const bank = await prisma.bank.findUnique({
 			where: { id: bankId },
 		});
 
-		if (!bank || !bank.accessToken) {
+		if (!bank?.accessToken) {
 			throw new Error("Bank not found or access token is missing");
 		}
 
+		// Get account info from Plaid
 		const accountsResponse = await plaidClient.accountsGet({
 			access_token: bank.accessToken,
 		});
-		const accountData = accountsResponse.data.accounts[0];
+		const plaidAccount = accountsResponse.data.accounts[0];
+		const institutionId = accountsResponse.data.item.institution_id;
 
-		const institution = await getInstitution(accountsResponse.data.item.institution_id!);
-
+		// Get additional info
+		const institution = await getInstitution(institutionId || "");
 		const transactions = await getTransactions(bank.accessToken);
 
-		const account = {
-			id: accountData.account_id,
-			availableBalance: accountData.balances.available!,
-			currentBalance: accountData.balances.current!,
-			institutionId: institution.institution_id,
-			name: accountData.name,
-			officialName: accountData.official_name,
-			mask: accountData.mask!,
-			type: accountData.type,
-			subtype: accountData.subtype!,
-			bankId: bank.id,
+		// Transform into your Account type with all necessary fields
+		const account: Account = {
+			...transformPlaidAccount(plaidAccount, institutionId || undefined),
+			id: bank.accountId, // Use your stored accountId
+			bankId: bank.id.toString(),
+			institution_id: institutionId || null,
+			name: plaidAccount.name || institution?.name || "Unknown Bank",
+			availableBalance: plaidAccount.balances.available,
+			currentBalance: plaidAccount.balances.current,
+			type: plaidAccount.type,
+			mask: plaidAccount.mask || "",
+			subtype: plaidAccount.subtype || "",
+			balances: transformPlaidBalances(plaidAccount.balances),
+			account_id: bank.accountId,
+			official_name: plaidAccount.official_name,
 		};
 
-		return { account, transactions };
+		return {
+			account,
+			transactions,
+			institution: institution || undefined,
+		};
 	} catch (error) {
-		console.error("An error occurred while getting the account:", error);
+		handlePlaidError(error, "getAccount");
 		throw error;
 	}
 };
 
 export const getInstitution = async (institutionId: string) => {
 	try {
-		const institutionResponse = await plaidClient.institutionsGetById({
+		const response = await plaidClient.institutionsGetById({
 			institution_id: institutionId,
 			country_codes: ["US"] as CountryCode[],
+			options: {
+				include_optional_metadata: true,
+			},
 		});
 
-		return institutionResponse.data.institution;
+		return response.data.institution;
 	} catch (error) {
-		console.error("An error occurred while getting the institution:", error);
+		handlePlaidError(error, "getInstitution");
 		throw error;
 	}
 };
@@ -96,51 +146,43 @@ export const getTransactions = async (accessToken: string) => {
 			accountId: transaction.account_id,
 			amount: transaction.amount,
 			pending: transaction.pending,
-			category: transaction.category ? transaction.category[0] : "",
+			category: transaction.personal_finance_category?.primary ?? transaction.category?.[0] ?? "uncategorized",
 			date: transaction.date,
-			image: transaction.logo_url,
+			image: transaction.logo_url ?? "",
 		}));
 	} catch (error) {
-		console.error("An error occurred while getting the transactions:", error);
+		handlePlaidError(error, "getTransactions");
 		throw error;
 	}
 };
 
-async function getUserWithBank(userId: string) {
+export const getUserWithBank = async (userId: string) => {
 	const user = await prisma.user.findUnique({
 		where: { userId },
-		include: {
-			banks: true,
-		},
+		include: { banks: true },
 	});
 
-	if (!user || !user.banks.length) {
+	if (!user?.banks.length) {
 		throw new Error("User not found or no bank information available");
 	}
-
-	// Access the accessToken from the Bank model
-	const plaidAccessToken = user.banks[0].accessToken;
 
 	return {
 		userId: user.userId,
 		email: user.email,
-		plaid_access_token: plaidAccessToken,
-		// other fields may be required
+		plaid_access_token: user.banks[0].accessToken,
+		banks: user.banks,
 	};
-}
+};
 
-// Function to fetch only the Plaid access token for a user
-async function getAccessTokenForUser(userId: string): Promise<string> {
+export const getAccessTokenForUser = async (userId: string): Promise<string> => {
 	const user = await prisma.user.findUnique({
 		where: { userId },
-		include: {
-			banks: true,
-		},
+		include: { banks: true },
 	});
 
-	if (!user || !user.banks.length) {
+	if (!user?.banks.length) {
 		throw new Error("Access token not found");
 	}
 
 	return user.banks[0].accessToken;
-}
+};

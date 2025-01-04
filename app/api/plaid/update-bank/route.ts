@@ -4,7 +4,7 @@ import prisma from "@/prisma/client";
 
 export async function POST(request: NextRequest) {
 	try {
-		const { bankId, accountId, fundingSourceUrl } = await request.json();
+		const { bankId, accountId } = await request.json();
 
 		const updatedBank = await prisma.bank.update({
 			where: {
@@ -12,7 +12,6 @@ export async function POST(request: NextRequest) {
 			},
 			data: {
 				accountId,
-				fundingSourceUrl,
 			},
 		});
 

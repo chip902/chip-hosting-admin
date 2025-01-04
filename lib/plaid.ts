@@ -1,8 +1,12 @@
 // lib/plaid.ts
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 
-// Determine the environment based on NODE_ENV
 const environment = process.env.NODE_ENV === "production" ? PlaidEnvironments.production : PlaidEnvironments.sandbox;
+
+console.log("Initializing Plaid client with environment:", {
+	nodeEnv: process.env.NODE_ENV,
+	usedEnv: environment,
+});
 
 const config = new Configuration({
 	basePath: environment,

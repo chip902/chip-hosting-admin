@@ -60,26 +60,52 @@ export interface Balances {
 	unofficial_currency_code: string | null;
 }
 
-export interface AccountBase {
+export interface Balances {
+	available: number | null;
+	current: number;
+	iso_currency_code: string;
+	limit: number | null;
+	unofficial_currency_code: string | null;
+}
+
+export interface Account {
+	id: string;
+	bankId: string | null;
 	account_id: string;
 	balances: Balances;
 	institution_id: string | null;
 	mask: string;
 	name: string;
 	official_name: string | null;
-	persistent_account_id?: string; // May not always be present
 	subtype: string;
-	type: "depository" | "investment" | "loan" | string;
-}
-
-export interface Account extends AccountBase {
-	id: string;
+	type: string;
 	availableBalance: number | null;
 	currentBalance: number | null;
-	bankId: string | null;
-	fundingSourceUrl?: string;
-	sharableId?: string | null;
 }
+
+export interface Institution {
+	institution_id: string;
+	name: string;
+}
+
+export interface GetAccountsResult {
+	accounts: Account[];
+	totalBanks: number;
+	totalCurrentBalance: number;
+}
+
+export type Transaction = {
+	id: string;
+	name: string;
+	paymentChannel: string;
+	type: string;
+	accountId: string;
+	amount: number;
+	pending: boolean;
+	category: string | PersonalFinanceCategory;
+	date: string;
+	image: string;
+};
 
 export interface GetAccountsResult {
 	accounts: Account[];
@@ -110,9 +136,7 @@ export type Bank = {
 	accountId: string;
 	bankId: string;
 	accessToken: string;
-	fundingSourceUrl: string;
 	userId: string;
-	sharableId: string;
 };
 
 export type AccountTypes = "depository" | "credit" | "loan" | "investment" | "other";
@@ -128,32 +152,6 @@ export type CategoryCount = {
 export type Receiver = {
 	firstName: string;
 	lastName: string;
-};
-
-export type TransferParams = {
-	sourceFundingSourceUrl: string;
-	destinationFundingSourceUrl: string;
-	amount: string;
-};
-
-export type AddFundingSourceParams = {
-	dwollaCustomerUrl: string;
-	dwollaCustomerId: string;
-	processorToken: string;
-	bankName: string;
-};
-
-export type NewDwollaCustomerParams = {
-	firstName: string;
-	lastName: string;
-	email: string;
-	type: string;
-	address1: string;
-	city: string;
-	state: string;
-	postalCode: string;
-	dateOfBirth: string;
-	ssn: string;
 };
 
 export interface CreditCardProps {
@@ -326,8 +324,6 @@ export interface CreateBankAccountProps {
 	userId: string;
 	accountId: string;
 	bankId: string;
-	fundingSourceUrl: string;
-	sharableId: string;
 }
 
 export interface GetBanksProps {

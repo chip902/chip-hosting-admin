@@ -46,59 +46,14 @@ const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 					throw new Error("User is undefined");
 				}
 
-				// Step 1: Exchange public token with Plaid
-				const exchangeRes = await axios.post(
-					"/api/plaid/exchange-public-token",
-					{ publicToken: public_token, userID: user },
-					{ headers: { "Content-Type": "application/json" } }
-				);
-
-				const { accessToken, itemId, bankId } = exchangeRes.data;
-
-				// Step 2: Get account ID from metadata
-				const accountId = metadata.accounts[0]?.id;
-				if (!accountId) throw new Error("No account ID found");
-
-				// Step 3: Create processor token for Dwolla
-				const processorRes = await axios.post(
-					"/api/plaid/create-processor-token",
-					{ accessToken, accountId },
-					{ headers: { "Content-Type": "application/json" } }
-				);
-
-				const { processorToken } = processorRes.data;
-
-				// Step 4: Create or get Dwolla customer
-				let dwollaCustomerId = user.dwollaCustomerId;
-				if (!dwollaCustomerId) {
-					const createCustomerRes = await axios.post("/api/dwolla/create-customer", { user }, { headers: { "Content-Type": "application/json" } });
-					const { customerId } = createCustomerRes.data;
-					dwollaCustomerId = customerId;
-				}
-
-				// Step 5: Create funding source in Dwolla
-				const fundingSourceRes = await axios.post(
-					"/api/dwolla/create-funding-source",
-					{
-						customerId: dwollaCustomerId,
-						customerUrl: user.dwollaCustomerUrl,
-						processorToken,
-						accountId: accountId,
-						bankName: metadata?.institution?.name,
-						bankAccountType: "business",
-					},
-					{ headers: { "Content-Type": "application/json" } }
-				);
-
-				const { fundingSourceUrl } = fundingSourceRes.data;
-
-				// Step 6: Update bank record with funding source URL
+				// Exchange public token with Plaid
 				await axios.post(
-					"/api/plaid/update-bank",
+					"/api/plaid/exchange-public-token",
 					{
-						bankId,
-						accountId,
-						fundingSourceUrl,
+						publicToken: public_token,
+						userID: user,
+						accountId: metadata.accounts[0]?.id,
+						institutionName: metadata.institution?.name || "Unknown Bank",
 					},
 					{ headers: { "Content-Type": "application/json" } }
 				);

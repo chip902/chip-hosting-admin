@@ -6,7 +6,7 @@ export async function POST(request: NextRequest) {
 	try {
 		const body = await request.json();
 
-		const { userId, bankId, accountId, accessToken, fundingSourceUrl, sharableId } = body;
+		const { userId, bankId, accountId, accessToken, fundingSourceUrl, sharableId, institutionName } = body;
 
 		// Validate required fields
 		if (!userId || !bankId || !accountId || !accessToken || !fundingSourceUrl || !sharableId) {
@@ -19,9 +19,7 @@ export async function POST(request: NextRequest) {
 				bankId: bankId,
 				accountId: accountId,
 				accessToken: accessToken,
-				fundingSourceUrl: fundingSourceUrl,
-				sharableId: sharableId,
-				// Handle User relation
+				institutionName: institutionName,
 				User: {
 					connect: { userId: userId },
 				},
@@ -34,40 +32,6 @@ export async function POST(request: NextRequest) {
 		return NextResponse.json({ error: "Error creating Bank" }, { status: 500 });
 	}
 }
-
-// export async function PATCH(request: NextRequest) {
-// 	try {
-// 		const body = await request.json();
-// 		const validation = authFormSchema(body.type).safeParse(body);
-// 		if (!validation.success) {
-// 			return NextResponse.json(validation.error.format(), { status: 400 });
-// 		}
-// 		const { email, password } = body;
-
-// 		if (!email || !password) {
-// 			return NextResponse.json({ message: "Missing fields" }, { status: 400 });
-// 		}
-
-// 		const hashedPassword = await bcrypt.hash(password, 10);
-// 		const updatedUser = await prisma.user.update({
-// 			where: { id: body.id },
-// 			data: {
-// 				firstName: body.firstname,
-// 				lastName: body.lastName,
-// 				email: body.email,
-// 				address: body.address,
-// 				city: body.city,
-// 				postalCode: body.postalCode,
-// 				dob: body.dob,
-// 				ssn: body.ssn,
-// 				password: hashedPassword,
-// 			},
-// 		});
-// 		return NextResponse.json(updatedUser, { status: 200 });
-// 	} catch (error) {
-// 		return NextResponse.json({ error: "Error updating user" }, { status: 500 });
-// 	}
-// }
 
 export async function GET() {
 	try {

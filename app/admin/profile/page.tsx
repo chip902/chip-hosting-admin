@@ -21,7 +21,7 @@ const ProfilePage = () => {
 		return <div>User not found</div>;
 	}
 
-	return <PlaidLink user={session.user} variant="primary" dwollaCustomerId={session.user.dwollaCustomerId || ""} />;
+	return <PlaidLink user={session.user} variant="primary" />;
 };
 
 export default ProfilePage;

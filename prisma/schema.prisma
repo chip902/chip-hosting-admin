@@ -8,26 +8,24 @@ datasource db {
 }
 
 model User {
-  id                Int             @id @default(autoincrement())
-  userId            String?         @unique
-  dwollaCustomerId  String?         @unique
-  dwollaCustomerUrl String?         @unique
-  email             String          @unique
-  password          String?
-  firstName         String?
-  lastName          String?
-  address           String?
-  city              String?
-  state             String?
-  postalCode        String?
-  dob               String?
-  ssn               String?
-  role              String?
-  timeEntries       TimeEntry[]
-  projects          Project[]       @relation("ProjectUser")
-  Session           Session[]
-  Authenticator     Authenticator[]
-  banks             Bank[]
+  id            Int             @id @default(autoincrement())
+  userId        String?         @unique
+  email         String          @unique
+  password      String?
+  firstName     String?
+  lastName      String?
+  address       String?
+  city          String?
+  state         String?
+  postalCode    String?
+  dob           String?
+  ssn           String?
+  role          String?
+  timeEntries   TimeEntry[]
+  projects      Project[]       @relation("ProjectUser")
+  Session       Session[]
+  Authenticator Authenticator[]
+  banks         Bank[]
 }
 
 model Customer {
@@ -164,15 +162,14 @@ model VerificationToken {
 }
 
 model Bank {
-  id               Int           @id @unique @default(autoincrement())
-  userId           String        @unique
-  bankId           String
-  accountId        String
-  accessToken      String
-  fundingSourceUrl String
-  sharableId       String
-  User             User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  Transaction      Transaction[]
+  id              Int           @id @unique @default(autoincrement())
+  userId          String        @unique
+  bankId          String
+  institutionName String
+  accountId       String
+  accessToken     String
+  User            User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  Transaction     Transaction[]
 }
 
 model Transaction {

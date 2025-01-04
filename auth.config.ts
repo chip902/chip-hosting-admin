@@ -42,8 +42,6 @@ export const authOptions: NextAuthOptions = {
 					return {
 						id: user.id,
 						userId: user.userId || "",
-						dwollaCustomerUrl: user.dwollaCustomerUrl || null,
-						dwollaCustomerId: user.dwollaCustomerId || null,
 						email: user.email,
 						name: user.firstName || user.email,
 						firstName: user.firstName || null,
@@ -62,8 +60,6 @@ export const authOptions: NextAuthOptions = {
 				console.log("JWT Callback - User: ", user);
 				token.id = user.id.toString();
 				token.userId = user.userId;
-				token.dwollaCustomerUrl = user.dwollaCustomerUrl;
-				token.dwollaCustomerId = user.dwollaCustomerId;
 				token.name = user.name;
 				token.firstName = user.firstName;
 				token.lastName = user.lastName;
@@ -75,8 +71,6 @@ export const authOptions: NextAuthOptions = {
 				console.log("Session Callback - Token: ", token);
 				session.user.id = token.id;
 				session.user.userId = token.userId;
-				session.user.dwollaCustomerUrl = token.dwollaCustomerUrl;
-				session.user.dwollaCustomerId = token.dwollaCustomerId;
 				session.user.name = token.name;
 				session.user.firstName = token.firstName;
 				session.user.lastName = token.lastName;
