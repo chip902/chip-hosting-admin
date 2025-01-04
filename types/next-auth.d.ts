@@ -7,8 +7,6 @@ declare module "next-auth" {
 		id: number;
 		userId: string;
 		email: string;
-		dwollaCustomerUrl?: string | null;
-		dwollaCustomerId?: string | null;
 		firstName?: string | null;
 		lastName?: string | null;
 		createdAt?: Date | null;
@@ -19,8 +17,6 @@ declare module "next-auth" {
 		user: {
 			id: string;
 			userId: string;
-			dwollaCustomerUrl?: string | null;
-			dwollaCustomerId?: string | null;
 			firstName?: string | null;
 			lastName?: string | null;
 		} & DefaultSession["user"];
@@ -31,8 +27,6 @@ declare module "next-auth/jwt" {
 	interface JWT {
 		id: string;
 		userId: string;
-		dwollaCustomerUrl?: string | null;
-		dwollaCustomerId?: string | null;
 		firstName?: string | null;
 		lastName?: string | null;
 	}

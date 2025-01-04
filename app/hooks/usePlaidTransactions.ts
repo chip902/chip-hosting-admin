@@ -12,5 +12,6 @@ export const usePlaidTransactions = (userId?: string) => {
 		},
 		enabled: !!userId,
 		staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+		refetchOnWindowFocus: false,
 	});
 };

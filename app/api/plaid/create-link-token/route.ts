@@ -1,30 +1,17 @@
 // app/api/plaid/create-link-token/route.ts
-
 import { NextRequest, NextResponse } from "next/server";
-import { Configuration, CountryCode, PlaidApi, PlaidEnvironments, Products } from "plaid";
-
-const basePath = process.env.NODE_ENV === "production" ? PlaidEnvironments.production : PlaidEnvironments.sandbox;
-
-const configuration = new Configuration({
-	basePath,
-	baseOptions: {
-		headers: {
-			"PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
-			"PLAID-SECRET": process.env.NODE_ENV !== "production" ? process.env.PLAID_SECRET : process.env.PLAID_PROD_SECRET,
-		},
-	},
-});
-
-const plaidClient = new PlaidApi(configuration);
+import { plaidClient } from "@/lib/plaid";
+import { Products, CountryCode } from "plaid";
 
 export async function POST(request: NextRequest) {
 	try {
 		const { user } = await request.json();
 		console.log("User object received in create-link-token API:", user);
-		// Use the correct property for the user ID
-		const userId = user?.id ?? user?.$id ?? user?.userId;
 
-		console.log("User ID: ", userId);
+		// Use the UUID consistently
+		const userId = user.userId || user.id;
+
+		console.log("Using userId for Plaid:", userId);
 
 		if (!userId) {
 			throw new Error("User ID is required");
@@ -32,22 +19,23 @@ export async function POST(request: NextRequest) {
 
 		const tokenParams = {
 			user: {
-				client_user_id: String(user.$id),
+				client_user_id: userId, // Use the UUID here
 			},
-			client_name: `${user.firstName} ${user.lastName}`,
-			products: ["auth", "transactions", "identity"] as Products[],
-			language: "en",
+			client_name: "ChipBooks",
+			products: ["auth", "identity"] as Products[],
 			country_codes: ["US"] as CountryCode[],
-			update: {
-				account_selection_enabled: true,
-			},
+			language: "en",
 		};
 
+		console.log("Creating link token with params:", tokenParams);
+
 		const response = await plaidClient.linkTokenCreate(tokenParams);
+		console.log("Link token created successfully");
 
 		return NextResponse.json({ linkToken: response.data.link_token });
-	} catch (error) {
+	} catch (error: any) {
 		console.error("Error creating link token:", error);
-		return NextResponse.json({ error: "Error creating link token" }, { status: 500 });
+		console.error("Plaid API Error Details:", error.response?.data);
+		return NextResponse.json({ error: "Error creating link token", details: error.response?.data }, { status: 400 });
 	}
 }

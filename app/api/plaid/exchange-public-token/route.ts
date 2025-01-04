@@ -3,19 +3,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
 import prisma from "@/prisma/client";
 
-const basePath = process.env.NODE_ENV === "production" ? PlaidEnvironments.production : PlaidEnvironments.sandbox;
-
-const configuration = new Configuration({
-	basePath,
-	baseOptions: {
-		headers: {
-			"PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
-			"PLAID-SECRET": process.env.NODE_ENV !== "production" ? process.env.PLAID_SECRET : process.env.PLAID_PROD_SECRET,
+const plaidClient = new PlaidApi(
+	new Configuration({
+		basePath: process.env.NODE_ENV === "production" ? PlaidEnvironments.production : PlaidEnvironments.sandbox,
+		baseOptions: {
+			headers: {
+				"PLAID-CLIENT-ID": process.env.PLAID_CLIENT_ID!,
+				"PLAID-SECRET": process.env.NODE_ENV === "production" ? process.env.PLAID_PROD_SECRET : process.env.PLAID_SECRET,
+			},
 		},
-	},
-});
-
-const plaidClient = new PlaidApi(configuration);
+	})
+);
 
 export async function POST(request: NextRequest) {
 	try {
@@ -32,7 +30,9 @@ export async function POST(request: NextRequest) {
 		// Check if a bank record already exists for this user
 		const existingBank = await prisma.bank.findFirst({
 			where: {
-				userId: userID.userId,
+				User: {
+					userId: userID.userId,
+				},
 				accountId: accountId,
 			},
 		});
@@ -54,10 +54,9 @@ export async function POST(request: NextRequest) {
 				bankId: updatedBank.id,
 			});
 		} else {
-			// Create new bank record with all required fields
+			// Create new bank record
 			const newBank = await prisma.bank.create({
 				data: {
-					userId: userID.userId,
 					bankId: itemId,
 					accessToken: accessToken,
 					accountId: accountId,

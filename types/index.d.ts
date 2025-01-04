@@ -193,7 +193,6 @@ export interface PaginationProps {
 export interface PlaidLinkProps {
 	user: AuthUser;
 	variant?: "primary" | "ghost";
-	dwollaCustomerId?: string;
 }
 
 export interface AuthFormProps {

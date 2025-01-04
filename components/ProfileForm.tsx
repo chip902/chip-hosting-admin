@@ -47,17 +47,8 @@ const ProfileForm = () => {
 				address1: data.address!,
 				dateOfBirth: data.dob!,
 			};
-			// const dwollaCustomerUrl = createDwollaCustomer({
-			// 	...data,
-			// 	type: "personal",
-			// 	address1: data.address!,
-			// 	dateOfBirth: data.dob!,
-			// });
-			// const dwollaCustomerID = extractCustomerIdFromUrl(dwollaCustomerUrl as unknown as string);
 			const response = await axios.post("/api/user/update-user/", {
 				...userData,
-				// dwollaCustomerID,
-				// dwollaCustomerUrl,
 			});
 			if (response.status === 201) {
 				router.push("/admin/profile");
