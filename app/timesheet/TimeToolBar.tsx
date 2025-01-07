@@ -1,8 +1,7 @@
 "use client";
 import { subWeeks, addWeeks, startOfWeek, endOfWeek } from "date-fns";
-import React, { useState, useCallback } from "react";
+import React, { ReactNode, useCallback } from "react";
 import { ChevronLeftIcon, ChevronRightIcon } from "@heroicons/react/20/solid";
-import LogTime from "./LogTime";
 
 interface ITimeToolBar {
 	filters: {
@@ -17,44 +16,43 @@ interface ITimeToolBar {
 			customerId?: number;
 		}>
 	>;
+	children?: ReactNode;
 }
 
-const TimeToolBar = ({ filters, setFilters }: ITimeToolBar) => {
-	const [currentWeek, setCurrentWeek] = useState(new Date());
-
-	// Directly update the filters and current week inside the handler
+const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 	const handlePreviousWeek = useCallback(() => {
-		const newWeek = subWeeks(currentWeek, 1);
+		if (!filters.startDate) return;
+
+		const newWeek = subWeeks(filters.startDate, 1);
 		const start = startOfWeek(newWeek, { weekStartsOn: 0 });
 		const end = endOfWeek(newWeek, { weekStartsOn: 0 });
 
-		setCurrentWeek(newWeek);
 		setFilters({
 			startDate: start,
 			endDate: end,
 			customerId: filters.customerId,
 		});
-	}, [currentWeek, filters.customerId, setFilters]);
+	}, [filters.startDate, filters.customerId, setFilters]);
 
 	const handleNextWeek = useCallback(() => {
-		const newWeek = addWeeks(currentWeek, 1);
+		if (!filters.startDate) return;
+
+		const newWeek = addWeeks(filters.startDate, 1);
 		const start = startOfWeek(newWeek, { weekStartsOn: 0 });
 		const end = endOfWeek(newWeek, { weekStartsOn: 0 });
 
-		setCurrentWeek(newWeek);
 		setFilters({
 			startDate: start,
 			endDate: end,
 			customerId: filters.customerId,
 		});
-	}, [currentWeek, filters.customerId, setFilters]);
+	}, [filters.startDate, filters.customerId, setFilters]);
 
 	const handleToday = useCallback(() => {
 		const today = new Date();
 		const start = startOfWeek(today, { weekStartsOn: 0 });
 		const end = endOfWeek(today, { weekStartsOn: 0 });
 
-		setCurrentWeek(today);
 		setFilters({
 			startDate: start,
 			endDate: end,
@@ -66,7 +64,8 @@ const TimeToolBar = ({ filters, setFilters }: ITimeToolBar) => {
 		<header className="flex flex-col items-center border-b border-gray-200 px-6 py-4 z-20 dark:border-gray-700">
 			<div className="flex w-full items-center justify-end">
 				<div className="ml-6 h-6 w-px bg-gray-300 dark:bg-gray-700" />
-				<LogTime />
+
+				{children}
 
 				<div className="flex items-center ml-5">
 					<div className="relative flex items-center rounded-md bg-white shadow-sm md:items-stretch dark:bg-gray-800">

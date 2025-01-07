@@ -44,7 +44,7 @@ export async function PATCH(request: NextRequest) {
 }
 
 // Delete a time entry
-async function DELETE(request: NextRequest) {
+export async function DELETE(request: NextRequest) {
 	try {
 		const params = getParamsFromUrl(request.url);
 		const idString = params.params.id;

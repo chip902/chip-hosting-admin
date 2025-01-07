@@ -9,6 +9,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import TransactionsTable from "./TransactionsTable";
 import _ from "lodash";
 import { DateRange } from "react-day-picker";
+import TransactionImporter from "./TransactionImporter";
 
 interface Transaction {
 	id: string;
@@ -131,6 +132,7 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 				<Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} className="plaidlink-primary">
 					{syncMutation.isPending ? "Syncing..." : "Sync Transactions"}
 				</Button>
+				<TransactionImporter userId={userId} bankId="34" />
 			</div>
 
 			{syncMutation.isSuccess && (

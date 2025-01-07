@@ -1,9 +1,10 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-import { TimeEntryProps, UpdateTimeEntryParams, DeleteTimeEntryParams } from "@/types";
+import { TimeEntryProps } from "@/types";
 
 const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
 	const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +13,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
+		startTime: entry.startTime.split("T")[1].replace("Z", "") || "",
 	});
 
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
@@ -23,7 +24,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 			duration: entry.duration?.toString() || "",
 			description: entry.description || "",
 			entryDate: new Date(entry.date).toISOString().split("T")[0],
-			startTime: entry.startTime.split("T")[1].replace("Z", "") || "", // Remove 'Z' suffix
+			startTime: entry.startTime.split("T")[1].replace("Z", "") || "",
 		});
 	}, [entry]);
 
@@ -37,62 +38,70 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
 		const isoDate = new Date(isoDateStr);
 
-		console.log(`ISO Date String: ${isoDateStr}`); // Debugging line
-		console.log(`Parsed Date: ${isoDate.toString()}`); // Debugging line
-
 		if (isNaN(isoDate.getTime())) {
 			console.error("Invalid date or time format: ", isoDateStr);
 			setLoading(false);
 			return;
 		}
 
-		const localISOString = isoDate.toISOString(); // Convert to ISO string in UTC
-		console.log(`Local ISO String: ${localISOString}`); // Debugging line
+		const localISOString = isoDate.toISOString();
 		const localISOStringWithoutZ = localISOString.replace("Z", "");
-		const updateParams: UpdateTimeEntryParams = {
-			id: entry.id,
-			data: { duration: Number(formState.duration), description: formState.description, date: localISOString },
-		};
 
-		console.log("Update Params:", updateParams); // Debugging line
-		updateTimeEntry(updateParams, {
-			onSuccess: () => {
-				setIsOpen(false);
-				setLoading(false);
+		updateTimeEntry(
+			{
+				id: entry.id,
+				data: {
+					duration: Number(formState.duration),
+					description: formState.description,
+					date: localISOString,
+				},
 			},
-			onError: (error) => {
-				console.error("Failed to update time entry:", error);
-				setLoading(false);
-			},
-		});
+			{
+				onSuccess: () => {
+					setIsOpen(false);
+					setLoading(false);
+				},
+				onError: (error) => {
+					console.error("Failed to update time entry:", error);
+					setLoading(false);
+				},
+			}
+		);
 	};
 
-	const handleDelete = () => {
-		const deleteParams: DeleteTimeEntryParams = { id: entry.id };
+	const handleDelete = (e: React.MouseEvent) => {
+		e.preventDefault(); // Prevent event bubbling
+		e.stopPropagation(); // Prevent event bubbling
 
-		console.log("Delete Params:", deleteParams); // Debugging line
-		deleteTimeEntry(deleteParams, {
-			onSuccess: () => {
-				setIsOpen(false);
-			},
-			onError: (error) => {
-				console.error("Error deleting time entry:", error);
-			},
-		});
+		setLoading(true);
+		deleteTimeEntry(
+			{ id: entry.id },
+			{
+				onSuccess: () => {
+					setIsOpen(false);
+					setLoading(false);
+				},
+				onError: (error) => {
+					console.error("Error deleting time entry:", error);
+					setLoading(false);
+				},
+			}
+		);
 	};
 
 	const calculatePosition = (start: number, end: number) => {
-		const offsetMinutes = 300; // 5 hours * 60 minutes/hour (adjust this value as needed)
+		const offsetMinutes = 300;
 		const adjustedStart = start + offsetMinutes;
 		const adjustedEnd = end + offsetMinutes;
 
 		const top = (adjustedStart / 1440) * 100;
 		let height = ((adjustedEnd - adjustedStart) / 1440) * 100;
 		if (height < 0) {
-			height += 100; // Adjust for entries that cross midnight
+			height += 100;
 		}
 		return { top, height: Math.max(height, 1) };
 	};
+
 	const { top, height } = calculatePosition(startSlot, endSlot);
 
 	return (
@@ -114,7 +123,7 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 				</div>
 			</Popover.Trigger>
 			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">
-				<form className="flex flex-col space-y-4">
+				<form className="flex flex-col space-y-4" onSubmit={(e) => e.preventDefault()}>
 					<label className="flex flex-col">
 						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description:</span>
 						<textarea

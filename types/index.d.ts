@@ -509,12 +509,20 @@ export interface GridItem {
 	customerName: string;
 }
 
-export interface TimeGridProps {
+interface TimeGridProps {
 	filters: {
 		startDate?: Date;
 		endDate?: Date;
 		customerId?: number;
 	};
+	onTimeSlotSelect: (
+		timeSlot: {
+			date?: Date;
+			startTime?: string;
+			endTime?: string;
+			duration?: number;
+		} | null
+	) => void;
 }
 
 export interface PdfData {

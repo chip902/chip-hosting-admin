@@ -1,11 +1,11 @@
-// app/timesheet/Page.tsx
 "use client";
 import { useState } from "react";
 import { endOfWeek, startOfWeek } from "date-fns";
-import { Flex, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
+import { Flex, Skeleton, AlertDialog, Dialog, Button } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import TimeToolBar from "./TimeToolBar";
 import TimeGrid from "./TimeGrid";
+import LogTimeForm from "./LogTime";
 import React from "react";
 
 interface Filters {
@@ -21,7 +21,13 @@ const Page: React.FC = () => {
 		customerId: undefined,
 	});
 
-	const days = Array.from({ length: 7 }, (_, i) => new Date(new Date().setDate(new Date().getDate() + i)));
+	const [logTimeOpen, setLogTimeOpen] = useState(false);
+	const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
+		date?: Date;
+		startTime?: string;
+		endTime?: string;
+		duration?: number;
+	} | null>(null);
 
 	const { data, error, isLoading } = useGetTimeEntries({
 		pageSize: 20,
@@ -31,33 +37,43 @@ const Page: React.FC = () => {
 		customerId: filters.customerId !== null && filters.customerId !== undefined ? filters.customerId : undefined,
 	});
 
+	const handleTimeSlotSelect = (timeSlot: typeof selectedTimeSlot) => {
+		setSelectedTimeSlot(timeSlot);
+		setLogTimeOpen(true);
+	};
+
 	return (
-		<Flex direction="column" gap="4">
-			{isLoading ? (
-				<Skeleton>
-					<div className="relative w-full h-fit" />
-				</Skeleton>
-			) : error ? (
-				<AlertDialog.Root defaultOpen={true}>
-					<AlertDialog.Content maxWidth="450px">
-						<AlertDialog.Title>Database Error</AlertDialog.Title>
-						<AlertDialog.Description size="2">
-							The Database connection cannot be established. Check your connection and try again.
-						</AlertDialog.Description>
-						<Flex gap="3" mt="4" justify="end">
-							<AlertDialog.Cancel>
-								<Button color="red">Dismiss</Button>
-							</AlertDialog.Cancel>
-						</Flex>
-					</AlertDialog.Content>
-				</AlertDialog.Root>
-			) : (
-				<>
-					<TimeToolBar filters={filters} setFilters={setFilters} />
-					<TimeGrid filters={filters} />
-				</>
-			)}
-		</Flex>
+		<Dialog.Root open={logTimeOpen} onOpenChange={setLogTimeOpen}>
+			<Flex direction="column" gap="4">
+				{isLoading ? (
+					<Skeleton>
+						<div className="relative w-full h-fit" />
+					</Skeleton>
+				) : error ? (
+					<AlertDialog.Root defaultOpen={true}>
+						<AlertDialog.Content maxWidth="450px">
+							<AlertDialog.Title>Database Error</AlertDialog.Title>
+							<AlertDialog.Description size="2">
+								The Database connection cannot be established. Check your connection and try again.
+							</AlertDialog.Description>
+						</AlertDialog.Content>
+					</AlertDialog.Root>
+				) : (
+					<>
+						<TimeToolBar filters={filters} setFilters={setFilters}>
+							<Dialog.Trigger>
+								<Button variant="solid">Log Time</Button>
+							</Dialog.Trigger>
+						</TimeToolBar>
+						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} />
+						<Dialog.Content>
+							<Dialog.Title>Log Time</Dialog.Title>
+							<LogTimeForm onClose={() => setLogTimeOpen(false)} initialValues={selectedTimeSlot || undefined} />
+						</Dialog.Content>
+					</>
+				)}
+			</Flex>
+		</Dialog.Root>
 	);
 };
 
