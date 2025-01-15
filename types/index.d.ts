@@ -230,7 +230,9 @@ export interface SiderbarProps {
 
 export interface RecentTransactionsProps {
 	accounts: Account[];
-	transactions: Transaction[];
+	transactions: {
+		transactions: Transaction[];
+	};
 	page?: number;
 }
 

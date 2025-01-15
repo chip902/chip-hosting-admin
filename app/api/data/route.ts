@@ -6,7 +6,7 @@ export async function GET() {
 		const customers = await prisma.customer.findMany();
 		customers.sort((a, b) => a.name.localeCompare(b.name));
 
-		const projects = await prisma.project.findMany();
+		const projects = await prisma.project.findMany({ where: { archived: false } });
 		projects.sort((a, b) => a.name.localeCompare(b.name));
 
 		const tasks = await prisma.task.findMany();

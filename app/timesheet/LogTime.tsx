@@ -136,14 +136,15 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			}
 
 			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
-			reset();
-			router.refresh();
+			onClose();
 		} catch (error) {
 			setSubmitting(false);
 			console.error("Failed to submit time log:", error);
 			setError("An unexpected error occurred");
 		} finally {
 			setSubmitting(false);
+			reset();
+			router.refresh();
 		}
 	};
 
@@ -274,9 +275,11 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 							Cancel
 						</Button>
 					</Dialog.Close>
-					<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
-						{submitting && <Spinner />} Log
-					</Button>
+					<Dialog.Close>
+						<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
+							{submitting && <Spinner />} Log
+						</Button>
+					</Dialog.Close>
 				</Flex>
 			</Form.Root>
 		</Flex>

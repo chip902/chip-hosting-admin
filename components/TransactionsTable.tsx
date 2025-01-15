@@ -20,7 +20,7 @@ const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead className="px-2">Transaction</TableHead>
+					<TableHead className="text-wrap px-2">Transaction</TableHead>
 					<TableHead className="px-2">Amount</TableHead>
 					<TableHead className="px-2">Status</TableHead>
 					<TableHead className="px-2">Date</TableHead>

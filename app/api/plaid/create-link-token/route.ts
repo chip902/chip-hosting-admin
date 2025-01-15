@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
 				client_user_id: userId, // Use the UUID here
 			},
 			client_name: "ChipBooks",
-			products: ["auth", "identity"] as Products[],
+			products: ["auth", "identity", "transactions"] as Products[],
 			country_codes: ["US"] as CountryCode[],
 			language: "en",
 		};

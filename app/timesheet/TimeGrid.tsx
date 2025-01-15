@@ -95,12 +95,24 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 	});
 };
 
+const throttle = (fn: Function, wait: number) => {
+	let timeout: NodeJS.Timeout | null = null;
+	return (args: any) => {
+		if (!timeout) {
+			fn(args);
+			timeout = setTimeout(() => {
+				timeout = null;
+			}, wait);
+		}
+	};
+};
+
 const TimeGrid = ({ filters, onTimeSlotSelect }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
 	const [isDragging, setIsDragging] = useState(false);
 	const [dragStart, setDragStart] = useState<{ dayIndex: number; minutes: number } | null>(null);
-	const [dragEnd, setDragEnd] = useState<{ dayIndex: number; minutes: number } | null>(null);
+	const [dragEnd, setDragEnd] = useState({ dayIndex: -1, minutes: -1 });
 
 	const { data, error, isLoading } = useGetTimeEntries({
 		pageSize: 50,
@@ -136,21 +148,25 @@ const TimeGrid = ({ filters, onTimeSlotSelect }: TimeGridProps) => {
 
 		const rect = event.currentTarget.getBoundingClientRect();
 		const relativeY = event.clientY - rect.top;
-		const minutes = Math.floor((relativeY / rect.height) * 24 * 60);
+		let minutes = Math.floor((relativeY / rect.height) * 24 * 60);
+		minutes = Math.round(minutes / 15) * 15;
 
 		setIsDragging(true);
 		setDragStart({ dayIndex, minutes });
 		setDragEnd({ dayIndex, minutes });
 	};
 
+	// Adjust delay if needed
+	const throttledSetDragEnd = throttle(setDragEnd, 50);
+
 	const handleGridMouseMove = (dayIndex: number, event: React.MouseEvent<HTMLDivElement>) => {
 		if (!isDragging) return;
 
 		const rect = event.currentTarget.getBoundingClientRect();
 		const relativeY = event.clientY - rect.top;
-		const minutes = Math.floor((relativeY / rect.height) * 24 * 60);
-
-		setDragEnd({ dayIndex, minutes });
+		let minutes = Math.floor((relativeY / rect.height) * 24 * 60);
+		minutes = Math.round(minutes / 15) * 15;
+		throttledSetDragEnd({ dayIndex, minutes });
 	};
 
 	const handleGridMouseUp = () => {
@@ -171,7 +187,6 @@ const TimeGrid = ({ filters, onTimeSlotSelect }: TimeGridProps) => {
 
 		setIsDragging(false);
 		setDragStart(null);
-		setDragEnd(null);
 	};
 
 	if (error) {

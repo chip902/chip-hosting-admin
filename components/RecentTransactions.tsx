@@ -1,16 +1,18 @@
 // components/RecentTransactions.tsx
-import { Account, RecentTransactionsProps } from "@/types";
+import { Account, RecentTransactionsProps, Transaction } from "@/types";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React from "react";
 import Link from "next/link";
 import TransactionsTable from "./TransactionsTable";
 import { BankTabItem } from "./BankTabItem";
 
-const RecentTransactions = ({ accounts, transactions = [], page = 1 }: RecentTransactionsProps) => {
+const RecentTransactions = ({ accounts, transactions: rawTransactions, page = 1 }: RecentTransactionsProps) => {
+	const transactions = Array.isArray(rawTransactions?.transactions) ? rawTransactions.transactions : [];
+
 	const transactionsPerPage = 10;
 	const startIndex = (page - 1) * transactionsPerPage;
 	const endIndex = startIndex + transactionsPerPage;
-	const displayedTransactions = Array.isArray(transactions) ? transactions.slice(startIndex, endIndex) : [];
+	const displayedTransactions = transactions.slice(startIndex, endIndex);
 
 	if (!accounts || accounts.length === 0) {
 		return (
@@ -44,12 +46,12 @@ const RecentTransactions = ({ accounts, transactions = [], page = 1 }: RecentTra
 				</TabsList>
 			</Tabs>
 			{accounts.map((account) => {
-				const filteredTransactions = displayedTransactions.filter((transaction) => transaction && transaction.accountId === account.id);
+				const accountTransactions = displayedTransactions.filter((transaction: Transaction) => transaction && transaction.accountId === account.id);
 
 				return (
 					<div key={account.id} className="mb-4">
 						<h3 className="text-xl font-semibold mb-2">{account.name}</h3>
-						<TransactionsTable transactions={filteredTransactions} />
+						<TransactionsTable transactions={accountTransactions} />
 					</div>
 				);
 			})}

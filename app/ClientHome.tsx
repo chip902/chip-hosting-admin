@@ -36,7 +36,7 @@ export default function ClientHome({ userId }: ClientHomeProps) {
 	return (
 		<>
 			<TotalBalanceBox accounts={accounts} totalBanks={totalBanks} totalCurrentBalance={totalCurrentBalance} />
-			<RecentTransactions accounts={accounts} transactions={transactions || []} />
+			<RecentTransactions accounts={accounts} transactions={transactions || { transactions: [] }} />
 		</>
 	);
 }

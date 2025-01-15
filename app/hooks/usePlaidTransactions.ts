@@ -1,17 +1,25 @@
+// hooks/usePlaidTransactions.ts
 import { Transaction } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
+export interface TransactionsResponse {
+	transactions: Transaction[];
+}
+
 export const usePlaidTransactions = (userId?: string) => {
-	return useQuery<Transaction[]>({
+	return useQuery<TransactionsResponse, Error>({
 		queryKey: ["transactions", userId],
 		queryFn: async () => {
-			const response = await axios.get<Transaction[]>(`/api/transactions/get-transactions?userId=${userId}`);
-			// Sort transactions by date (newest first)
-			return response.data.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+			const response = await axios.get<TransactionsResponse>(`/api/transactions/get-transactions?userId=${userId}`);
+			return response.data;
 		},
 		enabled: !!userId,
-		staleTime: 5 * 60 * 1000, // Consider data fresh for 5 minutes
+		staleTime: 5 * 60 * 1000,
 		refetchOnWindowFocus: false,
+		// Provide a default value if the query fails or returns no data
+		select: (data) => ({
+			transactions: data?.transactions || [],
+		}),
 	});
 };

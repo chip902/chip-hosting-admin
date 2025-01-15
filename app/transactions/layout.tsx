@@ -3,7 +3,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import React from "react";
 
-export default async function TransactionsLayout({ children, error }: { children: React.ReactNode; error: React.ReactNode }) {
+export default async function TransactionsLayout({ children, error }: any) {
 	const session = await auth();
 
 	if (!session?.user) {
