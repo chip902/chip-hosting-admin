@@ -30,7 +30,7 @@ const RecentTransactions = ({ accounts, transactions: rawTransactions, page = 1 
 
 	return (
 		<section className="recent-transactions">
-			<header className="flex items-center justify-between mb-4">
+			<header className="flex-1 items-center justify-between mb-4">
 				<h2 className="text-xl font-semibold">Recent Transactions</h2>
 				<Link className="view-all-btn" href={`/transaction-history/`}>
 					View All
@@ -49,8 +49,8 @@ const RecentTransactions = ({ accounts, transactions: rawTransactions, page = 1 
 				const accountTransactions = displayedTransactions.filter((transaction: Transaction) => transaction && transaction.accountId === account.id);
 
 				return (
-					<div key={account.id} className="mb-4">
-						<h3 className="text-xl font-semibold mb-2">{account.name}</h3>
+					<div key={account.id} className="w-full items-center">
+						<h3 className="text-xl font-semibold mb-2 w-full items-center">{account.name}</h3>
 						<TransactionsTable transactions={accountTransactions} />
 					</div>
 				);

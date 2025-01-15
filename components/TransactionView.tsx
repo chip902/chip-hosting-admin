@@ -55,8 +55,8 @@ const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 	};
 
 	const renderTransactionTable = (filteredTransactions: Transaction[]) => (
-		<div className="overflow-x-auto">
-			<table className="w-full">
+		<div className="flex-1">
+			<table className="recent-transactions w-full">
 				<thead>
 					<tr className="border-b">
 						<th className="px-4 py-2 text-left">Date</th>
@@ -72,8 +72,8 @@ const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 						const account = accounts.find((a) => a.account_id === transaction.accountId);
 						return (
 							<tr key={transaction.id} className="border-b hover:bg-gray-50">
-								<td className="px-4 py-2">{new Date(transaction.date).toLocaleDateString()}</td>
-								<td className="text-pretty px-4 py-2">{transaction.name}</td>
+								<td className="px-4 py-2 whitespace-nowrap">{new Date(transaction.date).toLocaleDateString()}</td>
+								<td className="truncate block items-center px-4 py-2">{transaction.name}</td>
 								<td className="px-4 py-2">
 									<span className="px-2 py-1 rounded-full bg-gray-100 text-sm">{formatCategory(transaction.category)}</span>
 								</td>

@@ -34,9 +34,9 @@ export default function ClientHome({ userId }: ClientHomeProps) {
 		return <Skeleton className="w-full h-full" />;
 	}
 	return (
-		<>
+		<div>
 			<TotalBalanceBox accounts={accounts} totalBanks={totalBanks} totalCurrentBalance={totalCurrentBalance} />
 			<RecentTransactions accounts={accounts} transactions={transactions || { transactions: [] }} />
-		</>
+		</div>
 	);
 }

@@ -20,7 +20,7 @@ const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps
 		<Table>
 			<TableHeader>
 				<TableRow>
-					<TableHead className="text-wrap px-2">Transaction</TableHead>
+					<TableHead className="px-2">Transaction</TableHead>
 					<TableHead className="px-2">Amount</TableHead>
 					<TableHead className="px-2">Status</TableHead>
 					<TableHead className="px-2">Date</TableHead>
@@ -38,8 +38,8 @@ const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps
 						<TableRow
 							key={t.id}
 							className={`${isDebit || amount[0] === "-" ? "text-orange-600" : "text-green-600"} !over:bg-none !border-b-DEFAULT`}>
-							<TableCell>
-								<div className="flex items-center gap-3">
+							<TableCell className="max-w-xs">
+								<div className="flex gap-3">
 									<h1 className={`text-14 truncate font-semibold ${isDebit || amount[0] === "-" ? "text-orange-600" : "text-green-600"} `}>
 										{removeSpecialCharacters(t.name)}
 									</h1>
