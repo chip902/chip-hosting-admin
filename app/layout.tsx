@@ -87,7 +87,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 							</Dialog>
 						</Transition>
 
-						<div className="flex h-full">
+						<div className="flex h-full w-full">
 							<Sidebar currentPath={pathname!} className="hidden lg:fixed lg:inset-y-0 lg:flex lg:w-72" />
 							<div className="flex flex-col flex-1 lg:pl-72">
 								<header className="sticky top-0 z-40 flex items-center gap-x-4 border-b border-gray-200 bg-white px-4 py-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8">

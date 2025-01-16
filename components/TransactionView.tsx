@@ -1,9 +1,8 @@
 "use client";
-
 import React, { useState } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Account, Transaction } from "@/types";
-import { usePlaidTransactions, TransactionsResponse } from "@/app/hooks/usePlaidTransactions";
+import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { formatAmount } from "@/lib/utils";
@@ -24,17 +23,13 @@ const formatCategory = (category: string | PersonalFinanceCategory): string => {
 const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 	const [activeTab, setActiveTab] = useState("all");
 	const { data: transactionsData, isLoading } = usePlaidTransactions(userId);
-
-	// Get the transactions array from the response
 	const transactions = transactionsData?.transactions || [];
 
 	const exportTransactions = (accountId?: string) => {
 		const filteredTransactions = accountId ? transactions.filter((t: Transaction) => t.accountId === accountId) : transactions;
 
 		const csvContent = [
-			// CSV Headers
 			["Date", "Description", "Category", "Amount", "Account", "Status"].join(","),
-			// CSV Rows
 			...filteredTransactions.map((t: Transaction) =>
 				[
 					t.date,
@@ -55,36 +50,47 @@ const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 	};
 
 	const renderTransactionTable = (filteredTransactions: Transaction[]) => (
-		<div className="flex-1">
-			<table className="recent-transactions w-full">
-				<thead>
-					<tr className="border-b">
-						<th className="px-4 py-2 text-left">Date</th>
-						<th className="px-4 py-2 text-left">Description</th>
-						<th className="px-4 py-2 text-left">Category</th>
-						<th className="px-4 py-2 text-right">Amount</th>
-						<th className="px-4 py-2 text-left">Account</th>
-						<th className="px-4 py-2 text-left">Status</th>
+		<div className="w-full overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700">
+			<table className="w-full min-w-full table-auto">
+				<thead className="bg-gray-50 dark:bg-gray-800">
+					<tr>
+						<th className="whitespace-nowrap px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Date</th>
+						<th className="whitespace-nowrap px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Description</th>
+						<th className="whitespace-nowrap px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Category</th>
+						<th className="whitespace-nowrap px-6 py-3 text-right text-sm font-semibold text-gray-900 dark:text-gray-100">Amount</th>
+						<th className="whitespace-nowrap px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Account</th>
+						<th className="whitespace-nowrap px-6 py-3 text-left text-sm font-semibold text-gray-900 dark:text-gray-100">Status</th>
 					</tr>
 				</thead>
-				<tbody>
+				<tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
 					{filteredTransactions.map((transaction) => {
 						const account = accounts.find((a) => a.account_id === transaction.accountId);
 						return (
-							<tr key={transaction.id} className="border-b hover:bg-gray-50">
-								<td className="px-4 py-2 whitespace-nowrap">{new Date(transaction.date).toLocaleDateString()}</td>
-								<td className="truncate block items-center px-4 py-2">{transaction.name}</td>
-								<td className="px-4 py-2">
-									<span className="px-2 py-1 rounded-full bg-gray-100 text-sm">{formatCategory(transaction.category)}</span>
+							<tr key={transaction.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+								<td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-gray-100">
+									{new Date(transaction.date).toLocaleDateString()}
 								</td>
-								<td className={`px-4 py-2 text-right ${transaction.amount < 0 ? "text-red-600" : "text-green-600"}`}>
+								<td className="max-w-md px-6 py-4">
+									<div className="text-sm text-gray-900 dark:text-gray-100 truncate">{transaction.name}</div>
+								</td>
+								<td className="whitespace-nowrap px-6 py-4">
+									<span className="inline-flex rounded-full bg-gray-100 px-2 py-1 text-xs font-semibold text-gray-800 dark:bg-gray-700 dark:text-gray-200">
+										{formatCategory(transaction.category)}
+									</span>
+								</td>
+								<td
+									className={`whitespace-nowrap px-6 py-4 text-right text-sm font-medium ${
+										transaction.amount < 0 ? "text-red-600 dark:text-red-400" : "text-green-600 dark:text-green-400"
+									}`}>
 									{formatAmount(Math.abs(transaction.amount))}
 								</td>
-								<td className="px-4 py-2">{account?.name || "Unknown Account"}</td>
-								<td className="px-4 py-2">
+								<td className="whitespace-nowrap px-6 py-4 text-sm text-gray-900 dark:text-gray-100">{account?.name || "Unknown Account"}</td>
+								<td className="whitespace-nowrap px-6 py-4">
 									<span
-										className={`px-2 py-1 rounded-full text-sm ${
-											transaction.pending ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800"
+										className={`inline-flex rounded-full px-2 py-1 text-xs font-semibold ${
+											transaction.pending
+												? "bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200"
+												: "bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200"
 										}`}>
 										{transaction.pending ? "Pending" : "Completed"}
 									</span>
@@ -98,13 +104,13 @@ const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 	);
 
 	if (isLoading) {
-		return <div>Loading transactions...</div>;
+		return <div className="p-4 text-gray-600 dark:text-gray-400">Loading transactions...</div>;
 	}
 
 	return (
-		<Tabs defaultValue="all" className="w-full" onValueChange={setActiveTab}>
-			<div className="flex justify-between items-center mb-4">
-				<TabsList>
+		<Tabs defaultValue="all" className="w-full space-y-6" onValueChange={setActiveTab}>
+			<div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+				<TabsList className="w-full sm:w-auto overflow-x-auto">
 					<TabsTrigger value="all">All Accounts</TabsTrigger>
 					{accounts.map((account) => (
 						<TabsTrigger key={account.id} value={account.id}>
@@ -112,7 +118,7 @@ const TransactionView = ({ accounts, userId }: TransactionViewProps) => {
 						</TabsTrigger>
 					))}
 				</TabsList>
-				<Button variant="outline" onClick={() => exportTransactions(activeTab !== "all" ? activeTab : undefined)}>
+				<Button variant="outline" onClick={() => exportTransactions(activeTab !== "all" ? activeTab : undefined)} className="w-full sm:w-auto">
 					<Download className="mr-2 h-4 w-4" />
 					Export CSV
 				</Button>

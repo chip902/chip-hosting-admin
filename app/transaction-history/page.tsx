@@ -23,7 +23,7 @@ const TransactionHistory = async () => {
 	}
 
 	return (
-		<div className="transactions space-y-6">
+		<div className="transactions space-y-6 overflow-x-auto w-full">
 			<div className="transactions-header flex justify-between items-center">
 				<HeaderBox title="Transaction History" subtext={`${accounts.length} Account${accounts.length !== 1 ? "s" : ""}`} />
 			</div>
