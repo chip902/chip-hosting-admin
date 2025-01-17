@@ -1,8 +1,7 @@
 // app/transactions/page.tsx
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import TransactionReporting from "@/components/TransactionReporting";
-import TransactionImporter from "@/components/TransactionImporter";
+import TransactionsClientWrapper from "@/components/TransactionsClientWrapper";
 
 export default async function TransactionsPage() {
 	const session = await auth();
@@ -20,14 +19,7 @@ export default async function TransactionsPage() {
 				</div>
 			</div>
 
-			<div className="transactions-content">
-				<TransactionReporting userId={session.user.id} />
-			</div>
-
-			<div className="mt-8">
-				<h2 className="text-lg font-semibold mb-4">Manual Import</h2>
-				<TransactionImporter userId={session.user.id} bankId="34" />
-			</div>
+			<TransactionsClientWrapper userId={session.user.id} />
 		</main>
 	);
 }
