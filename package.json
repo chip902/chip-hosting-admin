@@ -58,10 +58,7 @@
 		"react-hook-form": "^7.53.0",
 		"react-plaid-link": "^3.6.0",
 		"recharts": "^2.12.7",
-<<<<<<< HEAD
-=======
 		"shadcn-ui": "^0.9.4",
->>>>>>> origin/main
 		"tailwind-merge": "^2.5.4",
 		"tailwindcss-animate": "^1.0.7",
 		"uuid": "^9.0.1",
