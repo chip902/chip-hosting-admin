@@ -14,6 +14,7 @@ export async function POST(request: NextRequest) {
 
 		// Get all connected banks for the user
 		const banks = await prisma.bank.findMany({ where: { userId } });
+		console.log(`Number of banks found for user ${userId}:`, banks.length);
 
 		const syncResults = [];
 		const twoYearsAgo = subYears(startOfDay(new Date()), 2);
@@ -97,7 +98,7 @@ export async function POST(request: NextRequest) {
 			results: syncResults,
 		});
 	} catch (error) {
-		console.error("Error in transaction sync:", error);
+		console.error("Error syncing transactions:", error);
 		return NextResponse.json(
 			{
 				error: error instanceof Error ? error.message : "Error syncing transactions",
