@@ -150,10 +150,10 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 
 	return (
 		<Flex gap="3">
-			<Form.Root className="flex flex-col gap-4" onSubmit={handleSubmit(onSubmit)}>
-				<Grid columns={{ initial: "1", md: "2" }} gap="4">
-					<Form.Field name="customerId">
-						<Form.Label>Customer</Form.Label>
+			<Form.Root className="flex-col" onSubmit={handleSubmit(onSubmit)}>
+				<Grid className="flex w-fit" columns="2" gap="4">
+					<Form.Field className="flex flex-col" name="customerId">
+						<Form.Label className="mb-1">Customer</Form.Label>
 						<Form.Control asChild>
 							<Select.Root onValueChange={(value) => setValue("customerId", parseInt(value, 10), { shouldValidate: true })}>
 								<Select.Trigger className="w-full" placeholder="Select a Customer" />
@@ -168,8 +168,8 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 						</Form.Control>
 						{errors.customerId && <ErrorMessage>{errors.customerId.message}</ErrorMessage>}
 					</Form.Field>
-					<Form.Field name="projectId">
-						<Form.Label>Project</Form.Label>
+					<Form.Field className="flex flex-col" name="projectId">
+						<Form.Label className="mb-1">Project</Form.Label>
 						<Form.Control asChild>
 							<Select.Root onValueChange={(value) => setValue("projectId", parseInt(value, 10), { shouldValidate: true })}>
 								<Select.Trigger className="w-full" placeholder="Select a Project" />
@@ -184,8 +184,8 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 						</Form.Control>
 						{errors.projectId && <ErrorMessage>{errors.projectId.message}</ErrorMessage>}
 					</Form.Field>
-					<Form.Field name="taskId">
-						<Form.Label>Task</Form.Label>
+					<Form.Field className="flex flex-col" name="taskId">
+						<Form.Label className="mb-1">Task</Form.Label>
 						<Form.Control asChild>
 							<Select.Root onValueChange={(value) => setValue("taskId", parseInt(value, 10), { shouldValidate: true })}>
 								<Select.Trigger className="w-full" placeholder="Select a Task" />
@@ -200,8 +200,8 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 						</Form.Control>
 						{errors.taskId && <ErrorMessage>{errors.taskId.message}</ErrorMessage>}
 					</Form.Field>
-					<Form.Field name="userId">
-						<Form.Label>Employee</Form.Label>
+					<Form.Field className="flex flex-col" name="userId">
+						<Form.Label className="mb-1">Employee</Form.Label>
 						<Form.Control asChild>
 							<Select.Root onValueChange={(value) => setValue("userId", parseInt(value, 10), { shouldValidate: true })}>
 								<Select.Trigger className="w-full" placeholder="Select an Employee" />

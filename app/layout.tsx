@@ -1,8 +1,8 @@
+import "@radix-ui/themes/styles.css";
 import "./globals.css";
 import { Providers } from "./providers";
 import MainLayout from "./MainLayout";
 import { Metadata } from "next";
-import "@radix-ui/themes/styles.css";
 
 export const metadata: Metadata = {
 	title: "Chip Hosting Admin",

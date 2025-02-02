@@ -5,7 +5,7 @@ import { Flex, Skeleton, AlertDialog, Dialog, Button } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import TimeToolBar from "./TimeToolBar";
 import TimeGrid from "./TimeGrid";
-import LogTimeForm from "./LogTime";
+import LogTime from "./LogTime";
 import React from "react";
 
 interface Filters {
@@ -66,9 +66,9 @@ const Page: React.FC = () => {
 							</Dialog.Trigger>
 						</TimeToolBar>
 						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} />
-						<Dialog.Content>
+						<Dialog.Content className="min-w-[600px]">
 							<Dialog.Title>Log Time</Dialog.Title>
-							<LogTimeForm onClose={() => setLogTimeOpen(false)} initialValues={selectedTimeSlot || undefined} />
+							<LogTime onClose={() => setLogTimeOpen(false)} initialValues={selectedTimeSlot || undefined} />
 						</Dialog.Content>
 					</>
 				)}

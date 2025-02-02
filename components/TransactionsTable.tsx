@@ -32,22 +32,19 @@ const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps
 				{transactions.map((t: Transaction) => {
 					const status = getTransactionStatus(new Date(t.date));
 					const amount = formatAmount(t.amount);
-					const isDebit = t.type === "debit";
-					const isCredit = t.type === "credit";
+
 					return (
-						<TableRow
-							key={t.id}
-							className={`${isDebit || amount[0] === "-" ? "text-orange-600" : "text-green-600"} !over:bg-none !border-b-DEFAULT`}>
+						<TableRow key={t.id} className={`${t.amount < 0 ? "text-orange-600" : "text-green-600"} !over:bg-none !border-b-DEFAULT`}>
 							<TableCell className="max-w-xs">
 								<div className="flex gap-3">
-									<h1 className={`text-14 truncate font-semibold ${isDebit || amount[0] === "-" ? "text-orange-600" : "text-green-600"} `}>
+									<h1 className={`text-14 truncate font-semibold ${t.amount < 0 ? "text-orange-600" : "text-green-600"} `}>
 										{removeSpecialCharacters(t.name)}
 									</h1>
 								</div>
 							</TableCell>
-							<TableCell className={`text-14 truncate font-semibold ${isDebit || amount[0] === "-" ? "text-orange-600" : "text-green-600"} `}>
+							<TableCell className={`text-14 truncate font-semibold ${t.amount < 0 ? "text-orange-600" : "text-green-600"} `}>
 								<div>
-									<h1>{isDebit ? `-${amount}` : isCredit ? `+${amount}` : amount}</h1>
+									<h1>{t.amount < 0 ? `${amount}` : `+${amount}`}</h1>
 								</div>
 							</TableCell>
 							<TableCell className="pl-2 pr-10">
