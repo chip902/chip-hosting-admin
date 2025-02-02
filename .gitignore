@@ -27,8 +27,7 @@ yarn-debug.log*
 yarn-error.log*
 
 # local env files
-.env*.local
-.env
+.env*
 
 # AI
 .prompts
@@ -49,3 +48,8 @@ next-env.d.ts
 latest_backup_data_only.sql
 latest_backup.sql
 backup.dump
+*.txt
+*.csv
+
+# Python
+.venv/
