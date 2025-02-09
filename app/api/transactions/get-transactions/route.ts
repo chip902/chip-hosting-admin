@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
 						accountId: transaction.account_id,
 						amount: transaction.amount,
 						pending: transaction.pending,
-						category: transaction.personal_finance_category?.primary ?? transaction.category?.[0] ?? "uncategorized",
+						category: transaction.personal_finance_category?.primary ?? "uncategorized",
 						date: transaction.date,
 						image: transaction.logo_url ?? "",
 						senderBankId: bank.id.toString(),

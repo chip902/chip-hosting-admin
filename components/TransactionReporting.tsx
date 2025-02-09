@@ -35,16 +35,18 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 	const { data: banksData } = useQuery({
 		queryKey: ["plaidBanks", userId],
 		queryFn: async () => {
-			const response = await axios.get(`/api/bank/get-accounts?userId=${userId}`);
-			return response.data;
+			const response = await axios.get(`/api/bank/get-accounts?userId=${userId}`, {
+				data: userId,
+			});
+			return response;
 		},
 	});
 
 	// Sync mutation
 	const syncMutation = useMutation({
 		mutationFn: async () => {
-			const response = await axios.post("/api/transactions/sync", { userId });
-			return response.data;
+			const response = await axios.post("/api/transactions/sync", { data: userId });
+			return response;
 		},
 	});
 
@@ -103,7 +105,7 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 		return <div className="flex items-center justify-center p-4">Loading transactions...</div>;
 	}
 
-	const banks = banksData?.accounts || [];
+	const banks = banksData?.data.accounts || [];
 	const transactions = Array.isArray(transactionsData) ? transactionsData : [];
 
 	return (
@@ -150,7 +152,7 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 
 			{syncMutation.isSuccess && (
 				<Alert>
-					<AlertDescription>Successfully synced transactions from {syncMutation.data.results.length} banks</AlertDescription>
+					<AlertDescription>Successfully synced transactions from {syncMutation.data?.data?.results.length} banks</AlertDescription>
 				</Alert>
 			)}
 

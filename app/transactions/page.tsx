@@ -19,7 +19,7 @@ export default async function TransactionsPage() {
 				</div>
 			</div>
 
-			<TransactionsClientWrapper userId={session.user.id} />
+			<TransactionsClientWrapper userId={session.user.userId} />
 		</main>
 	);
 }

@@ -11,7 +11,10 @@ export const usePlaidTransactions = (userId?: string) => {
 	return useQuery<TransactionsResponse, Error>({
 		queryKey: ["transactions", userId],
 		queryFn: async () => {
-			const response = await axios.get<TransactionsResponse>(`/api/transactions/get-transactions?userId=${userId}`);
+			const response = await axios.get<TransactionsResponse>(`/api/transactions/get-transactions?userId=${userId}`, {
+				data: userId,
+				params: userId,
+			});
 			return response.data;
 		},
 		enabled: !!userId,

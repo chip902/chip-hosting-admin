@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, ChangeEvent } from "react";
+import React, { useState, ChangeEvent, useCallback } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -67,6 +67,17 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 	const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
 	const [isDragging, setIsDragging] = useState(false);
 
+	const { data: banksData } = useQuery({
+		queryKey: ["banks"],
+		queryFn: async () => {
+			const response = await axios.get("/api/bank/get-banks", {
+				data: userId,
+				params: userId,
+			});
+			return response;
+		},
+	});
+
 	const extractMetadata = useCallback((description: string, type: string): TransactionMetadata => {
 		const metadata: TransactionMetadata = {};
 
@@ -121,7 +132,7 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 				const year = dateParts[2].length === 2 ? "20" + dateParts[2] : dateParts[2];
 				const date = new Date(`${year}-${dateParts[0]}-${dateParts[1]}`);
 
-				const bankId = banksData?.accounts?.[0]?.id || "default";
+				const bankId = banksData?.data?.bankId || "default";
 				const metadata = extractMetadata(row.Description, row.Type);
 
 				return {
@@ -135,14 +146,14 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 					category: row.Type,
 					userId,
 					bankId,
-					metadata: extractMetadata(row.Description, row.Type),
+					metadata,
 				};
 			} catch (error) {
 				console.error("Error processing CSV row:", error);
 				return null;
 			}
 		},
-		[bankId, userId, extractMetadata]
+		[userId, extractMetadata, banksData?.data.bankId]
 	);
 
 	const handleFileUpload = useCallback(
@@ -252,6 +263,14 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 			});
 		}
 	};
+
+	const syncMutation = useMutation({
+		mutationFn: async () => {
+			// Add your Plaid sync API call here
+			const response = await axios.post("/api/transactions/sync");
+			return response;
+		},
+	});
 
 	return (
 		<div className="flex flex-col gap-6">

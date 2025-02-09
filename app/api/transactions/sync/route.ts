@@ -1,4 +1,3 @@
-// app/api/transactions/sync/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { plaidClient } from "@/lib/plaid";
@@ -16,39 +15,21 @@ export async function POST(request: NextRequest) {
 		const banks = await prisma.bank.findMany({ where: { userId } });
 		console.log(`Number of banks found for user ${userId}:`, banks.length);
 
+		if (!banks.length) {
+			return NextResponse.json({ message: "No banks found for this user" });
+		}
+
 		const syncResults = [];
 		const twoYearsAgo = subYears(startOfDay(new Date()), 2);
-		const startDate = twoYearsAgo.toISOString().split("T")[0];
-		const endDate = new Date().toISOString().split("T")[0];
 
 		for (const bank of banks) {
 			try {
-				// Get transactions in batches using offset pagination instead of cursor
-				let hasMore = true;
-				let offset = 0;
-				const bankTransactions = [];
+				// First try to use sync endpoint as it's more efficient
+				const syncResponse = await plaidClient.transactionsSync({
+					access_token: bank.accessToken,
+				});
 
-				while (hasMore) {
-					const transactionsResponse = await plaidClient.transactionsGet({
-						access_token: bank.accessToken,
-						start_date: startDate,
-						end_date: endDate,
-						options: {
-							count: 500, // Max batch size
-							offset: offset,
-							include_personal_finance_category: true,
-						},
-					});
-
-					const { transactions, total_transactions } = transactionsResponse.data;
-					bankTransactions.push(...transactions);
-
-					offset += transactions.length;
-					hasMore = offset < total_transactions;
-				}
-
-				// Process and store transactions
-				const processedTransactions = bankTransactions.map((t) => ({
+				const processedTransactions = syncResponse.data.added.map((t) => ({
 					id: t.transaction_id,
 					accountId: t.account_id,
 					amount: t.amount,
@@ -61,6 +42,50 @@ export async function POST(request: NextRequest) {
 					userId: userId,
 				}));
 
+				// Fall back to batch fetching if sync returns no data (for older transactions)
+				if (processedTransactions.length === 0) {
+					let hasMore = true;
+					let offset = 0;
+					const bankTransactions = [];
+					const startDate = twoYearsAgo.toISOString().split("T")[0];
+					const endDate = new Date().toISOString().split("T")[0];
+
+					while (hasMore) {
+						const transactionsResponse = await plaidClient.transactionsGet({
+							access_token: bank.accessToken,
+							start_date: startDate,
+							end_date: endDate,
+							options: {
+								count: 500,
+								offset: offset,
+								include_personal_finance_category: true,
+							},
+						});
+
+						const { transactions, total_transactions } = transactionsResponse.data;
+						bankTransactions.push(...transactions);
+
+						offset += transactions.length;
+						hasMore = offset < total_transactions;
+					}
+
+					// Process batch transactions
+					processedTransactions.push(
+						...bankTransactions.map((t) => ({
+							id: t.transaction_id,
+							accountId: t.account_id,
+							amount: t.amount,
+							date: new Date(t.date),
+							name: t.name,
+							paymentChannel: t.payment_channel,
+							pending: t.pending,
+							category: t.personal_finance_category?.primary || "Uncategorized",
+							bankId: bank.id,
+							userId: userId,
+						}))
+					);
+				}
+
 				// Batch upsert transactions
 				const batchSize = 100;
 				for (let i = 0; i < processedTransactions.length; i += batchSize) {
@@ -68,9 +93,7 @@ export async function POST(request: NextRequest) {
 					await prisma.$transaction(
 						batch.map((transaction) =>
 							prisma.transaction.upsert({
-								where: {
-									id: transaction.id,
-								},
+								where: { id: transaction.id },
 								create: transaction,
 								update: transaction,
 							})

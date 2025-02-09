@@ -34,7 +34,7 @@ export default function Error({ error, reset, userId }: ErrorProps) {
 			<div className="mt-8">
 				<h2 className="text-lg font-semibold mb-4">Manual Import Option</h2>
 				<p className="text-sm text-gray-600 mb-4">While we fix the issue, you can manually import your transactions:</p>
-				<TransactionImporter userId={userId} />
+				<TransactionImporter userId={userId} bankId={""} />
 			</div>
 		</div>
 	);
