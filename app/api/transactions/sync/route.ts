@@ -5,7 +5,46 @@ import { startOfDay, subYears } from "date-fns";
 
 export async function POST(request: NextRequest) {
 	try {
-		const { userId } = await request.json();
+		// Debug incoming request
+		console.log("Sync request received");
+
+		let userIdBody;
+		try {
+			const rawBody = await request.text(); // First get raw body
+			console.log("Raw request body:", rawBody); // Log it for debugging
+
+			if (!rawBody) {
+				return NextResponse.json(
+					{
+						error: "Invalid request body - body is empty",
+					},
+					{ status: 400 }
+				);
+			}
+
+			userIdBody = JSON.parse(rawBody);
+			console.log("Parsed body:", userIdBody);
+		} catch (e) {
+			console.error("Error parsing request body:", e);
+			return NextResponse.json(
+				{
+					error: "Invalid request body",
+					details: e instanceof Error ? e.message : "Unknown parsing error",
+				},
+				{ status: 400 }
+			);
+		}
+
+		const userId = userIdBody?.userId;
+		if (!userId) {
+			return NextResponse.json(
+				{
+					error: "User ID is required",
+					receivedBody: userIdBody,
+				},
+				{ status: 400 }
+			);
+		}
 
 		if (!userId) {
 			return NextResponse.json({ error: "User ID is required" }, { status: 400 });
@@ -27,7 +66,23 @@ export async function POST(request: NextRequest) {
 				// First try to use sync endpoint as it's more efficient
 				const syncResponse = await plaidClient.transactionsSync({
 					access_token: bank.accessToken,
+					cursor: bank.transactionsCursor || undefined,
 				});
+
+				if (!syncResponse?.data?.added) {
+					console.error("Plaid API returned an unexpected format:", syncResponse);
+					return NextResponse.json({ error: "Invalid response format from Plaid" }, { status: 500 });
+				}
+
+				// Store the cursor for next sync
+				if (syncResponse.data.next_cursor) {
+					await prisma.bank.update({
+						where: { id: bank.id },
+						data: {
+							transactionsCursor: syncResponse.data.next_cursor,
+						},
+					});
+				}
 
 				const processedTransactions = syncResponse.data.added.map((t) => ({
 					id: t.transaction_id,
@@ -51,18 +106,22 @@ export async function POST(request: NextRequest) {
 					const endDate = new Date().toISOString().split("T")[0];
 
 					while (hasMore) {
+						console.log(`Fetching transactions for bank ${bank.id}, offset: ${offset}`); // Add logging
+
 						const transactionsResponse = await plaidClient.transactionsGet({
 							access_token: bank.accessToken,
 							start_date: startDate,
 							end_date: endDate,
 							options: {
-								count: 500,
+								count: 500, // Maximum allowed by Plaid
 								offset: offset,
 								include_personal_finance_category: true,
 							},
 						});
 
 						const { transactions, total_transactions } = transactionsResponse.data;
+						console.log(`Received ${transactions.length} transactions, total: ${total_transactions}`); // Add logging
+
 						bankTransactions.push(...transactions);
 
 						offset += transactions.length;
@@ -87,18 +146,24 @@ export async function POST(request: NextRequest) {
 				}
 
 				// Batch upsert transactions
-				const batchSize = 100;
-				for (let i = 0; i < processedTransactions.length; i += batchSize) {
-					const batch = processedTransactions.slice(i, i + batchSize);
-					await prisma.$transaction(
-						batch.map((transaction) =>
-							prisma.transaction.upsert({
-								where: { id: transaction.id },
-								create: transaction,
-								update: transaction,
-							})
-						)
-					);
+				try {
+					// Batch upsert transactions
+					const batchSize = 100;
+					for (let i = 0; i < processedTransactions.length; i += batchSize) {
+						const batch = processedTransactions.slice(i, i + batchSize);
+						await prisma.$transaction(
+							batch.map((transaction) =>
+								prisma.transaction.upsert({
+									where: { id: transaction.id },
+									create: transaction,
+									update: transaction,
+								})
+							)
+						);
+					}
+				} catch (error) {
+					console.error(`Error processing transactions for bank ${bank.id}:`, error);
+					return NextResponse.json({ error: "Failed to process transactions" }, { status: 500 });
 				}
 
 				syncResults.push({

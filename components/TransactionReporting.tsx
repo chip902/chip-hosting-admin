@@ -2,23 +2,18 @@
 import React, { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import axios from "axios";
+import { useSyncTransactions } from "@/app/hooks/useSyncTransactions";
+import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
+
 import { Button } from "@/components/ui/button";
 import * as Select from "@radix-ui/react-select";
 import { DateRangePicker } from "@/components/ui/date-range-picker";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import TransactionsTable from "./TransactionsTable";
 import { DateRange } from "react-day-picker";
-import TransactionImporter from "./TransactionImporter";
 import _ from "lodash";
-
-interface Transaction {
-	id: string;
-	amount: number;
-	date: string;
-	name: string;
-	category: string;
-	paymentChannel: string;
-}
+import { Transaction } from "@/types";
+import { formatAmount } from "@/lib/utils";
 
 interface TransactionReportingProps {
 	userId: string;
@@ -42,57 +37,48 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 		},
 	});
 
-	// Sync mutation
-	const syncMutation = useMutation({
-		mutationFn: async () => {
-			const response = await axios.post("/api/transactions/sync", { data: userId });
-			return response;
-		},
-	});
+	const { mutate: syncTransactions, isPending: isSyncing, isSuccess: isSyncSuccess, data: syncData } = useSyncTransactions(userId);
 
-	// Fetch transactions with proper error handling and type safety
-	const { data: transactionsData, isLoading } = useQuery({
-		queryKey: ["transactions", userId, selectedBank, dateRange],
-		queryFn: async () => {
-			const response = await axios.get("/api/transactions/get-transactions", {
-				params: {
-					userId,
-					bankId: selectedBank !== "all" ? selectedBank : undefined,
-					startDate: dateRange.from?.toISOString(),
-					endDate: dateRange.to?.toISOString(),
-				},
-			});
-			// Ensure we always return an array
-			return Array.isArray(response.data) ? response.data : [];
-		},
-	});
+	const { data: transactionsData, isLoading } = usePlaidTransactions(userId);
 
 	// Process transaction data for reports with null checks
 	const processedData = React.useMemo(() => {
-		if (!transactionsData || !Array.isArray(transactionsData))
+		if (!transactionsData?.transactions || !Array.isArray(transactionsData.transactions)) {
 			return {
 				totalTransactions: 0,
 				totalIncome: 0,
 				totalExpenses: 0,
 			};
+		}
 
 		const totalIncome = Math.abs(
 			_.sumBy(
-				transactionsData.filter((t: Transaction) => t && t.amount < 0),
+				transactionsData.transactions.filter((t: Transaction) => {
+					// Type guard to ensure t is a Transaction
+					return t && typeof t.amount === "number" && t.amount < 0;
+				}),
 				"amount"
 			)
 		);
+
 		const totalExpenses = _.sumBy(
-			transactionsData.filter((t: Transaction) => t && t.amount > 0),
+			transactionsData.transactions.filter((t) => {
+				return t && typeof t.amount === "number" && t.amount > 0;
+			}),
 			"amount"
 		);
 
 		return {
-			totalTransactions: transactionsData.length,
+			totalTransactions: transactionsData.transactions.length,
 			totalIncome,
 			totalExpenses,
 		};
-	}, [transactionsData]);
+	}, [transactionsData?.transactions]);
+
+	// Early return for loading state
+	if (isLoading) {
+		return <div className="flex items-center justify-center p-4">Loading transactions...</div>;
+	}
 
 	const handleDateRangeChange = (range: DateRange | undefined) => {
 		if (range) {
@@ -100,13 +86,8 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 		}
 	};
 
-	// Early return for loading state
-	if (isLoading) {
-		return <div className="flex items-center justify-center p-4">Loading transactions...</div>;
-	}
-
 	const banks = banksData?.data.accounts || [];
-	const transactions = Array.isArray(transactionsData) ? transactionsData : [];
+	const transactions = transactionsData?.transactions || [];
 
 	return (
 		<div className="flex flex-col gap-8">
@@ -145,14 +126,14 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 
 				<DateRangePicker from={dateRange.from} to={dateRange.to} onSelect={handleDateRangeChange} />
 
-				<Button onClick={() => syncMutation.mutate()} disabled={syncMutation.isPending} className="plaidlink-primary">
-					{syncMutation.isPending ? "Syncing..." : "Sync Transactions"}
+				<Button onClick={() => syncTransactions()} disabled={isSyncing} className="plaidlink-primary">
+					{isSyncing ? "Syncing..." : "Sync Transactions"}
 				</Button>
 			</div>
 
-			{syncMutation.isSuccess && (
+			{isSyncSuccess && (
 				<Alert>
-					<AlertDescription>Successfully synced transactions from {syncMutation.data?.data?.results.length} banks</AlertDescription>
+					<AlertDescription>Successfully synced transactions from {syncData?.results?.length} banks</AlertDescription>
 				</Alert>
 			)}
 
@@ -171,7 +152,7 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 					<div className="bank-info_content">
 						<div>
 							<p className="text-14 font-medium text-gray-600 dark:text-gray-400">Total Income</p>
-							<p className="text-24 font-semibold text-green-600 dark:text-green-400">${processedData.totalIncome.toFixed(2)}</p>
+							<p className="text-24 font-semibold text-green-600 dark:text-green-400">{formatAmount(processedData.totalIncome)}</p>
 						</div>
 					</div>
 				</div>
@@ -180,7 +161,7 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 					<div className="bank-info_content">
 						<div>
 							<p className="text-14 font-medium text-gray-600 dark:text-gray-400">Total Expenses</p>
-							<p className="text-24 font-semibold text-red-600 dark:text-red-400">${processedData.totalExpenses.toFixed(2)}</p>
+							<p className="text-24 font-semibold text-red-600 dark:text-red-400">{formatAmount(processedData.totalExpenses)}</p>
 						</div>
 					</div>
 				</div>

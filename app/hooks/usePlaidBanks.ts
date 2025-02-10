@@ -10,7 +10,7 @@ export const usePlaidBanks = (userId: string | null | undefined) => {
 				throw new Error("User ID is required");
 			}
 			const response = await axios.get<GetAccountsResult>(`/api/bank/get-accounts?userId=${userId}`, {
-				data: userId,
+				data: { userId },
 			});
 			return response.data;
 		},

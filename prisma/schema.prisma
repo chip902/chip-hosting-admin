@@ -163,14 +163,15 @@ model VerificationToken {
 }
 
 model Bank {
-  id              Int           @id @unique @default(autoincrement())
-  userId          String
-  bankId          String
-  institutionName String
-  accountId       String
-  accessToken     String
-  User            User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
-  Transaction     Transaction[]
+  id                 Int           @id @unique @default(autoincrement())
+  userId             String
+  bankId             String
+  institutionName    String
+  accountId          String
+  accessToken        String
+  User               User          @relation(fields: [userId], references: [userId], onDelete: Cascade)
+  Transaction        Transaction[]
+  transactionsCursor String?
 }
 
 model Transaction {

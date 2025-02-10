@@ -12,8 +12,7 @@ export const usePlaidTransactions = (userId?: string) => {
 		queryKey: ["transactions", userId],
 		queryFn: async () => {
 			const response = await axios.get<TransactionsResponse>(`/api/transactions/get-transactions?userId=${userId}`, {
-				data: userId,
-				params: userId,
+				data: { userId },
 			});
 			return response.data;
 		},
