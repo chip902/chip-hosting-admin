@@ -136,10 +136,7 @@ const TransactionReporting = ({
 
 			<div className="rounded-lg overflow-x-auto border border-gray-200 bg-white p-6 dark:bg-gray-800 dark:border-gray-700">
 				<h2 className="text-18 font-semibold text-gray-900 dark:text-gray-100 mb-4">Tax Reporting</h2>
-				<TaxReportGenerator
-					transactions={selectedTab === "all" ? transactions : transactions.filter((tx) => tx.accountId === selectedTab)}
-					year={new Date().getFullYear() - 1}
-				/>
+				<TaxReportGenerator transactions={transactions} year={new Date().getFullYear() - 1} />
 			</div>
 		</div>
 	);
