@@ -54,7 +54,7 @@ export const projectSchema = z.object({
 		.optional(),
 	description: z.string().optional(),
 	name: z.string().min(1, "Project name is required"),
-	archived: z.boolean(),
+	archived: z.boolean().optional(),
 });
 
 export const bookingSchema = z.object({

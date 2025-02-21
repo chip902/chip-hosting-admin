@@ -3,16 +3,28 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CategoryBadgeProps, Transaction, TransactionTableProps } from "@/types";
 import { cn, formatAmount, formatDateTime, getTransactionStatus, removeSpecialCharacters } from "@/lib/utils";
 import { transactionCategoryStyles } from "@/constants";
+import { PersonalFinanceCategory } from "plaid";
 
 const CategoryBadge = ({ category }: CategoryBadgeProps) => {
 	const { borderColor, backgroundColor, textColor, chipBackgroundColor } =
-		transactionCategoryStyles[category as keyof typeof transactionCategoryStyles] || transactionCategoryStyles.default;
+		transactionCategoryStyles[category as unknown as keyof typeof transactionCategoryStyles] || transactionCategoryStyles.default;
 	return (
 		<div className={cn("category-badge", borderColor, chipBackgroundColor)}>
 			<div className={cn("size-2 rounded-full", backgroundColor)} />
-			<p className={cn("text-[12px] font-medium", textColor)}>{category}</p>
+			<p className={cn("text-[12px] font-medium", textColor)}>{formatCategory(category)}</p>
 		</div>
 	);
+};
+
+const isPersonalFinanceCategory = (category: string | PersonalFinanceCategory | undefined): category is PersonalFinanceCategory => {
+	return typeof category === "object" && category !== null && "primary" in category;
+};
+
+const formatCategory = (category: string | PersonalFinanceCategory | undefined): string => {
+	if (!category) return "Uncategorized";
+	if (typeof category === "string") return category;
+	if (isPersonalFinanceCategory(category)) return category.primary;
+	return "Uncategorized";
 };
 
 const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps) => {
@@ -62,7 +74,7 @@ const TransactionsTable = ({ transactions, filterByBank }: TransactionTableProps
 							</TableCell>
 							<TableCell className="pl-2 pr-10 max-md:hidden">
 								<div>
-									<CategoryBadge category={typeof t.category === "string" ? t.category : t.category.primary} />
+									<CategoryBadge category={formatCategory(t.category)} />
 								</div>
 							</TableCell>
 						</TableRow>

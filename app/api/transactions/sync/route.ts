@@ -5,14 +5,9 @@ import { startOfDay, subYears } from "date-fns";
 
 export async function POST(request: NextRequest) {
 	try {
-		// Debug incoming request
-		console.log("Sync request received");
-
 		let userIdBody;
 		try {
 			const rawBody = await request.text(); // First get raw body
-			console.log("Raw request body:", rawBody); // Log it for debugging
-
 			if (!rawBody) {
 				return NextResponse.json(
 					{
@@ -21,7 +16,6 @@ export async function POST(request: NextRequest) {
 					{ status: 400 }
 				);
 			}
-
 			userIdBody = JSON.parse(rawBody);
 			console.log("Parsed body:", userIdBody);
 		} catch (e) {
@@ -63,6 +57,9 @@ export async function POST(request: NextRequest) {
 
 		for (const bank of banks) {
 			try {
+				let allTransactions = [];
+				let hasMore = true;
+				let offset = 0;
 				// First try to use sync endpoint as it's more efficient
 				const syncResponse = await plaidClient.transactionsSync({
 					access_token: bank.accessToken,
@@ -106,12 +103,10 @@ export async function POST(request: NextRequest) {
 					const endDate = new Date().toISOString().split("T")[0];
 
 					while (hasMore) {
-						console.log(`Fetching transactions for bank ${bank.id}, offset: ${offset}`); // Add logging
-
 						const transactionsResponse = await plaidClient.transactionsGet({
 							access_token: bank.accessToken,
-							start_date: startDate,
-							end_date: endDate,
+							start_date: twoYearsAgo.toISOString().split("T")[0],
+							end_date: new Date().toISOString().split("T")[0],
 							options: {
 								count: 500, // Maximum allowed by Plaid
 								offset: offset,
@@ -120,57 +115,54 @@ export async function POST(request: NextRequest) {
 						});
 
 						const { transactions, total_transactions } = transactionsResponse.data;
-						console.log(`Received ${transactions.length} transactions, total: ${total_transactions}`); // Add logging
+						console.log(`Fetched ${transactions.length} transactions, total available: ${total_transactions}, current offset: ${offset}`);
 
-						bankTransactions.push(...transactions);
-
+						allTransactions.push(...transactions);
 						offset += transactions.length;
 						hasMore = offset < total_transactions;
 					}
 
 					// Process batch transactions
-					processedTransactions.push(
-						...bankTransactions.map((t) => ({
-							id: t.transaction_id,
-							accountId: t.account_id,
-							amount: t.amount,
-							date: new Date(t.date),
-							name: t.name,
-							paymentChannel: t.payment_channel,
-							pending: t.pending,
-							category: t.personal_finance_category?.primary || "Uncategorized",
-							bankId: bank.id,
-							userId: userId,
-						}))
-					);
-				}
+					const processedTransactions = allTransactions.map((t) => ({
+						id: t.transaction_id,
+						accountId: t.account_id,
+						amount: t.amount,
+						date: new Date(t.date),
+						name: t.name,
+						paymentChannel: t.payment_channel,
+						pending: t.pending,
+						category: t.personal_finance_category?.primary || "Uncategorized",
+						bankId: bank.id,
+						userId: userId,
+					}));
 
-				// Batch upsert transactions
-				try {
 					// Batch upsert transactions
-					const batchSize = 100;
-					for (let i = 0; i < processedTransactions.length; i += batchSize) {
-						const batch = processedTransactions.slice(i, i + batchSize);
-						await prisma.$transaction(
-							batch.map((transaction) =>
-								prisma.transaction.upsert({
-									where: { id: transaction.id },
-									create: transaction,
-									update: transaction,
-								})
-							)
-						);
+					try {
+						// Batch upsert transactions
+						const batchSize = 100;
+						for (let i = 0; i < processedTransactions.length; i += batchSize) {
+							const batch = processedTransactions.slice(i, i + batchSize);
+							await prisma.$transaction(
+								batch.map((transaction) =>
+									prisma.transaction.upsert({
+										where: { id: transaction.id },
+										create: transaction,
+										update: transaction,
+									})
+								)
+							);
+						}
+					} catch (error) {
+						console.error(`Error processing transactions for bank ${bank.id}:`, error);
+						return NextResponse.json({ error: "Failed to process transactions" }, { status: 500 });
 					}
-				} catch (error) {
-					console.error(`Error processing transactions for bank ${bank.id}:`, error);
-					return NextResponse.json({ error: "Failed to process transactions" }, { status: 500 });
-				}
 
-				syncResults.push({
-					bankId: bank.id,
-					transactionCount: processedTransactions.length,
-					status: "success",
-				});
+					syncResults.push({
+						bankId: bank.id,
+						transactionCount: processedTransactions.length,
+						status: "success",
+					});
+				}
 			} catch (error) {
 				console.error(`Error syncing bank ${bank.id}:`, error);
 				syncResults.push({

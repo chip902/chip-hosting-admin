@@ -6,6 +6,7 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useSyncTransactions } from "@/app/hooks/useSyncTransactions";
 import axios from "axios";
 import { Bank } from "@/types";
+import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 interface TransactionsClientWrapperProps {
 	userId: string;
@@ -19,7 +20,6 @@ export default function TransactionsClientWrapper({ userId }: TransactionsClient
 		queryKey: ["banks"],
 		queryFn: async () => {
 			const response = await axios.get("/api/bank/get-banks", {
-				data: userId,
 				params: userId,
 			});
 			return response as unknown as Bank[];
@@ -55,6 +55,7 @@ export default function TransactionsClientWrapper({ userId }: TransactionsClient
 						Sync Transactions
 					</button>
 				</div>
+				<DateRangePicker onSelect={(range) => console.log(range)} />
 				<TransactionReporting userId={userId} />
 			</div>
 

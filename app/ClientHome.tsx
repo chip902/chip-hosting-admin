@@ -10,31 +10,38 @@ import { ErrorBoundary } from "react-error-boundary";
 
 function ClientHomeContent({ userId }: { userId: string }) {
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(userId);
-	const { data: transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(userId);
 	const { toast } = useToast();
-
-	const accounts = plaidData?.accounts || [];
 	const totalBanks = plaidData?.totalBanks || 0;
 	const totalCurrentBalance = plaidData?.totalCurrentBalance || 0;
 
+	const query = usePlaidTransactions(userId);
+
+	console.log("Plaid Query Result:", query); // Add this debug log
+
+	const transactions = query.transactions || [];
+	console.log("Transactions:", transactions); // Add this debug log
+
+	const accounts = plaidData?.accounts || [];
+	console.log("Accounts:", accounts);
+
 	useEffect(() => {
-		if (plaidError || transactionsError) {
+		if (plaidError || !transactions) {
 			toast({
 				variant: "destructive",
 				title: "Error",
-				description: plaidError?.message || transactionsError?.message || "An error occurred while fetching data.",
+				description: plaidError?.message || "An error occurred while fetching data.",
 			});
 		}
-	}, [plaidError, transactionsError, toast]);
+	}, [plaidError, toast]);
 
-	if (isPlaidLoading || isTransactionsLoading) {
+	if (isPlaidLoading || query.isLoading) {
 		return <Skeleton className="w-full h-full" />;
 	}
 
 	return (
 		<div>
 			<TotalBalanceBox accounts={accounts} totalBanks={totalBanks} totalCurrentBalance={totalCurrentBalance} />
-			<RecentTransactions accounts={accounts} transactions={transactions || { transactions: [] }} />
+			<RecentTransactions accounts={accounts} transactions={{ transactions: transactions }} />
 		</div>
 	);
 }

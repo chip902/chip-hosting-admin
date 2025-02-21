@@ -71,7 +71,7 @@ export interface Balances {
 export interface Account {
 	id: string;
 	bankId: string | null;
-	account_id: string;
+	accountId: string;
 	balances: Balances;
 	institution_id: string | null;
 	mask: string;
@@ -94,7 +94,7 @@ export interface GetAccountsResult {
 	totalCurrentBalance: number;
 }
 
-export type Transaction = {
+export interface Transaction {
 	id: string;
 	name: string;
 	paymentChannel: string;
@@ -105,7 +105,9 @@ export type Transaction = {
 	category: string | PersonalFinanceCategory;
 	date: string;
 	image: string;
-};
+	senderBankId: string;
+	receiverBankId: string;
+}
 
 export interface GetAccountsResult {
 	accounts: Account[];
@@ -242,12 +244,12 @@ export interface TransactionHistoryTableProps {
 }
 
 export interface CategoryBadgeProps {
-	category: string;
+	category: string | PersonalFinanceCategory | undefined;
 }
 
 export interface TransactionTableProps {
 	transactions: Transaction[];
-	filterByBank?: boolean;
+	filterByBank?: string;
 }
 
 export interface CategoryProps {
@@ -559,4 +561,36 @@ export interface Invoice {
 	customer: Customer;
 	invoiceItems?: InvoiceItem[];
 	timeEntries?: TimeEntry[];
+}
+
+export interface ExpenseRow {
+	Date: string;
+	"Check #": string;
+	Payee: string;
+	Amount: number;
+	"Office Expense": string | number;
+	"Telephone Expense": string | number;
+	Personal: string | number;
+	Accounting: string | number;
+	"Bank Charge": string | number;
+	Ads: string | number;
+	Insurance: string | number;
+	"Medical Exp": string | number;
+	Utilities: string | number;
+	MISC: string | number;
+	Description: string;
+}
+
+export interface DepositRow {
+	Date: string;
+	Source: string;
+	Amount: number;
+	"W-2 Income": string | number;
+	"Self Employed Income": string | number;
+	"Personal funds": string | number;
+}
+
+export interface TaxReportAccumulator {
+	expenses: ExpenseRow[];
+	deposits: DepositRow[];
 }

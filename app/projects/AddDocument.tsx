@@ -47,6 +47,7 @@ const AddDocument = ({ project }: { project?: Project }) => {
 			setSubmitting(true);
 			const newData = {
 				...data,
+				archived: false,
 				rate: data.rate ? parseFloat(data.rate as unknown as string) : undefined,
 			};
 

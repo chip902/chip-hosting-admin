@@ -1,27 +1,54 @@
-// hooks/usePlaidTransactions.ts
-import { Transaction } from "@/types";
+"use client";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
+import { Transaction } from "@/types";
 
-export interface TransactionsResponse {
+interface TransactionsResponse {
 	transactions: Transaction[];
 }
 
-export const usePlaidTransactions = (userId?: string) => {
-	return useQuery<TransactionsResponse, Error>({
-		queryKey: ["transactions", userId],
+interface DateRange {
+	startDate?: Date;
+	endDate?: Date;
+}
+
+export const usePlaidTransactions = (userId: string, range?: DateRange) => {
+	// Format dates properly
+	const defaultRange = {
+		startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+		endDate: new Date(),
+	};
+	const effectiveRange = range || defaultRange;
+	const formattedStartDate = effectiveRange.startDate?.toISOString().split("T")[0];
+	const formattedEndDate = effectiveRange.endDate?.toISOString().split("T")[0];
+
+	const { data, isLoading, error } = useQuery<TransactionsResponse>({
+		queryKey: ["transactions", userId, formattedStartDate, formattedEndDate],
 		queryFn: async () => {
-			const response = await axios.get<TransactionsResponse>(`/api/transactions/get-transactions?userId=${userId}`, {
-				data: { userId },
+			if (!userId) {
+				throw new Error("User ID is required");
+			}
+
+			const response = await axios.get("/api/transactions/get-transactions", {
+				params: {
+					userId,
+					startDate: formattedStartDate,
+					endDate: formattedEndDate,
+				},
 			});
+
 			return response.data;
 		},
-		enabled: !!userId,
-		staleTime: 5 * 60 * 1000,
+		enabled: !!userId && !!formattedStartDate && !!formattedEndDate,
+		staleTime: 15 * 60,
+		refetchInterval: 30 * 60 * 1000,
+		retry: 3,
 		refetchOnWindowFocus: false,
-		// Provide a default value if the query fails or returns no data
-		select: (data) => ({
-			transactions: data?.transactions || [],
-		}),
 	});
+
+	return {
+		transactions: data?.transactions || [],
+		isLoading,
+		error,
+	};
 };
