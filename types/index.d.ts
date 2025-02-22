@@ -231,10 +231,10 @@ export interface SiderbarProps {
 }
 
 export interface RecentTransactionsProps {
+	startDate: DateTime;
+	endDate: DateTime;
 	accounts: Account[];
-	transactions: {
-		transactions: Transaction[];
-	};
+	userId: string;
 	page?: number;
 }
 

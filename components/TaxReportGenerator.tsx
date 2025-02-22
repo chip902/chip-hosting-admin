@@ -7,6 +7,7 @@ import { formatAmount } from "@/lib/utils";
 import { PersonalFinanceCategory } from "plaid";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
+import { useGenerateTransactions } from "@/app/hooks/useGenerateTransactions";
 
 interface ExpenseRow {
 	Date: string;
@@ -188,19 +189,64 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 		);
 	}, [fiscalYearTransactions, year]);
 
-	const generateExcel = () => {
-		const wb = XLSX.utils.book_new();
+	const { mutateAsync: generateTransactions, isPending: isGenerating } = useGenerateTransactions(userId);
+	const processTransactions = (transactions: Transaction[], year: number) => {
+		return transactions.reduce<TaxReportAccumulator>(
+			(acc: TaxReportAccumulator, transaction: Transaction) => {
+				const transactionDate = new Date(transaction.date);
+				const transactionYear = transactionDate.getFullYear();
 
-		// Create Expenses worksheet
-		const wsExpenses = XLSX.utils.json_to_sheet(expenses);
-		XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
+				if (transactionYear === year) {
+					if (transaction.amount < 0) {
+						const expenseCategories = mapExpenseCategory(transaction);
+						acc.expenses.push({
+							Date: transactionDate.toLocaleDateString(),
+							"Check #": transaction.paymentChannel === "check" ? "" : "",
+							Payee: transaction.name,
+							Amount: Math.abs(transaction.amount),
+							...expenseCategories,
+							Description: transaction.name,
+						});
+					} else {
+						acc.deposits.push({
+							Date: transactionDate.toLocaleDateString(),
+							Source: transaction.name,
+							Amount: transaction.amount,
+							"W-2 Income": transaction.category === "INCOME" && transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
+							"Self Employed Income":
+								transaction.category === "INCOME" && !transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
+							"Personal funds": transaction.category === "TRANSFER_IN" ? transaction.amount : "",
+						});
+					}
+				}
+				return acc;
+			},
+			{ expenses: [], deposits: [] }
+		);
+	};
 
-		// Create Deposits worksheet
-		const wsDeposits = XLSX.utils.json_to_sheet(deposits);
-		XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+	const generateExcel = async () => {
+		try {
+			// Wait for transactions to be fetched
+			const { transactions } = await generateTransactions({
+				startDate: dateRange.startDate,
+				endDate: dateRange.endDate,
+			});
 
-		// Save the file
-		XLSX.writeFile(wb, `tax_report_${year}.xlsx`);
+			// Process transactions for Excel
+			const { expenses, deposits } = processTransactions(transactions, year);
+
+			// Generate Excel file
+			const wb = XLSX.utils.book_new();
+			const wsExpenses = XLSX.utils.json_to_sheet(expenses);
+			XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
+			const wsDeposits = XLSX.utils.json_to_sheet(deposits);
+			XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+			XLSX.writeFile(wb, `tax_report_${year}.xlsx`);
+		} catch (error) {
+			console.error("Error generating report:", error);
+			// Handle error (show toast, etc)
+		}
 	};
 
 	return (

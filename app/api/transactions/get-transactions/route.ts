@@ -1,15 +1,44 @@
-// app/api/transactions/get-transactions/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { plaidClient } from "@/lib/plaid";
 import prisma from "@/prisma/client";
+import { Transaction } from "@/types";
 
 export const dynamic = "force-dynamic";
+
 export async function GET(request: NextRequest) {
 	try {
 		const searchParams = request.nextUrl.searchParams;
+
+		// Extract and validate dates
+		const startDateParam = searchParams.get("startDate");
+		const endDateParam = searchParams.get("endDate");
+		console.log("Received date parameters:", {
+			startDateParam,
+			endDateParam,
+			parsedStartDate: new Date(startDateParam!),
+			parsedEndDate: new Date(endDateParam!),
+		});
+		if (!startDateParam || !endDateParam) {
+			return NextResponse.json({ error: "Both startDate and endDate are required" }, { status: 400 });
+		}
+
+		const startDate = new Date(startDateParam);
+		const endDate = new Date(endDateParam);
+
+		console.log("Date range for Plaid request:", {
+			startDate: startDate.toISOString(),
+			endDate: endDate.toISOString(),
+			currentYear: new Date().getFullYear(),
+			isStartDateFuture: startDate > new Date(),
+			isEndDateFuture: endDate > new Date(),
+		});
+
+		// Check if the dates are valid
+		if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+			return NextResponse.json({ error: "Invalid date format. Please use ISO 8601 format (YYYY-MM-DD)" }, { status: 400 });
+		}
+
 		const userId = searchParams.get("userId");
-		const startDate = searchParams.get("startDate") || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
-		const endDate = searchParams.get("endDate") || new Date().toISOString().split("T")[0];
 		const bankIds = searchParams.get("bankIds")?.split(",");
 
 		if (!userId) {
@@ -31,12 +60,13 @@ export async function GET(request: NextRequest) {
 		};
 
 		const banks = await prisma.bank.findMany(banksQuery);
-
 		if (!banks.length) {
 			return NextResponse.json({ transactions: [] });
 		}
 
 		let allTransactions = new Map();
+
+		// Inside your try block, replace the existing Plaid API call with:
 
 		for (const bank of banks) {
 			try {
@@ -46,40 +76,53 @@ export async function GET(request: NextRequest) {
 					accountId: bank.accountId,
 				});
 
-				// Use transactionsGet instead of transactionsSync for initial pull
-				const response = await plaidClient.transactionsGet({
-					access_token: bank.accessToken,
-					start_date: startDate,
-					end_date: endDate,
-					options: {
-						include_personal_finance_category: true,
-					},
-				});
+				let fetchedTransactions: any[] = [];
+				let hasMore = true;
+				let offset = 0;
 
-				const transactions = response.data.transactions.map((transaction) => ({
-					id: transaction.transaction_id,
-					name: transaction.name,
-					paymentChannel: transaction.payment_channel,
-					type: transaction.payment_channel,
-					accountId: transaction.account_id,
-					amount: transaction.amount * -1,
-					pending: transaction.pending,
-					category: transaction.personal_finance_category?.primary ?? "uncategorized",
-					date: transaction.date,
-					image: transaction.logo_url ?? "",
-					bankId: bank.id,
-					institutionName: bank.institutionName,
-				}));
+				while (hasMore) {
+					const plaidResponse = await plaidClient.transactionsGet({
+						access_token: bank.accessToken,
+						start_date: startDate.toISOString().split("T")[0],
+						end_date: endDate.toISOString().split("T")[0],
+						options: {
+							include_personal_finance_category: true,
+							offset: offset,
+							count: 500, // Plaid's maximum per request
+						},
+					});
 
-				// Add new transactions
-				transactions.forEach((transaction) => {
+					const mappedTransactions = plaidResponse.data.transactions.map((transaction) => ({
+						id: transaction.transaction_id,
+						name: transaction.name,
+						paymentChannel: transaction.payment_channel,
+						type: transaction.payment_channel,
+						accountId: transaction.account_id,
+						amount: transaction.amount * -1,
+						pending: transaction.pending,
+						category: transaction.personal_finance_category?.primary ?? "uncategorized",
+						date: transaction.date,
+						image: transaction.logo_url ?? "",
+						bankId: bank.id,
+						institutionName: bank.institutionName,
+						// Add these if they're required by your Transaction type
+						senderBankId: bank.id,
+						receiverBankId: bank.id,
+					}));
+
+					fetchedTransactions = [...fetchedTransactions, ...mappedTransactions];
+					hasMore = plaidResponse.data.total_transactions > fetchedTransactions.length;
+					offset = fetchedTransactions.length;
+				}
+
+				// Add transactions to the Map
+				fetchedTransactions.forEach((transaction) => {
 					allTransactions.set(transaction.id, transaction);
 				});
 
 				console.log(`Bank ${bank.institutionName} (${bank.id}) results:`, {
-					totalTransactions: transactions.length,
-					accountIds: [...new Set(transactions.map((t) => t.accountId))],
-					accounts: response.data.accounts,
+					totalTransactions: fetchedTransactions.length,
+					accountIds: [...new Set(fetchedTransactions.map((t) => t.accountId))],
 				});
 			} catch (error: any) {
 				console.error(`Error fetching transactions for bank ${bank.institutionName}:`, {

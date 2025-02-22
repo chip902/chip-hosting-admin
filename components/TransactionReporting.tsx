@@ -1,5 +1,5 @@
 "use client";
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useSyncTransactions } from "@/app/hooks/useSyncTransactions";
@@ -9,8 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import TransactionsTable from "./TransactionsTable";
 import _ from "lodash";
-import { Account, Transaction } from "@/types";
-import { formatAmount } from "@/lib/utils";
+import { Account } from "@/types";
 import TaxReportGenerator from "./TaxReportGenerator";
 import { Alert, AlertDescription } from "./ui/alert";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
@@ -24,17 +23,36 @@ interface TransactionReportingProps {
 		startDate: Date | undefined;
 		endDate: Date | undefined;
 	};
+	startDate?: Date;
+	endDate?: Date;
 }
 
-const TransactionReporting = ({ userId, range }: TransactionReportingProps) => {
-	// Memoize the initial date range
-	const initialDateRange = useMemo(
-		() => ({
-			startDate: new Date(new Date().setDate(1)),
-			endDate: new Date(),
-		}),
-		[]
-	);
+const TransactionReporting = ({ userId, range, startDate, endDate }: TransactionReportingProps) => {
+	useEffect(() => {
+		if (userId) {
+			syncTransactions();
+		}
+	}, [userId]);
+
+	const initialDateRange = useMemo(() => {
+		if (range && range.startDate && range.endDate) {
+			return {
+				startDate: new Date(range.startDate),
+				endDate: new Date(range.endDate),
+			};
+		} else if (startDate && endDate) {
+			return {
+				startDate,
+				endDate,
+			};
+		}
+
+		const currentYear = new Date().getFullYear();
+		return {
+			startDate: new Date(currentYear - 1, 0, 1),
+			endDate: new Date(currentYear - 1, 11, 31),
+		};
+	}, [range, startDate, endDate]);
 
 	const [dateRange, setDateRange] = useState(initialDateRange);
 	const [selectedTab, setSelectedTab] = useState("all");
@@ -44,6 +62,7 @@ const TransactionReporting = ({ userId, range }: TransactionReportingProps) => {
 	const { transactions, isLoading, error } = usePlaidTransactions(userId, {
 		startDate: dateRange.startDate,
 		endDate: dateRange.endDate,
+		bankIds: selectedTab === "all" ? undefined : [selectedTab],
 	});
 
 	const yearTransactions = useMemo(() => {

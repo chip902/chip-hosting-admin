@@ -29,6 +29,7 @@ const DoughnutChart = ({ accounts }: DoughnutChartProps) => {
 
 	return (
 		<Doughnut
+			className="z-10"
 			options={{
 				cutout: "60%",
 				plugins: {

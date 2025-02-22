@@ -34,6 +34,10 @@ export const usePlaidTransactions = (userId: string, range?: DateRange & { bankI
 			if (!userId) {
 				throw new Error("User ID is required");
 			}
+			console.log("Sending date parameters:", {
+				startDate: range?.startDate?.toISOString().split("T")[0],
+				endDate: range?.endDate?.toISOString().split("T")[0],
+			});
 
 			const response = await axios.get("/api/transactions/get-transactions", {
 				params: {

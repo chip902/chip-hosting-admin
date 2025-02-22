@@ -3,7 +3,7 @@ import { usePlaidBanks } from "@/app/hooks/usePlaidBanks";
 import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
 import RecentTransactions from "@/components/RecentTransactions";
 import TotalBalanceBox from "@/components/TotalBalanceBox";
-import { useEffect, Suspense } from "react";
+import { useEffect, Suspense, useState } from "react";
 import { useToast } from "@/app/hooks/useToast";
 import { Skeleton } from "@radix-ui/themes";
 import { ErrorBoundary } from "react-error-boundary";
@@ -11,18 +11,16 @@ import { ErrorBoundary } from "react-error-boundary";
 function ClientHomeContent({ userId }: { userId: string }) {
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(userId);
 	const { toast } = useToast();
+	const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 3)));
+	const [endDate, setEndDate] = useState(new Date());
 	const totalBanks = plaidData?.totalBanks || 0;
 	const totalCurrentBalance = plaidData?.totalCurrentBalance || 0;
 
 	const query = usePlaidTransactions(userId);
 
-	console.log("Plaid Query Result:", query); // Add this debug log
-
 	const transactions = query.transactions || [];
-	console.log("Transactions:", transactions); // Add this debug log
 
 	const accounts = plaidData?.accounts || [];
-	console.log("Accounts:", accounts);
 
 	useEffect(() => {
 		if (plaidError || !transactions) {
@@ -41,7 +39,7 @@ function ClientHomeContent({ userId }: { userId: string }) {
 	return (
 		<div>
 			<TotalBalanceBox accounts={accounts} totalBanks={totalBanks} totalCurrentBalance={totalCurrentBalance} />
-			<RecentTransactions accounts={accounts} transactions={{ transactions: transactions }} />
+			<RecentTransactions startDate={startDate.toISOString()} endDate={endDate.toISOString()} accounts={accounts} userId={userId} />
 		</div>
 	);
 }

@@ -49,14 +49,12 @@ export default function TransactionsClientWrapper({ userId }: TransactionsClient
 	return (
 		<>
 			<div className="transactions-content">
-				{/* Add a sync button */}
-				<div className="mb-4">
-					<button onClick={handleSync} className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-						Sync Transactions
-					</button>
-				</div>
-				<DateRangePicker onSelect={(range) => console.log(range)} />
 				<TransactionReporting userId={userId} />
+				{defaultBankId && (
+					<div className="mb-4 flex justify-end">
+						<button onClick={handleSync}>Sync Transactions</button>
+					</div>
+				)}
 			</div>
 
 			<div className="mt-8">
