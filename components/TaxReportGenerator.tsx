@@ -1,10 +1,12 @@
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
-import { Transaction } from "@/types";
+import { Account, Transaction } from "@/types";
 import * as XLSX from "xlsx";
 import { formatAmount } from "@/lib/utils";
 import { PersonalFinanceCategory } from "plaid";
+import axios from "axios";
+import { useQuery } from "@tanstack/react-query";
 
 interface ExpenseRow {
 	Date: string;
@@ -39,8 +41,10 @@ interface TaxReportAccumulator {
 }
 
 interface TaxReportGeneratorProps {
-	transactions: Transaction[];
 	year: number;
+	userId: string;
+	accounts: Account[];
+	transactions: Transaction[];
 }
 
 const getCategory = (category: string | PersonalFinanceCategory): string => {
@@ -109,47 +113,58 @@ const mapExpenseCategory = (transaction: Transaction): Partial<ExpenseRow> => {
 	return mapping;
 };
 
-const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ transactions, year }) => {
-	// Add transaction date debugging
-	console.log("Transaction dates:", {
-		year,
-		transactionYears: transactions.map((t) => new Date(t.date).getFullYear()),
-		dateRange: {
-			start: `${year}-01-01`,
-			end: `${year}-12-31`,
-		},
-		sampleDates: transactions.slice(0, 3).map((t) => ({
-			original: t.date,
-			parsed: new Date(t.date).toISOString(),
-			year: new Date(t.date).getFullYear(),
-		})),
+const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, accounts, transactions }) => {
+	// Use useState instead of useRef or useMemo for the date range
+	const [dateRange] = useState({
+		startDate: new Date(`${year}-01-01`),
+		endDate: new Date(`${year}-12-31`),
 	});
 
-	const { expenses, deposits } = useMemo(() => {
-		const startDate = new Date(`${year}-01-01T00:00:00.000Z`);
-		const endDate = new Date(`${year}-12-31T23:59:59.999Z`);
+	// Add selected banks state
+	const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
+	const isQueryEnabled = useMemo(() => {
+		return selectedBanks.length > 0;
+	}, [selectedBanks]);
 
-		return transactions.reduce<TaxReportAccumulator>(
-			(acc, transaction) => {
+	const { data: fiscalYearData, isLoading } = useQuery<{ transactions: Transaction[] }>({
+		queryKey: ["fiscal-year-transactions", userId, year, selectedBanks],
+		queryFn: async () => {
+			const response = await axios.get<{ transactions: Transaction[] }>("/api/transactions/get-transactions", {
+				params: {
+					userId,
+					startDate: dateRange.startDate.toISOString().split("T")[0],
+					endDate: dateRange.endDate.toISOString().split("T")[0],
+					bankIds: selectedBanks.join(","),
+				},
+			});
+			return response.data;
+		},
+		enabled: isQueryEnabled, // Only run query when banks are selected
+		refetchOnWindowFocus: false,
+		refetchOnMount: false,
+		staleTime: Infinity,
+	});
+
+	const fiscalYearTransactions = fiscalYearData?.transactions || [];
+
+	const filteredTransactions = useMemo(() => {
+		if (selectedBanks.length === 0) return [];
+		return transactions.filter((tx) => selectedBanks.includes(tx.accountId));
+	}, [transactions, selectedBanks]);
+
+	// Use filtered transactions for calculations
+	const { expenses, deposits } = useMemo(() => {
+		return filteredTransactions.reduce<TaxReportAccumulator>(
+			(acc: TaxReportAccumulator, transaction: Transaction) => {
 				const transactionDate = new Date(transaction.date);
 				const transactionYear = transactionDate.getFullYear();
 
-				// Debug each transaction's date comparison
-				console.log("Transaction date check:", {
-					date: transaction.date,
-					year: transactionYear,
-					targetYear: year,
-					amount: transaction.amount,
-					isInYear: transactionYear === year,
-				});
-
 				if (transactionYear === year) {
-					// Simplified year check
 					if (transaction.amount < 0) {
 						const expenseCategories = mapExpenseCategory(transaction);
 						acc.expenses.push({
 							Date: transactionDate.toLocaleDateString(),
-							"Check #": transaction.paymentChannel === "check" ? (transaction as any).checkNumber || "" : "",
+							"Check #": transaction.paymentChannel === "check" ? "" : "",
 							Payee: transaction.name,
 							Amount: Math.abs(transaction.amount),
 							...expenseCategories,
@@ -171,19 +186,7 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ transactions, y
 			},
 			{ expenses: [], deposits: [] }
 		);
-	}, [transactions, year]);
-
-	// Debug the final results
-	console.log("Tax Report Results:", {
-		year,
-		totalTransactions: transactions.length,
-		filteredExpenses: expenses.length,
-		filteredDeposits: deposits.length,
-		expensesTotal: expenses.reduce((sum, exp) => sum + exp.Amount, 0),
-		depositsTotal: deposits.reduce((sum, dep) => sum + dep.Amount, 0),
-		sampleExpense: expenses[0],
-		sampleDeposit: deposits[0],
-	});
+	}, [fiscalYearTransactions, year]);
 
 	const generateExcel = () => {
 		const wb = XLSX.utils.book_new();
@@ -202,6 +205,31 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ transactions, y
 
 	return (
 		<div className="space-y-4">
+			{/* Bank Selection */}
+			<div className="p-4 border rounded-lg">
+				<h3 className="text-lg font-medium mb-2">Select Banks for Tax Report</h3>
+				<div className="flex flex-wrap gap-2">
+					{accounts.map((account: Account) => (
+						<label key={account.accountId} className="flex items-center space-x-2">
+							<input
+								type="checkbox"
+								checked={selectedBanks.includes(account.accountId)}
+								onChange={(e) => {
+									if (e.target.checked) {
+										setSelectedBanks([...selectedBanks, account.accountId]);
+									} else {
+										setSelectedBanks(selectedBanks.filter((id) => id !== account.accountId));
+									}
+								}}
+								className="rounded border-gray-300"
+							/>
+							<span>{account.name}</span>
+						</label>
+					))}
+				</div>
+			</div>
+
+			{/* Rest of your existing JSX */}
 			<div className="flex justify-between items-center">
 				<h2 className="text-xl font-semibold">Tax Report Generator ({year})</h2>
 				<Button onClick={generateExcel} className="flex items-center gap-2">
@@ -214,13 +242,13 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ transactions, y
 				<div className="p-4 border rounded-lg">
 					<h3 className="text-lg font-medium mb-2">Expenses Summary</h3>
 					<p>Total Records: {expenses.length}</p>
-					<p>Total Amount: {formatAmount(expenses.reduce((sum, exp) => sum + exp.Amount, 0))}</p>
+					<p>Total Amount: {formatAmount(expenses.reduce((sum: number, exp: ExpenseRow) => sum + exp.Amount, 0))}</p>
 				</div>
 
 				<div className="p-4 border rounded-lg">
 					<h3 className="text-lg font-medium mb-2">Deposits Summary</h3>
 					<p>Total Records: {deposits.length}</p>
-					<p>Total Amount: {formatAmount(deposits.reduce((sum, dep) => sum + dep.Amount, 0))}</p>
+					<p>Total Amount: {formatAmount(deposits.reduce((sum: number, dep: DepositRow) => sum + dep.Amount, 0))}</p>
 				</div>
 			</div>
 		</div>

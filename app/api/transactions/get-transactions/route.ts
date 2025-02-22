@@ -10,13 +10,17 @@ export async function GET(request: NextRequest) {
 		const userId = searchParams.get("userId");
 		const startDate = searchParams.get("startDate") || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 		const endDate = searchParams.get("endDate") || new Date().toISOString().split("T")[0];
+		const bankIds = searchParams.get("bankIds")?.split(",");
 
 		if (!userId) {
 			return NextResponse.json({ error: "UserId is required" }, { status: 400 });
 		}
 
-		const banks = await prisma.bank.findMany({
-			where: { userId },
+		const banksQuery = {
+			where: {
+				userId,
+				...(bankIds && bankIds.length > 0 ? { accountId: { in: bankIds } } : {}),
+			},
 			select: {
 				id: true,
 				bankId: true,
@@ -24,7 +28,9 @@ export async function GET(request: NextRequest) {
 				accountId: true,
 				institutionName: true,
 			},
-		});
+		};
+
+		const banks = await prisma.bank.findMany(banksQuery);
 
 		if (!banks.length) {
 			return NextResponse.json({ transactions: [] });
