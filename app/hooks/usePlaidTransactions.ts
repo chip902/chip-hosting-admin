@@ -13,10 +13,14 @@ interface DateRange {
 	endDate?: Date;
 }
 
+function toBusinessCategory(hierarchy: string[]): string {
+	return hierarchy[0] || "uncategorized";
+}
+
 export const usePlaidTransactions = (userId: string, range?: DateRange & { bankIds?: string[] }) => {
 	// Format dates properly
 	const defaultRange = {
-		startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+		startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
 		endDate: new Date(),
 	};
 	const effectiveRange = range || defaultRange;
@@ -34,10 +38,6 @@ export const usePlaidTransactions = (userId: string, range?: DateRange & { bankI
 			if (!userId) {
 				throw new Error("User ID is required");
 			}
-			console.log("Sending date parameters:", {
-				startDate: range?.startDate?.toISOString().split("T")[0],
-				endDate: range?.endDate?.toISOString().split("T")[0],
-			});
 
 			const response = await axios.get("/api/transactions/get-transactions", {
 				params: {
@@ -48,7 +48,25 @@ export const usePlaidTransactions = (userId: string, range?: DateRange & { bankI
 				},
 			});
 
-			return response.data;
+			// Map the transactions with categories
+			const mappedTransactions = response.data.transactions.map((tx: Transaction) => {
+				// Create a proper string array for the category hierarchy
+				const categoryHierarchy: string[] = tx.personal_finance_category
+					? [tx.personal_finance_category.primary, tx.personal_finance_category.detailed].filter((cat): cat is string => Boolean(cat))
+					: Array.isArray(tx.category)
+					? tx.category
+					: [];
+
+				return {
+					...tx,
+					businessCategory: toBusinessCategory(categoryHierarchy),
+					categoryConfidence: tx.personal_finance_category_confidence,
+				};
+			});
+
+			return {
+				transactions: mappedTransactions,
+			};
 		},
 		enabled: !!userId && !!formattedStartDate && !!formattedEndDate,
 		staleTime: 60 * 60 * 1000,

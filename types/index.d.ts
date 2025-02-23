@@ -71,6 +71,7 @@ export interface Balances {
 export interface Account {
 	id: string;
 	bankId: string | null;
+	account_id: string;
 	accountId: string;
 	balances: Balances;
 	institution_id: string | null;
@@ -107,6 +108,13 @@ export interface Transaction {
 	image: string;
 	senderBankId: string;
 	receiverBankId: string;
+	personal_finance_category?: {
+		primary: string;
+		detailed: string;
+	};
+	personal_finance_category_confidence?: number;
+	category?: string[];
+	businessCategory?: string;
 }
 
 export interface GetAccountsResult {

@@ -4,6 +4,7 @@ import { parseISO, isValid, startOfDay } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";
 import { format } from "date-fns-tz";
+import { Customer, Project, Task, TimeEntry } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
 			},
 		});
 
-		const formattedEntries: ProcessedTimeEntry[] = timeEntries.map((entry) => {
+		const formattedEntries: ProcessedTimeEntry[] = timeEntries.map((entry: TimeEntry & { customer: Customer; project: Project; task: Task }) => {
 			const startTime = format(entry.date, "yyyy-MM-dd'T'HH:mm:ss'Z'");
 
 			let actualEndDate: Date;

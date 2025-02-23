@@ -16,7 +16,7 @@ const BankInfo = ({ account, appwriteItemId, type }: BankInfoProps) => {
 		const newUrl = formUrlQuery({
 			params: searchParams?.toString() || "",
 			key: "id",
-			value: account?.account_id,
+			value: account?.accountId,
 		});
 		router.push(newUrl, { scroll: false });
 	};

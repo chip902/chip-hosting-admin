@@ -555,7 +555,7 @@ html {
 }
 
 .rdp {
-	--rdp-cell-size: 40px;
+	--rdp-cell-size: 35px;
 	--rdp-accent-color: #2563eb; /* blue-600 */
 	--rdp-background-color: #2563eb;
 	--rdp-accent-color-dark: #3b82f6; /* blue-500 */
@@ -596,6 +596,10 @@ html {
 .dark .rdp-caption_label,
 .dark .rdp-head_cell {
 	color: #e5e7eb; /* dark:text-gray-200 */
+}
+.rdp-months {
+	display: flex;
+	gap: 1rem;
 }
 
 /* Update the PopoverContent styling */

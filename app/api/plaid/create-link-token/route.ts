@@ -19,12 +19,15 @@ export async function POST(request: NextRequest) {
 
 		const tokenParams = {
 			user: {
-				client_user_id: userId, // Use the UUID here
+				client_user_id: userId,
 			},
 			client_name: "ChipBooks",
 			products: ["auth", "identity", "transactions"] as Products[],
 			country_codes: ["US"] as CountryCode[],
 			language: "en",
+			transactions: {
+				days_requested: 730,
+			},
 		};
 
 		console.log("Creating link token with params:", tokenParams);

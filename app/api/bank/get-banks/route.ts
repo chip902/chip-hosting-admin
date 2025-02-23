@@ -2,6 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAccounts } from "@/lib/actions/bank.actions";
 import prisma from "@/prisma/client";
+import { Bank } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 
 		// Combine the data
 		const result = plaidAccounts.accounts.map((account) => {
-			const bank = banks.find((b) => b.id.toString() === account.bankId);
+			const bank = banks.find((b: Bank) => b.id.toString() === account.bankId);
 			return {
 				...account,
 				institutionName: bank?.institutionName,

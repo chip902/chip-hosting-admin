@@ -1,7 +1,7 @@
 // lib/actions/bank.actions.ts
 import { plaidClient } from "@/lib/plaid";
 import prisma from "@/prisma/client";
-import { Account, GetAccountsResult, Balances } from "@/types";
+import { GetAccountsResult, Balances, Account } from "@/types";
 import { AccountBase as PlaidAccountBase, CountryCode } from "plaid";
 
 const handlePlaidError = (error: unknown, context: string) => {
@@ -31,6 +31,7 @@ const transformPlaidBalances = (plaidBalances: PlaidAccountBase["balances"]): Ba
 
 const transformPlaidAccount = (plaidAccount: PlaidAccountBase, institutionId?: string): Account => ({
 	account_id: plaidAccount.account_id,
+	accountId: plaidAccount.account_id,
 	id: plaidAccount.account_id,
 	balances: transformPlaidBalances(plaidAccount.balances),
 	institution_id: institutionId || plaidAccount.account_id,
@@ -70,6 +71,7 @@ export const getAccounts = async (userId: string): Promise<GetAccountsResult> =>
 				const accounts = response.data.accounts.map((account) => ({
 					id: account.account_id,
 					account_id: account.account_id,
+					accountId: account.account_id,
 					bankId: bank.id.toString(),
 					name: account.name,
 					mask: account.mask || "",

@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
 import { parseISO } from "date-fns";
 import { getParamsFromUrl } from "@/lib/utils";
+import { TimeEntry } from "@prisma/client";
 
 export async function PATCH(request: NextRequest) {
 	try {
@@ -56,7 +57,7 @@ export async function DELETE(request: NextRequest) {
 
 		// Fetch time entries before attempting deletion
 		const allEntries = await prisma.timeEntry.findMany();
-		const foundEntry = allEntries.find((entry) => entry.id === id);
+		const foundEntry = allEntries.find((entry: TimeEntry) => entry.id === id);
 
 		if (!foundEntry) {
 			// Return response in case the time entry is not found prior to delete

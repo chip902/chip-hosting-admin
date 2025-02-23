@@ -4,6 +4,7 @@ import { generateInvoicePdf } from "@/app/utils/PdfService";
 import fs from "fs/promises";
 import path from "path";
 import { TimeEntryData } from "@/types";
+import { TimeEntry, Project, User, Customer, Task } from "@prisma/client";
 
 function logError(step: string, error: any) {
 	console.error(`Error in ${step}:`, error.message);
@@ -35,7 +36,10 @@ export async function POST(request: NextRequest) {
 		}
 
 		const customer = timeEntries[0].customer;
-		const totalAmount = timeEntries.reduce((total, entry) => total + (entry.duration * (entry.project.rate ?? 0)) / 60, 0);
+		const totalAmount = timeEntries.reduce(
+			(total: number, entry: TimeEntry & { project: Project }) => total + (entry.duration * (entry.project.rate ?? 0)) / 60,
+			0
+		);
 
 		let invoice;
 		try {
@@ -52,7 +56,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json({ error: "Error creating invoice in database" }, { status: 500 });
 		}
 
-		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry) => {
+		const timeEntryDataArray: TimeEntryData[] = timeEntries.map((entry: TimeEntry & { user: User; customer: Customer; project: Project; task: Task }) => {
 			const userName = [entry.user?.firstName, entry.user?.lastName].filter(Boolean).join(" ");
 			const customerName = entry.customer.name;
 			const startDate = new Date(entry.date);

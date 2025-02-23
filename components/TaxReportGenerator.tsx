@@ -1,20 +1,29 @@
+// components/TaxReportGenerator.tsx
+"use client";
 import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Account, Transaction } from "@/types";
 import * as XLSX from "xlsx";
 import { formatAmount } from "@/lib/utils";
-import { PersonalFinanceCategory } from "plaid";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
-import { useGenerateTransactions } from "@/app/hooks/useGenerateTransactions";
 
+//
+// 1) Type declarations
+//
+
+/**
+ * ExpenseRow can have standard fields like Date, Payee, etc.
+ * but also any other string key for categories (e.g. "Meals/Entertainment").
+ * The values can be string (for "Check #") or number (for amounts).
+ */
 interface ExpenseRow {
 	Date: string;
-	"Check #"?: string;
-	Payee?: string;
+	"Check #"?: string | undefined;
+	Payee: string;
 	Amount: number;
-	"Office Expense"?: string | number | undefined | undefined;
+	"Office Expense"?: string | number | undefined;
 	"Telephone Expense"?: string | number | undefined;
 	Personal?: string | number | undefined;
 	Accounting?: string | number | undefined;
@@ -25,15 +34,16 @@ interface ExpenseRow {
 	Utilities?: string | number | undefined;
 	MISC?: string | number | undefined;
 	Description: string;
+	[key: string]: string | number | undefined;
 }
 
 interface DepositRow {
 	Date: string;
 	Source: string;
 	Amount: number;
-	"W-2 Income": string | number | undefined;
-	"Self Employed Income": string | number | undefined;
-	"Personal funds": string | number | undefined;
+	"W-2 Income": string | number;
+	"Self Employed Income": string | number;
+	"Personal funds": string | number;
 }
 
 interface TaxReportAccumulator {
@@ -45,92 +55,139 @@ interface TaxReportGeneratorProps {
 	year: number;
 	userId: string;
 	accounts: Account[];
-	transactions: Transaction[];
 }
 
-const getCategory = (category: string | PersonalFinanceCategory): string => {
-	if (typeof category === "string") {
-		return category;
+//
+// 2) Simple mapping from personal_finance_category.primary -> your business category
+//
+function mapPfcToBusinessCategory(primaryCat: string | undefined, transactionName: string): string {
+	// If we have no category, try to determine it from the transaction name
+	const name = transactionName.toUpperCase();
+
+	console.log("Attempting to categorize transaction:", {
+		originalName: transactionName,
+		normalizedName: name,
+		originalCategory: primaryCat,
+	});
+
+	// Check transaction name patterns
+	if (name.includes("VERIZON")) {
+		return "Telephone Expense";
 	}
-	return category.primary;
-};
+	if (name.includes("OPTIMUM") || name.includes("NYSEG")) {
+		return "Utilities";
+	}
+	if (name.includes("AMERICAN EXPRESS") || name.includes("WIRE FEE")) {
+		return "Bank Charge";
+	}
+	if (name.includes("TRANSFER") || name.includes("FID BKG SVC")) {
+		return "Transfer / Owner Draw";
+	}
+	if (name.includes("NYS DTF") || name.includes("IRS") || name.includes("TAX")) {
+		return "Accounting";
+	}
+	if (name.includes("SERVICE FEE")) {
+		return "Bank Charge";
+	}
+	if (name.includes("SMASHBALLOON") || name.includes("ELEMENTOR")) {
+		return "Office Expense";
+	}
+	if (name.includes("DOMESTIC INCOMING")) {
+		return "Personal funds";
+	}
 
-const mapExpenseCategory = (transaction: Transaction): Partial<ExpenseRow> => {
-	const category = getCategory(transaction.category);
-	// Don't need to use Math.abs here since we're already handling signs properly
-	const amount = transaction.amount;
+	// If no pattern matches, log it and return MISC
+	console.log("No category match found for transaction:", transactionName);
+	return "MISC";
+}
 
-	const mapping: Partial<ExpenseRow> = {
-		"Office Expense": "",
-		"Telephone Expense": "",
-		Personal: "",
-		Accounting: "",
-		"Bank Charge": "",
-		Ads: "",
-		Insurance: "",
-		"Medical Exp": "",
-		Utilities: "",
-		MISC: "",
+function cleanupTransactionName(name: string): string {
+	// Remove common prefixes
+	let cleaned = name.replace(/ORIG CO NAME:|DESC DATE:|CO ENTRY DESCR:|SEC:|TRACE#:|EED:|IND ID:|IND NAME:|TRN:|\s+TC$/g, "");
+
+	// Remove transaction numbers and references
+	cleaned = cleaned.replace(/transaction#:\s*\d+/g, "");
+	cleaned = cleaned.replace(/reference#:\s*\d+[A-Z]+\s+\d+\/\d+/g, "");
+
+	// Remove ORIG ID and similar technical identifiers
+	cleaned = cleaned.replace(/ORIG ID:[A-Z0-9]+/g, "");
+
+	// Clean up specific patterns in your transactions
+	const specialCases: Record<string, string> = {
+		"OPTIMUM 7819": "Optimum Cable",
+		"NYS DTF PIT": "NYS Tax Payment",
+		"NATL FIN SVC LLC": "National Financial Services",
+		"DOMESTIC INCOMING WIRE": "Incoming Wire Transfer",
+		"Online Realtime Transfer to Personal Checking": "Transfer to Personal Account",
+		"Online Transfer to MMA": "Transfer to Money Market Account",
+		"MONTHLY SERVICE FEE": "Bank Service Fee",
 	};
 
-	// Updated categories to match Plaid's personal finance categories
-	switch (category) {
-		case "UTILITIES":
-			mapping.Utilities = amount;
-			break;
-		case "INSURANCE":
-			mapping.Insurance = amount;
-			break;
-		case "ADVERTISING":
-		case "MARKETING":
-			mapping.Ads = amount;
-			break;
-		case "BANK_FEES":
-		case "FINANCE_CHARGE":
-			mapping["Bank Charge"] = amount;
-			break;
-		case "MEDICAL":
-		case "HEALTHCARE":
-			mapping["Medical Exp"] = amount;
-			break;
-		case "OFFICE_SUPPLIES":
-		case "OFFICE_EXPENSE":
-			mapping["Office Expense"] = amount;
-			break;
-		case "TELECOMMUNICATIONS":
-		case "PHONE":
-			mapping["Telephone Expense"] = amount;
-			break;
-		case "PERSONAL":
-			mapping.Personal = amount;
-			break;
-		case "PROFESSIONAL_SERVICES":
-			mapping.Accounting = amount;
-			break;
-		default:
-			mapping.MISC = amount;
+	// Apply special case replacements
+	for (const [pattern, replacement] of Object.entries(specialCases)) {
+		if (cleaned.includes(pattern)) {
+			cleaned = replacement;
+		}
 	}
 
-	return mapping;
-};
+	// Clean up any remaining technical details
+	cleaned = cleaned.replace(/\d{6,}/g, ""); // Remove long number sequences
+	cleaned = cleaned.replace(/\s+/g, " "); // Remove extra spaces
+	cleaned = cleaned.trim();
 
-const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, accounts, transactions }) => {
-	// Use useState instead of useRef or useMemo for the date range
+	// Proper case the final result (first letter of each word capitalized)
+	cleaned = cleaned
+		.split(" ")
+		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+		.join(" ");
+
+	return cleaned;
+}
+
+function mapExpenseCategory(tx: Transaction): Partial<ExpenseRow> {
+	const primary = tx.personal_finance_category?.primary;
+	const businessCategory = mapPfcToBusinessCategory(primary, tx.name);
+	const cleanedName = cleanupTransactionName(tx.name);
+
+	const partialRow: Partial<ExpenseRow> = {
+		"Meals/Entertainment": 0,
+		"Travel Expenses": 0,
+		"Repairs & Maintenance": 0,
+		"Medical Expenses": 0,
+		"Transfer / Owner Draw": 0,
+		"Office Expense": 0,
+		"Telephone Expense": 0,
+		"Bank Charge": 0,
+		Utilities: 0,
+		Accounting: 0,
+		"Personal funds": 0,
+		MISC: 0,
+	};
+
+	return {
+		...partialRow,
+		Payee: cleanedName,
+		Description: cleanedName,
+		[businessCategory]: Math.abs(tx.amount),
+	};
+}
+//
+// 4) The main component
+//
+const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, accounts }) => {
 	const [dateRange] = useState({
 		startDate: new Date(`${year}-01-01`),
 		endDate: new Date(`${year}-12-31`),
 	});
 
-	// Add selected banks state
 	const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
-	const isQueryEnabled = useMemo(() => {
-		return selectedBanks.length > 0;
-	}, [selectedBanks]);
+	const isQueryEnabled = selectedBanks.length > 0;
 
-	const { data: fiscalYearData, isLoading } = useQuery<{ transactions: Transaction[] }>({
+	// Query the server for transactions, assuming personal_finance_category
+	const { data: fiscalYearData, isLoading } = useQuery({
 		queryKey: ["fiscal-year-transactions", userId, year, selectedBanks],
 		queryFn: async () => {
-			const response = await axios.get<{ transactions: Transaction[] }>("/api/transactions/get-transactions", {
+			const resp = await axios.get("/api/transactions/get-transactions", {
 				params: {
 					userId,
 					startDate: dateRange.startDate.toISOString().split("T")[0],
@@ -138,48 +195,41 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 					bankIds: selectedBanks.join(","),
 				},
 			});
-			return response.data;
+			return resp.data as { transactions: Transaction[] };
 		},
-		enabled: isQueryEnabled, // Only run query when banks are selected
+		enabled: isQueryEnabled,
 		refetchOnWindowFocus: false,
-		refetchOnMount: false,
 		staleTime: Infinity,
 	});
 
 	const fiscalYearTransactions = fiscalYearData?.transactions || [];
 
-	const filteredTransactions = useMemo(() => {
-		if (selectedBanks.length === 0) return [];
-		return transactions.filter((tx) => selectedBanks.includes(tx.accountId));
-	}, [transactions, selectedBanks]);
-
-	// Use filtered transactions for calculations
+	// Summaries
 	const { expenses, deposits } = useMemo(() => {
-		return filteredTransactions.reduce<TaxReportAccumulator>(
-			(acc: TaxReportAccumulator, transaction: Transaction) => {
-				const transactionDate = new Date(transaction.date);
-				const transactionYear = transactionDate.getFullYear();
-
-				if (transactionYear === year) {
-					if (transaction.amount < 0) {
-						const expenseCategories = mapExpenseCategory(transaction);
+		return fiscalYearTransactions.reduce<TaxReportAccumulator>(
+			(acc, tx) => {
+				const transactionDate = new Date(tx.date);
+				if (transactionDate.getFullYear() === year) {
+					if (tx.amount < 0) {
+						// It's an expense
+						const mappedExpCat = mapExpenseCategory(tx);
 						acc.expenses.push({
 							Date: transactionDate.toLocaleDateString(),
-							"Check #": transaction.paymentChannel === "check" ? "" : "",
-							Payee: transaction.name,
-							Amount: Math.abs(transaction.amount),
-							...expenseCategories,
-							Description: transaction.name,
+							"Check #": tx.paymentChannel === "check" ? "" : "",
+							Payee: tx.name,
+							Amount: Math.abs(tx.amount),
+							...mappedExpCat,
+							Description: tx.name,
 						});
 					} else {
+						// It's a deposit
 						acc.deposits.push({
 							Date: transactionDate.toLocaleDateString(),
-							Source: transaction.name,
-							Amount: transaction.amount,
-							"W-2 Income": transaction.category === "INCOME" && transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
-							"Self Employed Income":
-								transaction.category === "INCOME" && !transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
-							"Personal funds": transaction.category === "TRANSFER_IN" ? transaction.amount : "",
+							Source: tx.name,
+							Amount: tx.amount,
+							"W-2 Income": tx.category === "INCOME" && tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
+							"Self Employed Income": tx.category === "INCOME" && !tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
+							"Personal funds": tx.personal_finance_category?.primary === "TRANSFER_IN" ? tx.amount : "",
 						});
 					}
 				}
@@ -189,82 +239,71 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 		);
 	}, [fiscalYearTransactions, year]);
 
-	const { mutateAsync: generateTransactions, isPending: isGenerating } = useGenerateTransactions(userId);
-	const processTransactions = (transactions: Transaction[], year: number) => {
-		return transactions.reduce<TaxReportAccumulator>(
-			(acc: TaxReportAccumulator, transaction: Transaction) => {
-				const transactionDate = new Date(transaction.date);
-				const transactionYear = transactionDate.getFullYear();
-
-				if (transactionYear === year) {
-					if (transaction.amount < 0) {
-						const expenseCategories = mapExpenseCategory(transaction);
-						acc.expenses.push({
-							Date: transactionDate.toLocaleDateString(),
-							"Check #": transaction.paymentChannel === "check" ? "" : "",
-							Payee: transaction.name,
-							Amount: Math.abs(transaction.amount),
-							...expenseCategories,
-							Description: transaction.name,
-						});
-					} else {
-						acc.deposits.push({
-							Date: transactionDate.toLocaleDateString(),
-							Source: transaction.name,
-							Amount: transaction.amount,
-							"W-2 Income": transaction.category === "INCOME" && transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
-							"Self Employed Income":
-								transaction.category === "INCOME" && !transaction.name.toLowerCase().includes("payroll") ? transaction.amount : "",
-							"Personal funds": transaction.category === "TRANSFER_IN" ? transaction.amount : "",
-						});
-					}
-				}
-				return acc;
-			},
-			{ expenses: [], deposits: [] }
-		);
-	};
-
 	const generateExcel = async () => {
 		try {
-			// Wait for transactions to be fetched
-			const { transactions } = await generateTransactions({
-				startDate: dateRange.startDate,
-				endDate: dateRange.endDate,
-			});
+			// Instead of fetching new transactions, use the already filtered transactions
+			// from fiscalYearTransactions which respects the selectedBanks
+			const final = fiscalYearTransactions.reduce<TaxReportAccumulator>(
+				(acc, tx) => {
+					const transactionDate = new Date(tx.date);
+					if (transactionDate.getFullYear() === year) {
+						if (tx.amount < 0) {
+							const mappedExpCat = mapExpenseCategory(tx);
+							acc.expenses.push({
+								Date: transactionDate.toLocaleDateString(),
+								"Check #": tx.paymentChannel === "check" ? "" : "",
+								Payee: tx.name,
+								Amount: Math.abs(tx.amount),
+								...mappedExpCat,
+								Description: tx.name,
+							});
+						} else {
+							acc.deposits.push({
+								Date: transactionDate.toLocaleDateString(),
+								Source: tx.name,
+								Amount: tx.amount,
+								"W-2 Income": tx.category === "INCOME" && tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
+								"Self Employed Income": tx.category === "INCOME" && !tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
+								"Personal funds": tx.personal_finance_category?.primary === "TRANSFER_IN" ? tx.amount : "",
+							});
+						}
+					}
+					return acc;
+				},
+				{ expenses: [], deposits: [] }
+			);
 
-			// Process transactions for Excel
-			const { expenses, deposits } = processTransactions(transactions, year);
-
-			// Generate Excel file
+			// Make Excel
 			const wb = XLSX.utils.book_new();
-			const wsExpenses = XLSX.utils.json_to_sheet(expenses);
+			const wsExpenses = XLSX.utils.json_to_sheet(final.expenses);
 			XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
-			const wsDeposits = XLSX.utils.json_to_sheet(deposits);
+
+			const wsDeposits = XLSX.utils.json_to_sheet(final.deposits);
 			XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+
 			XLSX.writeFile(wb, `tax_report_${year}.xlsx`);
-		} catch (error) {
-			console.error("Error generating report:", error);
-			// Handle error (show toast, etc)
+		} catch (err) {
+			console.error("Error generating report:", err);
 		}
 	};
 
+	// UI
 	return (
 		<div className="space-y-4">
 			{/* Bank Selection */}
 			<div className="p-4 border rounded-lg">
 				<h3 className="text-lg font-medium mb-2">Select Banks for Tax Report</h3>
 				<div className="flex flex-wrap gap-2">
-					{accounts.map((account: Account) => (
+					{accounts.map((account) => (
 						<label key={account.accountId} className="flex items-center space-x-2">
 							<input
 								type="checkbox"
 								checked={selectedBanks.includes(account.accountId)}
 								onChange={(e) => {
 									if (e.target.checked) {
-										setSelectedBanks([...selectedBanks, account.accountId]);
+										setSelectedBanks((prev) => [...prev, account.accountId]);
 									} else {
-										setSelectedBanks(selectedBanks.filter((id) => id !== account.accountId));
+										setSelectedBanks((prev) => prev.filter((id) => id !== account.accountId));
 									}
 								}}
 								className="rounded border-gray-300"
@@ -275,26 +314,32 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 				</div>
 			</div>
 
-			{/* Rest of your existing JSX */}
+			{/* Header / Export */}
 			<div className="flex justify-between items-center">
 				<h2 className="text-xl font-semibold">Tax Report Generator ({year})</h2>
-				<Button onClick={generateExcel} className="flex items-center gap-2">
+				<Button onClick={generateExcel} disabled={!isQueryEnabled || isLoading} className="flex items-center gap-2">
 					<Download className="h-4 w-4" />
-					Export Tax Report
+					{isLoading ? "Loading..." : "Export Tax Report"}
 				</Button>
 			</div>
 
+			{/* Loading / no selection states */}
+			{isQueryEnabled && isLoading && <div className="p-2 text-gray-500">Loading transactions...</div>}
+			{!isQueryEnabled && <div className="p-2 text-gray-500">Select at least one bank to see the report.</div>}
+
+			{/* Summaries */}
 			<div className="grid grid-cols-2 gap-4">
 				<div className="p-4 border rounded-lg">
 					<h3 className="text-lg font-medium mb-2">Expenses Summary</h3>
 					<p>Total Records: {expenses.length}</p>
-					<p>Total Amount: {formatAmount(expenses.reduce((sum: number, exp: ExpenseRow) => sum + exp.Amount, 0))}</p>
+					{/* Amount could be undefined, so do (exp.Amount || 0). */}
+					<p>Total Amount: {formatAmount(expenses.reduce((sum, exp) => sum + (exp.Amount || 0), 0))}</p>
 				</div>
 
 				<div className="p-4 border rounded-lg">
 					<h3 className="text-lg font-medium mb-2">Deposits Summary</h3>
 					<p>Total Records: {deposits.length}</p>
-					<p>Total Amount: {formatAmount(deposits.reduce((sum: number, dep: DepositRow) => sum + dep.Amount, 0))}</p>
+					<p>Total Amount: {formatAmount(deposits.reduce((sum, dep) => sum + dep.Amount, 0))}</p>
 				</div>
 			</div>
 		</div>

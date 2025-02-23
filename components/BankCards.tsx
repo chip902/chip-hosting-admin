@@ -13,7 +13,7 @@ interface BankCardsProps {
 
 const BankCards: React.FC<BankCardsProps> = ({ user }) => {
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(user.userId);
-	const { data: transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(user.userId);
+	const { transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(user.userId || "");
 	const { toast } = useToast();
 
 	const accounts = plaidData?.accounts || [];

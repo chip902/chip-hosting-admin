@@ -17,8 +17,8 @@ export async function POST(request: Request) {
 		});
 
 		// Calculate totals
-		const totalIncome = transactions.reduce((sum, t) => sum + (t.amount > 0 ? t.amount : 0), 0);
-		const totalExpenses = transactions.reduce((sum, t) => sum + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
+		const totalIncome = transactions.reduce((sum: number, t: { amount: number }) => sum + (t.amount > 0 ? t.amount : 0), 0);
+		const totalExpenses = transactions.reduce((sum: number, t: { amount: number }) => sum + (t.amount < 0 ? Math.abs(t.amount) : 0), 0);
 
 		return NextResponse.json({
 			data: {

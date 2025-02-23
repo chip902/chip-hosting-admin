@@ -44,17 +44,24 @@ export function DateRangePicker({ from, to, onSelect, className }: DateRangePick
 						)}
 					</Button>
 				</PopoverTrigger>
-				<PopoverContent className="w-auto p-0" align="start">
+				<PopoverContent className="w-[600px] p-0" align="start">
 					<Calendar
 						initialFocus
 						mode="range"
 						defaultMonth={date?.from}
 						selected={date}
 						onSelect={(newDate) => {
-							setDate(newDate);
-							onSelect(newDate);
+							setDate(newDate); // Update immediately to show selection
+							if (newDate?.from && newDate?.to) {
+								onSelect(newDate);
+							}
 						}}
 						numberOfMonths={2}
+						classNames={{
+							day_range_start: "day-range-start",
+							day_range_end: "day-range-end",
+							day_range_middle: "day-range-middle",
+						}}
 					/>
 				</PopoverContent>
 			</Popover>

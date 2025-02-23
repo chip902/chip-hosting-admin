@@ -43,7 +43,8 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "app/api/bookings/[id]/route.ts",
-    "next.config.js"
+    "next.config.js",
+    "remove-item.ts.script"
   ],
   "exclude": [
     "node_modules"

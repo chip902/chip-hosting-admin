@@ -15,7 +15,7 @@ interface ClientPageProps {
 
 export default function ClientHome({ userId, userName }: ClientPageProps) {
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(userId);
-	const { data: transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(userId);
+	const { transactions, isLoading: isTransactionsLoading, error: transactionsError } = usePlaidTransactions(userId);
 	const { toast } = useToast();
 
 	const accounts = plaidData?.accounts || [];

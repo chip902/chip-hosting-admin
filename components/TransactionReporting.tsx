@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useSyncTransactions } from "@/app/hooks/useSyncTransactions";
 import { usePlaidTransactions } from "@/app/hooks/usePlaidTransactions";
-
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import TransactionsTable from "./TransactionsTable";
@@ -23,46 +22,42 @@ interface TransactionReportingProps {
 		startDate: Date | undefined;
 		endDate: Date | undefined;
 	};
-	startDate?: Date;
-	endDate?: Date;
 }
 
-const TransactionReporting = ({ userId, range, startDate, endDate }: TransactionReportingProps) => {
+const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 	useEffect(() => {
 		if (userId) {
 			syncTransactions();
 		}
 	}, [userId]);
 
-	const initialDateRange = useMemo(() => {
-		if (range && range.startDate && range.endDate) {
-			return {
-				startDate: new Date(range.startDate),
-				endDate: new Date(range.endDate),
-			};
-		} else if (startDate && endDate) {
-			return {
-				startDate,
-				endDate,
-			};
+	const [dateRange, setDateRange] = useState({
+		startDate: new Date(),
+		endDate: new Date(),
+	});
+	const getCurrentFiscalYearDates = () => {
+		const today = new Date();
+		const fiscalStartMonth = 0;
+		let startYear = today.getFullYear();
+
+		if (today.getMonth() < fiscalStartMonth) {
+			startYear -= 1;
 		}
 
-		const currentYear = new Date().getFullYear();
 		return {
-			startDate: new Date(currentYear - 1, 0, 1),
-			endDate: new Date(currentYear - 1, 11, 31),
+			startDate: new Date(startYear, fiscalStartMonth, 1),
+			endDate: new Date(startYear + 1, fiscalStartMonth - 1, 31),
 		};
-	}, [range, startDate, endDate]);
+	};
+	const [fiscalDateRange] = useState(getCurrentFiscalYearDates());
+	const [selectedTab, setSelectedTab] = useState<string>("all");
 
-	const [dateRange, setDateRange] = useState(initialDateRange);
-	const [selectedTab, setSelectedTab] = useState("all");
 	const currentYear = useMemo(() => dateRange.startDate.getFullYear(), [dateRange.startDate]);
 
 	// Single source of truth for transactions
 	const { transactions, isLoading, error } = usePlaidTransactions(userId, {
-		startDate: dateRange.startDate,
-		endDate: dateRange.endDate,
-		bankIds: selectedTab === "all" ? undefined : [selectedTab],
+		startDate: fiscalDateRange.startDate,
+		endDate: fiscalDateRange.endDate,
 	});
 
 	const yearTransactions = useMemo(() => {
@@ -76,10 +71,11 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 			const response = await axios.get(`/api/bank/get-accounts?userId=${userId}`);
 			return response;
 		},
-		staleTime: 30000, // Add staleTime to prevent frequent refetches
+		staleTime: 30000,
 	});
 
 	const { mutate: syncTransactions, isPending: isSyncing, isSuccess: isSyncSuccess, data: syncData } = useSyncTransactions(userId);
+
 	const accounts = useMemo(
 		() =>
 			banksData?.data?.accounts?.map((account: Account) => ({
@@ -95,14 +91,7 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 		if (!accountId || accountId === "all") {
 			return transactions;
 		}
-
-		console.log("Filtering transactions:", {
-			accountId,
-			totalTransactions: transactions?.length || 0,
-			matchingTransactions: transactions?.filter((tx) => tx.accountId === accountId)?.length || 0,
-		});
-
-		return transactions?.filter((tx) => tx.accountId === accountId) || [];
+		return transactions.filter((tx) => tx.accountId === accountId);
 	};
 
 	// Add error handling
@@ -147,6 +136,7 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 					</PopoverContent>
 				</Popover>
 			</div>
+
 			<div className="flex flex-col md:flex-row gap-4 items-center justify-between">
 				<Button onClick={() => syncTransactions()} disabled={isSyncing} className="plaidlink-primary">
 					{isSyncing ? "Syncing..." : "Sync Transactions"}
@@ -162,8 +152,7 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 			{/* Bank Tabs and Transactions */}
 			<div className="rounded-lg overflow-x-auto border border-gray-200 bg-white p-6 dark:bg-gray-800 dark:border-gray-700">
 				<h2 className="text-18 font-semibold text-gray-900 dark:text-gray-100 mb-4">Transaction Details</h2>
-
-				<Tabs value={selectedTab} onValueChange={setSelectedTab}>
+				<Tabs value="all" onValueChange={setSelectedTab}>
 					<TabsList>
 						<TabsTrigger value="all">All Banks</TabsTrigger>
 						{accounts.map((account: Account) => (
@@ -172,13 +161,11 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 							</TabsTrigger>
 						))}
 					</TabsList>
-
 					<TabsContent value="all">
 						<div className="p-4">
 							<TransactionsTable transactions={transactions} />
 						</div>
 					</TabsContent>
-
 					{accounts.map((account: Account) => (
 						<TabsContent key={`transactions-${account.id}`} value={account.accountId}>
 							<div className="p-4">
@@ -191,7 +178,7 @@ const TransactionReporting = ({ userId, range, startDate, endDate }: Transaction
 
 			<div className="rounded-lg overflow-x-auto border border-gray-200 bg-white p-6 dark:bg-gray-800 dark:border-gray-700">
 				<h2 className="text-18 font-semibold text-gray-900 dark:text-gray-100 mb-4">Tax Reporting</h2>
-				<TaxReportGenerator key={currentYear} year={currentYear} userId={userId} accounts={accounts} transactions={yearTransactions} />
+				<TaxReportGenerator key={currentYear} year={currentYear} userId={userId} accounts={accounts} />
 			</div>
 		</div>
 	);
