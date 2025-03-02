@@ -16,7 +16,7 @@ const InvoiceGenerator = () => {
 	const queryClient = useQueryClient();
 
 	// Default filters are set to undefined to fetch all entries
-	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; isInvoiced?: boolean }>({});
+	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; invoiceStatus?: string }>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10); // Define page size
 	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
@@ -28,7 +28,7 @@ const InvoiceGenerator = () => {
 		startDate: parsedStartDate,
 		endDate: parsedEndDate,
 		customerId: parsedCustomerId,
-		isInvoiced: filters.isInvoiced ?? undefined, // No filter by default for invoiced status
+		invoiceStatus: filters.invoiceStatus ?? undefined, // No filter by default for invoiced status
 		pageSize: pageSize,
 		page: page,
 		sortBy: "date",
@@ -64,13 +64,6 @@ const InvoiceGenerator = () => {
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
-
-	// useEffect(() => {
-	// 	const newSelectedEntries = isSelectAll ? (timeEntries as TimeEntryData[]).map((entry) => entry.id) || [] : [];
-	// 	if (selectedEntries.length !== newSelectedEntries.length) {
-	// 		setSelectedEntries(newSelectedEntries);
-	// 	}
-	// }, [isSelectAll, timeEntries, selectedEntries.length]);
 
 	const handleSelectEntry = (entryId: number) => {
 		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
@@ -174,6 +167,7 @@ const InvoiceGenerator = () => {
 								<DropdownMenu.Item onSelect={() => setPageSize(20)}>20</DropdownMenu.Item>
 								<DropdownMenu.Item onSelect={() => setPageSize(30)}>30</DropdownMenu.Item>
 								<DropdownMenu.Item onSelect={() => setPageSize(40)}>40</DropdownMenu.Item>
+								<DropdownMenu.Item onSelect={() => setPageSize(50)}>50</DropdownMenu.Item>
 							</DropdownMenu.Content>
 						</DropdownMenu.Root>
 					</div>

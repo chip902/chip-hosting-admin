@@ -23,14 +23,19 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			customerId: undefined,
 			startDate: "",
 			endDate: "",
-			isInvoiced: false,
+			invoiceStatus: "all",
 		},
 	});
 
 	const customerId = watch("customerId");
 
 	const onSubmit = (data: FilterFormSchema) => {
-		onApplyFilters(data);
+		// Adjust the end date to include the full day
+		const adjustedData = {
+			...data,
+			endDate: data.endDate ? `${data.endDate}T23:59:59.999` : undefined,
+		};
+		onApplyFilters(adjustedData);
 	};
 
 	const handleReset = () => {
@@ -84,9 +89,13 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 				</Form.Control>
 			</Form.Field>
 			<Form.Field name="isInvoiced" className="flex-1">
-				<Form.Label className="mr-2">Already Invoiced</Form.Label>
+				<Form.Label className="mr-2">Invoice Status</Form.Label>
 				<Form.Control asChild>
-					<input className="mr-2" type="checkbox" {...register("isInvoiced")} />
+					<select className="select-input" {...register("invoiceStatus")}>
+						<option value="all">All Entries</option>
+						<option value="true">Invoiced Only</option>
+						<option value="false">Not Invoiced Only</option>
+					</select>
 				</Form.Control>
 			</Form.Field>
 			<Flex gap="3">

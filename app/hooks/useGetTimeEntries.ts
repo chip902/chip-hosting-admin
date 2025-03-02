@@ -8,7 +8,7 @@ interface QueryParams {
 	customerId?: number;
 	startDate?: Date;
 	endDate?: Date;
-	isInvoiced?: boolean;
+	invoiceStatus?: string;
 	pageSize: number;
 	page: number;
 	sortBy?: string;
@@ -21,7 +21,7 @@ interface TimeEntryResponse {
 	totalEntries: number;
 }
 
-export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, isInvoiced, sortBy = "date", sortOrder = "desc" }: QueryParams) => {
+export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customerId, invoiceStatus, sortBy = "date", sortOrder = "desc" }: QueryParams) => {
 	const queryKey = [
 		"timeEntries",
 		page,
@@ -29,7 +29,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 		startDate ? format(startDate, "yyyy-MM-dd") : undefined,
 		endDate ? format(endDate, "yyyy-MM-dd") : undefined,
 		customerId,
-		isInvoiced,
+		invoiceStatus,
 		sortBy,
 		sortOrder,
 	];
@@ -43,7 +43,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 				...(startDate && { startDate: format(startDate, "yyyy-MM-dd") }),
 				...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }),
 				...(customerId !== undefined && { customerId: customerId.toString() }),
-				...(isInvoiced !== undefined && { isInvoiced: isInvoiced.toString() }),
+				...(invoiceStatus !== undefined && { invoiceStatus: invoiceStatus.toString() }),
 				sortBy,
 				sortOrder,
 			});

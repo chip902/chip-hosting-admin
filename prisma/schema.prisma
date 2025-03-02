@@ -101,6 +101,7 @@ model TimeEntry {
   projectId     Int
   invoiceId     Int?
   isInvoiced    Boolean?     @default(false)
+  invoiceStatus String?      @default("all")
   isBillable    Boolean?     @default(true)
   color         String?
   startSlot     Int?

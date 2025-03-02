@@ -18,6 +18,14 @@ import { useQuery } from "@tanstack/react-query";
  * but also any other string key for categories (e.g. "Meals/Entertainment").
  * The values can be string (for "Check #") or number (for amounts).
  */
+
+type ReportType = "deposits" | "expenses" | "both";
+
+interface BankSelection {
+	accountId: string;
+	reportType: ReportType;
+}
+
 interface ExpenseRow {
 	Date: string;
 	"Check #"?: string | undefined;
@@ -61,58 +69,50 @@ interface TaxReportGeneratorProps {
 // 2) Simple mapping from personal_finance_category.primary -> your business category
 //
 function mapPfcToBusinessCategory(primaryCat: string | undefined, transactionName: string): string {
-	// If we have no category, try to determine it from the transaction name
-	const name = transactionName.toUpperCase();
+	// Clean up the transaction name first
+	const cleanName = cleanupTransactionName(transactionName);
+	// Convert to uppercase for consistent matching
+	const name = cleanName.toUpperCase();
 
-	console.log("Attempting to categorize transaction:", {
-		originalName: transactionName,
-		normalizedName: name,
-		originalCategory: primaryCat,
+	console.log("Processing transaction:", {
+		original: transactionName,
+		cleaned: cleanName,
+		upperCase: name,
+		plaidCategory: primaryCat,
 	});
 
-	// Check transaction name patterns
-	if (name.includes("VERIZON")) {
-		return "Telephone Expense";
-	}
-	if (name.includes("OPTIMUM") || name.includes("NYSEG")) {
-		return "Utilities";
-	}
-	if (name.includes("AMERICAN EXPRESS") || name.includes("WIRE FEE")) {
-		return "Bank Charge";
-	}
-	if (name.includes("TRANSFER") || name.includes("FID BKG SVC")) {
-		return "Transfer / Owner Draw";
-	}
-	if (name.includes("NYS DTF") || name.includes("IRS") || name.includes("TAX")) {
-		return "Accounting";
-	}
-	if (name.includes("SERVICE FEE")) {
-		return "Bank Charge";
-	}
-	if (name.includes("SMASHBALLOON") || name.includes("ELEMENTOR")) {
-		return "Office Expense";
-	}
-	if (name.includes("DOMESTIC INCOMING")) {
-		return "Personal funds";
+	// Define category mappings
+	const categoryMappings: [string[], string][] = [
+		[["VERIZON"], "Telephone Expense"],
+		[["OPTIMUM", "NYSEG"], "Utilities"],
+		[["AMERICAN EXPRESS", "WIRE FEE", "SERVICE FEE"], "Bank Charge"],
+		[["TRANSFER", "FID BKG SVC", "NYS DTF", "IRS", "TAX", "DOMESTIC INCOMING"], "Personal"],
+		[["SMASHBALLOON", "ELEMENTOR", "GOOGLE", "ADOBE"], "Office Expense"],
+	];
+
+	// Check each category mapping
+	for (const [patterns, category] of categoryMappings) {
+		if (patterns.some((pattern) => name.includes(pattern))) {
+			console.log(`Mapped "${cleanName}" to category: ${category}`);
+			return category;
+		}
 	}
 
-	// If no pattern matches, log it and return MISC
-	console.log("No category match found for transaction:", transactionName);
+	// If no matches found
+	console.log(`No category match found for "${cleanName}", defaulting to MISC`);
 	return "MISC";
 }
 
 function cleanupTransactionName(name: string): string {
-	// Remove common prefixes
+	// Remove common prefixes and technical details
 	let cleaned = name.replace(/ORIG CO NAME:|DESC DATE:|CO ENTRY DESCR:|SEC:|TRACE#:|EED:|IND ID:|IND NAME:|TRN:|\s+TC$/g, "");
 
 	// Remove transaction numbers and references
 	cleaned = cleaned.replace(/transaction#:\s*\d+/g, "");
 	cleaned = cleaned.replace(/reference#:\s*\d+[A-Z]+\s+\d+\/\d+/g, "");
-
-	// Remove ORIG ID and similar technical identifiers
 	cleaned = cleaned.replace(/ORIG ID:[A-Z0-9]+/g, "");
 
-	// Clean up specific patterns in your transactions
+	// Special case replacements
 	const specialCases: Record<string, string> = {
 		"OPTIMUM 7819": "Optimum Cable",
 		"NYS DTF PIT": "NYS Tax Payment",
@@ -121,6 +121,11 @@ function cleanupTransactionName(name: string): string {
 		"Online Realtime Transfer to Personal Checking": "Transfer to Personal Account",
 		"Online Transfer to MMA": "Transfer to Money Market Account",
 		"MONTHLY SERVICE FEE": "Bank Service Fee",
+		"AMERICAN EXPRESS": "Amex Payment",
+		GOOGLE: "Google Services",
+		ADOBE: "Adobe Software",
+		ELEMENTOR: "Elementor Website Builder",
+		SMASHBALLOON: "SmashBalloon Social Media Plugin",
 	};
 
 	// Apply special case replacements
@@ -135,7 +140,7 @@ function cleanupTransactionName(name: string): string {
 	cleaned = cleaned.replace(/\s+/g, " "); // Remove extra spaces
 	cleaned = cleaned.trim();
 
-	// Proper case the final result (first letter of each word capitalized)
+	// Proper case the final result
 	cleaned = cleaned
 		.split(" ")
 		.map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
@@ -150,17 +155,13 @@ function mapExpenseCategory(tx: Transaction): Partial<ExpenseRow> {
 	const cleanedName = cleanupTransactionName(tx.name);
 
 	const partialRow: Partial<ExpenseRow> = {
-		"Meals/Entertainment": 0,
-		"Travel Expenses": 0,
-		"Repairs & Maintenance": 0,
-		"Medical Expenses": 0,
-		"Transfer / Owner Draw": 0,
+		"Medical Exp": 0,
 		"Office Expense": 0,
 		"Telephone Expense": 0,
-		"Bank Charge": 0,
+		Ads: 0,
 		Utilities: 0,
 		Accounting: 0,
-		"Personal funds": 0,
+		Personal: 0,
 		MISC: 0,
 	};
 
@@ -179,20 +180,25 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 		startDate: new Date(`${year}-01-01`),
 		endDate: new Date(`${year}-12-31`),
 	});
+	const [bankSelections, setBankSelections] = useState<BankSelection[]>([]);
+	const isQueryEnabled = bankSelections.length > 0;
 
-	const [selectedBanks, setSelectedBanks] = useState<string[]>([]);
-	const isQueryEnabled = selectedBanks.length > 0;
+	// Helper function to check if a bank is selected for a specific type
+	const isBankSelectedFor = (accountId: string, type: ReportType) => {
+		return bankSelections.some((selection) => selection.accountId === accountId && (selection.reportType === type || selection.reportType === "both"));
+	};
 
 	// Query the server for transactions, assuming personal_finance_category
 	const { data: fiscalYearData, isLoading } = useQuery({
-		queryKey: ["fiscal-year-transactions", userId, year, selectedBanks],
+		queryKey: ["fiscal-year-transactions", userId, year, bankSelections],
 		queryFn: async () => {
 			const resp = await axios.get("/api/transactions/get-transactions", {
 				params: {
 					userId,
 					startDate: dateRange.startDate.toISOString().split("T")[0],
 					endDate: dateRange.endDate.toISOString().split("T")[0],
-					bankIds: selectedBanks.join(","),
+					// Map the accountIds from bankSelections
+					bankIds: bankSelections.map((s) => s.accountId).join(","),
 				},
 			});
 			return resp.data as { transactions: Transaction[] };
@@ -206,7 +212,9 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 
 	// Summaries
 	const { expenses, deposits } = useMemo(() => {
-		return fiscalYearTransactions.reduce<TaxReportAccumulator>(
+		// Sort transactions by date first
+		const sortedTransactions = [...fiscalYearTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+		return sortedTransactions.reduce<TaxReportAccumulator>(
 			(acc, tx) => {
 				const transactionDate = new Date(tx.date);
 				if (transactionDate.getFullYear() === year) {
@@ -241,26 +249,43 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 
 	const generateExcel = async () => {
 		try {
-			// Instead of fetching new transactions, use the already filtered transactions
-			// from fiscalYearTransactions which respects the selectedBanks
-			const final = fiscalYearTransactions.reduce<TaxReportAccumulator>(
+			// Sort transactions by date first
+			const sortedTransactions = [...fiscalYearTransactions].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+			// Process transactions with proper filtering and mapping
+			const final = sortedTransactions.reduce<TaxReportAccumulator>(
 				(acc, tx) => {
 					const transactionDate = new Date(tx.date);
 					if (transactionDate.getFullYear() === year) {
-						if (tx.amount < 0) {
+						// Find the bank selection for this transaction
+						const bankSelection = bankSelections.find((s) => s.accountId === tx.accountId);
+						if (!bankSelection) return acc; // Skip if bank not selected
+
+						if (tx.amount < 0 && (bankSelection.reportType === "expenses" || bankSelection.reportType === "both")) {
 							const mappedExpCat = mapExpenseCategory(tx);
+							const cleanedName = cleanupTransactionName(tx.name);
 							acc.expenses.push({
 								Date: transactionDate.toLocaleDateString(),
-								"Check #": tx.paymentChannel === "check" ? "" : "",
-								Payee: tx.name,
+								"Check #": tx.paymentChannel === "check" ? tx.paymentChannel : "",
+								Payee: cleanedName,
 								Amount: Math.abs(tx.amount),
-								...mappedExpCat,
-								Description: tx.name,
+								"Office Expense": mappedExpCat["Office Expense"] || 0,
+								"Telephone Expense": mappedExpCat["Telephone Expense"] || 0,
+								Personal: mappedExpCat["Personal"] || 0,
+								Accounting: mappedExpCat["Accounting"] || 0,
+								"Bank Charge": mappedExpCat["Bank Charge"] || 0,
+								Ads: mappedExpCat["Ads"] || 0,
+								Insurance: mappedExpCat["Insurance"] || 0,
+								"Medical Exp": mappedExpCat["Medical Exp"] || 0,
+								Utilities: mappedExpCat["Utilities"] || 0,
+								MISC: mappedExpCat["MISC"] || 0,
+								Description: cleanedName,
 							});
-						} else {
+						} else if (tx.amount > 0 && (bankSelection.reportType === "deposits" || bankSelection.reportType === "both")) {
+							const cleanedName = cleanupTransactionName(tx.name);
 							acc.deposits.push({
 								Date: transactionDate.toLocaleDateString(),
-								Source: tx.name,
+								Source: cleanedName,
 								Amount: tx.amount,
 								"W-2 Income": tx.category === "INCOME" && tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
 								"Self Employed Income": tx.category === "INCOME" && !tx.name.toLowerCase().includes("payroll") ? tx.amount : "",
@@ -273,43 +298,155 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 				{ expenses: [], deposits: [] }
 			);
 
-			// Make Excel
+			// Create Excel workbook
 			const wb = XLSX.utils.book_new();
-			const wsExpenses = XLSX.utils.json_to_sheet(final.expenses);
-			XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
 
-			const wsDeposits = XLSX.utils.json_to_sheet(final.deposits);
-			XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+			// Define headers
+			const expenseHeaders = [
+				"Date",
+				"Check #",
+				"Payee",
+				"Amount",
+				"Office Expense",
+				"Telephone Expense",
+				"Personal",
+				"Accounting",
+				"Bank Charge",
+				"Ads",
+				"Insurance",
+				"Medical Exp",
+				"Utilities",
+				"MISC",
+				"Description",
+			];
 
+			const depositHeaders = ["Date", "Source", "Amount", "W-2 Income", "Self Employed Income", "Personal funds"];
+
+			// Create Expenses sheet if there are expenses
+			if (final.expenses.length > 0) {
+				const wsExpenses = XLSX.utils.json_to_sheet(final.expenses, {
+					header: expenseHeaders,
+					skipHeader: true,
+				});
+
+				// Add headers with styling
+				XLSX.utils.sheet_add_aoa(wsExpenses, [expenseHeaders], { origin: "A1" });
+
+				// Optional: Add some basic styling to headers
+				for (let i = 0; i < expenseHeaders.length; i++) {
+					const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+					if (!wsExpenses[cellRef]) wsExpenses[cellRef] = {};
+					wsExpenses[cellRef].s = { font: { bold: true } };
+				}
+
+				XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
+			}
+
+			// Create Deposits sheet if there are deposits
+			if (final.deposits.length > 0) {
+				const wsDeposits = XLSX.utils.json_to_sheet(final.deposits, {
+					header: depositHeaders,
+					skipHeader: true,
+				});
+
+				// Add headers with styling
+				XLSX.utils.sheet_add_aoa(wsDeposits, [depositHeaders], { origin: "A1" });
+
+				// Optional: Add some basic styling to headers
+				for (let i = 0; i < depositHeaders.length; i++) {
+					const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+					if (!wsDeposits[cellRef]) wsDeposits[cellRef] = {};
+					wsDeposits[cellRef].s = { font: { bold: true } };
+				}
+
+				XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+			}
+
+			// Save the file
 			XLSX.writeFile(wb, `tax_report_${year}.xlsx`);
 		} catch (err) {
 			console.error("Error generating report:", err);
+			// You might want to add some user feedback here
 		}
 	};
-
 	// UI
 	return (
 		<div className="space-y-4">
 			{/* Bank Selection */}
 			<div className="p-4 border rounded-lg">
-				<h3 className="text-lg font-medium mb-2">Select Banks for Tax Report</h3>
-				<div className="flex flex-wrap gap-2">
+				<h3 className="text-lg font-medium mb-2">Select Banks and Report Types</h3>
+				<div className="flex flex-col gap-4">
 					{accounts.map((account) => (
-						<label key={account.accountId} className="flex items-center space-x-2">
-							<input
-								type="checkbox"
-								checked={selectedBanks.includes(account.accountId)}
-								onChange={(e) => {
-									if (e.target.checked) {
-										setSelectedBanks((prev) => [...prev, account.accountId]);
-									} else {
-										setSelectedBanks((prev) => prev.filter((id) => id !== account.accountId));
-									}
-								}}
-								className="rounded border-gray-300"
-							/>
-							<span>{account.name}</span>
-						</label>
+						<div key={account.accountId} className="space-y-2">
+							<div className="font-medium">{account.name}</div>
+							<div className="flex gap-4 ml-4">
+								<label className="flex items-center space-x-2">
+									<input
+										type="radio"
+										name={`report-type-${account.accountId}`}
+										checked={isBankSelectedFor(account.accountId, "expenses")}
+										onChange={() => {
+											setBankSelections((prev) => {
+												const filtered = prev.filter((s) => s.accountId !== account.accountId);
+												return [...filtered, { accountId: account.accountId, reportType: "expenses" }];
+											});
+										}}
+										className="rounded border-gray-300"
+									/>
+									<span>Expenses Only</span>
+								</label>
+								<label className="flex items-center space-x-2">
+									<input
+										type="radio"
+										name={`report-type-${account.accountId}`}
+										checked={isBankSelectedFor(account.accountId, "deposits")}
+										onChange={() => {
+											setBankSelections((prev) => {
+												const filtered = prev.filter((s) => s.accountId !== account.accountId);
+												return [...filtered, { accountId: account.accountId, reportType: "deposits" }];
+											});
+										}}
+										className="rounded border-gray-300"
+									/>
+									<span>Deposits Only</span>
+								</label>
+								<label className="flex items-center space-x-2">
+									<input
+										type="radio"
+										name={`report-type-${account.accountId}`}
+										checked={bankSelections.some((s) => s.accountId === account.accountId && s.reportType === "both")}
+										onChange={() => {
+											setBankSelections((prev) => {
+												// Remove any existing selection for this account
+												const filtered = prev.filter((s) => s.accountId !== account.accountId);
+												// Add the new selection
+												return [
+													...filtered,
+													{
+														accountId: account.accountId,
+														reportType: "both",
+													},
+												];
+											});
+										}}
+										className="rounded border-gray-300"
+									/>
+									<span>Both</span>
+								</label>
+								<label className="flex items-center space-x-2">
+									<input
+										type="radio"
+										name={`report-type-${account.accountId}`}
+										checked={!bankSelections.some((s) => s.accountId === account.accountId)}
+										onChange={() => {
+											setBankSelections((prev) => prev.filter((s) => s.accountId !== account.accountId));
+										}}
+										className="rounded border-gray-300"
+									/>
+									<span>None</span>
+								</label>
+							</div>
+						</div>
 					))}
 				</div>
 			</div>
@@ -317,7 +454,7 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 			{/* Header / Export */}
 			<div className="flex justify-between items-center">
 				<h2 className="text-xl font-semibold">Tax Report Generator ({year})</h2>
-				<Button onClick={generateExcel} disabled={!isQueryEnabled || isLoading} className="flex items-center gap-2">
+				<Button onClick={generateExcel} disabled={bankSelections.length === 0 || isLoading} className="flex items-center gap-2">
 					<Download className="h-4 w-4" />
 					{isLoading ? "Loading..." : "Export Tax Report"}
 				</Button>
@@ -325,7 +462,7 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 
 			{/* Loading / no selection states */}
 			{isQueryEnabled && isLoading && <div className="p-2 text-gray-500">Loading transactions...</div>}
-			{!isQueryEnabled && <div className="p-2 text-gray-500">Select at least one bank to see the report.</div>}
+			{bankSelections.length === 0 && <div className="p-2 text-gray-500">Select at least one bank and report type to generate the report.</div>}
 
 			{/* Summaries */}
 			<div className="grid grid-cols-2 gap-4">
