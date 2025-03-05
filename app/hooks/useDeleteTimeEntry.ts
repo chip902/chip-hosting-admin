@@ -6,7 +6,7 @@ const deleteTimeEntry = async ({ id }: DeleteTimeEntryParams): Promise<AxiosResp
 	try {
 		const response = await axios.delete(`/api/timelog/${id}`);
 
-		if (response.status !== 200) {
+		if (response.status !== 204) {
 			throw new Error("Error deleting time entry");
 		}
 
