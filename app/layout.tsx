@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
 	return (
-		<html lang="en" className="h-full antialiased [--removed-body-scroll-bar-size:0px]">
+		<html lang="en" suppressHydrationWarning className="h-full antialiased [--removed-body-scroll-bar-size:0px]">
 			<body className="h-full">
 				<Providers>
 					<MainLayout>{children}</MainLayout>
