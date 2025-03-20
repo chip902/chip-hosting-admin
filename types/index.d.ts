@@ -396,9 +396,13 @@ export interface Task {
 }
 
 export interface TimeEntry {
+	time(time: any, arg1: number): number | Date;
+	start: any;
+	end(end: any, arg1: number): number | Date;
 	startTime: string;
 	endTime: string;
 	id: number;
+	name: string;
 	description?: string;
 	duration: number;
 	date: Date;
@@ -458,14 +462,13 @@ export interface ProcessedTimeSlot {
 }
 
 export interface TimeEntryProps {
-	date: Date;
+	entry: TimeEntry;
 	startSlot: number;
 	endSlot: number;
-	dayIndex: number;
 	color: string;
-	width: number;
 	left: number;
-	entry: ProcessedTimeEntry; // Use ProcessedTimeEntry which includes both base and UI-specific data
+	width: number;
+	onTimeSlotSelect: (slot: { date?: Date; startTime?: string; endTime?: string; duration?: number }) => void;
 }
 
 export interface RawTimeEntry {
@@ -488,25 +491,19 @@ export interface RawTimeEntry {
 
 export interface ProcessedTimeEntry {
 	id: number;
-	date: Date | string;
+	date: Date | string | DateTime;
 	startTime: string;
 	endTime: string;
 	customer: { name: string };
 	project: { name: string };
 	task: { name: string };
-	isInvoiced: boolean | null;
-	isBillable: boolean | null;
-	color: string;
-	name: string;
-	customerName?: string;
-	projectName?: string;
-	taskName?: string;
-	width?: number;
-	left?: number;
-	startSlot?: number | null;
-	endSlot?: number | null;
-	duration: number;
-	description?: string;
+	isInvoiced: boolean;
+	invoiceStatus: boolean | string | null;
+	// Add other required properties
+	userId: number | string;
+	isBillable: boolean; // Example of another property that might be needed
+	color: string; // Example of another property that might be needed
+	name: string; // Example of another property that might be needed
 }
 
 export interface GridItem {

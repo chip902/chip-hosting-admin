@@ -1,9 +1,10 @@
+// app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/prisma/client";
-import { parseISO, isValid, startOfDay, endOfDay } from "date-fns";
+import { parseISO, isValid } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";
-import { format, zonedTimeToUtc, utcToZonedTime } from "date-fns-tz";
+import { format } from "date-fns-tz";
 import { Customer, Project, Task, TimeEntry } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -89,22 +90,18 @@ export async function GET(request: NextRequest) {
 
 			return {
 				id: entry.id,
-				date: entry.date,
-				startTime,
-				endTime,
-				customer: { name: entry.customer?.name || "" },
-				project: { name: entry.project?.name || "" },
-				task: { name: entry.task?.name || "" },
-				isInvoiced: entry.isInvoiced,
-				invoiceStatus: entry.invoiceStatus,
-				isClientInvoiced: entry.isInvoiced,
-				isBillable: entry.isBillable,
-				color: entry.customer.color!,
-				name: entry.customer?.name || "",
-				description: entry.description ?? "",
-				duration,
-				startSlot: entry.startSlot ?? undefined,
-				endSlot: entry.endSlot ?? undefined,
+				date: new Date(entry.date),
+				startTime: startTime,
+				endTime: endTime,
+				customer: { name: entry.customer.name },
+				project: { name: entry.project.name },
+				task: { name: entry.task.name },
+				isInvoiced: entry.isInvoiced ?? false,
+				invoiceStatus: entry.invoiceStatus ?? false,
+				userId: entry.userId,
+				isBillable: entry.isBillable || false,
+				color: entry.color || "",
+				name: entry.task.name || "",
 			};
 		});
 

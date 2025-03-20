@@ -5,7 +5,7 @@ import TimeGridHeader from "./TimeGridHeader";
 import { AlertDialog, Button, Flex } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { areIntervalsOverlapping, differenceInMinutes, endOfDay, parseISO, startOfDay, format, addMinutes } from "date-fns";
-import { ProcessedTimeEntry } from "@/types";
+import { ProcessedTimeEntry, TimeEntry } from "@/types";
 import { calculateDuration, calculateLeftPosition, calculateWidth } from "@/lib/utils";
 
 interface TimeGridProps {
@@ -42,15 +42,8 @@ const transformToTimeEntry = (entry: any): ProcessedTimeEntry => ({
 	isBillable: entry.isBillable ?? true,
 	color: entry.color || "#000000",
 	name: entry.name || `${entry.Project?.name} - ${entry.Task?.name}`,
-	customerName: entry.Customer?.name,
-	projectName: entry.Project?.name,
-	taskName: entry.Task?.name,
-	width: calculateWidth(entry),
-	left: calculateLeftPosition(entry),
-	startSlot: entry.startSlot,
-	endSlot: entry.endSlot,
-	duration: calculateDuration(entry.startTime, entry.endTime),
-	description: entry.description ?? "",
+	userId: entry.userId,
+	invoiceStatus: null,
 });
 
 interface OverlappingEntry extends ProcessedTimeEntry {
@@ -277,14 +270,13 @@ const TimeGrid = ({ filters, onTimeSlotSelect }: TimeGridProps) => {
 								{processedEntries.map((entry) => (
 									<TimeEntryComponent
 										key={entry.id}
-										entry={entry}
-										date={entry.date}
+										entry={entry as unknown as TimeEntry}
 										startSlot={entry.startSlot}
 										endSlot={entry.endSlot}
-										dayIndex={dayIndex}
 										color={entry.color || "#000000"}
 										width={entry.width}
 										left={entry.left}
+										onTimeSlotSelect={onTimeSlotSelect}
 									/>
 								))}
 							</div>

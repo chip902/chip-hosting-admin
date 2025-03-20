@@ -1,32 +1,74 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-import { TimeEntryProps } from "@/types";
+import { TimeEntry, TimeEntryProps } from "@/types";
+import { addMinutes, differenceInMinutes, format, startOfDay } from "date-fns";
 
-const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlot, color, left, width }) => {
+const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onTimeSlotSelect }: TimeEntryProps) => {
+	const initialPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
+	const [loader, setLoader] = useState(false);
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		startTime: entry.startTime.split("T")[1].replace("Z", "") || "",
+		startTime: entry.startTime.toString().split("T")[1].replace("Z", "") || "",
 	});
 
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 
-	useEffect(() => {
-		setFormState({
-			duration: entry.duration?.toString() || "",
-			description: entry.description || "",
-			entryDate: new Date(entry.date).toISOString().split("T")[0],
-			startTime: entry.startTime.split("T")[1].replace("Z", "") || "",
+	// Drag state management
+	const [isDragging, setIsDragging] = useState(false);
+	const [dragStart, setDragStart] = useState<{ dayIndex: number; minutes: number } | null>(null);
+	const [dragEnd, setDragEnd] = useState<{ dayIndex: number; minutes: number } | null>(null);
+
+	// Initialize time entry data
+	const [timeEntry, setTimeEntry] = useState({
+		id: entry.id,
+		date: new Date(entry.date),
+		startTime: new Date(entry.startTime),
+		endTime: new Date(entry.endTime),
+	});
+
+	const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
+		if (event.target === event.currentTarget && !(event.target as Element).classList.contains("resize-handle")) {
+			setIsDragging(true);
+			setDragStart({ dayIndex: 0, minutes: getMinutesFromTime(timeEntry.startTime) });
+		}
+		initialPosition.current = { x: event.clientX, y: event.clientY };
+	};
+
+	const handleMouseMove = (dayIndex: number, event: React.MouseEvent<HTMLDivElement>) => {
+		if (!isDragging) return;
+
+		const rect = event.currentTarget.getBoundingClientRect();
+		const relativeY = event.clientY - rect.top;
+		const minutes = Math.floor((relativeY / rect.height) * 24 * 60);
+
+		setDragEnd({ dayIndex, minutes });
+	};
+
+	const handleMouseUp = () => {
+		if (!isDragging || !dragStart || !dragEnd) return;
+
+		const newStartTime = addMinutes(startOfDay(timeEntry.date), dragEnd.minutes);
+		const newEndTime = addMinutes(newStartTime, differenceInMinutes(timeEntry.endTime, timeEntry.startTime));
+
+		onTimeSlotSelect({
+			date: timeEntry.date,
+			startTime: format(newStartTime, "HH:mm"),
+			endTime: format(newEndTime, "HH:mm"),
 		});
-	}, [entry]);
+
+		setIsDragging(false);
+		setDragStart(null);
+		setDragEnd(null);
+	};
 
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
@@ -35,45 +77,40 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 
 	const handleUpdate = () => {
 		setLoading(true);
-		const isoDateStr = `${formState.entryDate}T${formState.startTime}`;
-		const isoDate = new Date(isoDateStr);
 
-		if (isNaN(isoDate.getTime())) {
-			console.error("Invalid date or time format: ", isoDateStr);
+		try {
+			const isoDate = new Date(`${formState.entryDate}T${formState.startTime}`);
+			updateTimeEntry(
+				{
+					id: entry.id,
+					data: {
+						duration: Number(formState.duration),
+						description: formState.description,
+						date: isoDate.toISOString(),
+					},
+				},
+				{
+					onSuccess: () => {
+						setIsOpen(false);
+						setLoading(false);
+					},
+					onError: (error) => {
+						console.error("Failed to update time entry:", error);
+						setLoading(false);
+					},
+				}
+			);
+		} catch (error) {
+			console.error("Invalid date/time format");
 			setLoading(false);
-			return;
 		}
-
-		const localISOString = isoDate.toISOString();
-		const localISOStringWithoutZ = localISOString.replace("Z", "");
-
-		updateTimeEntry(
-			{
-				id: entry.id,
-				data: {
-					duration: Number(formState.duration),
-					description: formState.description,
-					date: localISOString,
-				},
-			},
-			{
-				onSuccess: () => {
-					setIsOpen(false);
-					setLoading(false);
-				},
-				onError: (error) => {
-					console.error("Failed to update time entry:", error);
-					setLoading(false);
-				},
-			}
-		);
 	};
 
 	const handleDelete = (e: React.MouseEvent) => {
-		e.preventDefault(); // Prevent event bubbling
-		e.stopPropagation(); // Prevent event bubbling
+		e.preventDefault();
+		e.stopPropagation();
 
-		setLoading(true);
+		setLoader(true);
 		deleteTimeEntry(
 			{ id: entry.id },
 			{
@@ -94,12 +131,14 @@ const TimeEntryComponent: React.FC<TimeEntryProps> = ({ entry, startSlot, endSlo
 		const adjustedStart = start + offsetMinutes;
 		const adjustedEnd = end + offsetMinutes;
 
-		const top = (adjustedStart / 1440) * 100;
-		let height = ((adjustedEnd - adjustedStart) / 1440) * 100;
-		if (height < 0) {
-			height += 100;
-		}
-		return { top, height: Math.max(height, 1) };
+		return {
+			top: `${(adjustedStart / 1440) * 100}%`,
+			height: `${Math.max(((adjustedEnd - adjustedStart) / 1440) * 100, 1)}%`,
+		};
+	};
+
+	const getMinutesFromTime = (date: Date) => {
+		return date.getHours() * 60 + date.getMinutes();
 	};
 
 	const { top, height } = calculatePosition(startSlot, endSlot);

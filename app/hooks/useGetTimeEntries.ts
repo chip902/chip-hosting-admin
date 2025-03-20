@@ -8,7 +8,8 @@ interface QueryParams {
 	customerId?: number;
 	startDate?: Date;
 	endDate?: Date;
-	invoiceStatus?: string;
+	invoiceStatus?: string | boolean;
+	isInvoiced?: string | boolean;
 	pageSize: number;
 	page: number;
 	sortBy?: string;
