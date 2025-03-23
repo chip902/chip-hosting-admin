@@ -458,7 +458,7 @@ export interface ProcessedTimeSlot {
 	date: Date;
 	dayIndex: number;
 	color: string;
-	entry: ProcessedTimeEntry; // Ensure this is the full object
+	entry: ProcessedTimeEntry;
 }
 
 export interface TimeEntryProps {
@@ -494,14 +494,23 @@ export interface ProcessedTimeEntry {
 	date: Date | string | DateTime;
 	startTime: string;
 	endTime: string;
+	customerName: string;
+	projectName: string;
+	taskName: string;
+	width: number;
+	left: number;
+	startSlot: number;
+	endSlot: number;
+	duration: number;
+	description: string;
 	customer: { name: string };
 	project: { name: string };
 	task: { name: string };
 	isInvoiced: boolean;
-	invoiceStatus: boolean | string | null;
+	invoiceStatus?: boolean | string | null;
 	// Add other required properties
 	userId: number | string;
-	isBillable: boolean; // Example of another property that might be needed
+	isBillable?: boolean; // Example of another property that might be needed
 	color: string; // Example of another property that might be needed
 	name: string; // Example of another property that might be needed
 }

@@ -1,6 +1,6 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "es2020",
     "lib": [
       "dom",
       "dom.iterable",
@@ -12,13 +12,12 @@
     "forceConsistentCasingInFileNames": true,
     "noEmit": true,
     "esModuleInterop": true,
-    "module": "ESNext",
-    "moduleResolution": "bundler",
+    "module": "esnext",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
     "jsx": "preserve",
     "incremental": true,
-    "baseUrl": ".",
     "plugins": [
       {
         "name": "next"
@@ -34,19 +33,22 @@
       "./types"
     ],
     "types": [
-      "next-auth"
+      "node"
     ]
   },
-  "include": [
-    "next-env.d.ts",
+  "includes": [
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "app/api/bookings/[id]/route.ts",
-    "next.config.js",
-    "remove-item.ts.script"
+    "**/*.js",
+    "**/*.jsx"
   ],
   "exclude": [
     "node_modules"
+  ],
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    "**/*.ts",
+    "**/*.tsx"
   ]
 }

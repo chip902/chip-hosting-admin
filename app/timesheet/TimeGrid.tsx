@@ -26,6 +26,7 @@ interface TimeGridProps {
 
 const transformToTimeEntry = (entry: any): ProcessedTimeEntry => ({
 	id: entry.id,
+	userId: entry.id,
 	date: entry.date,
 	startTime: entry.startTime,
 	endTime: entry.endTime,
@@ -42,8 +43,15 @@ const transformToTimeEntry = (entry: any): ProcessedTimeEntry => ({
 	isBillable: entry.isBillable ?? true,
 	color: entry.color || "#000000",
 	name: entry.name || `${entry.Project?.name} - ${entry.Task?.name}`,
-	userId: entry.userId,
-	invoiceStatus: null,
+	customerName: entry.Customer?.name,
+	projectName: entry.Project?.name,
+	taskName: entry.Task?.name,
+	width: calculateWidth(entry),
+	left: calculateLeftPosition(entry),
+	startSlot: entry.startSlot,
+	endSlot: entry.endSlot,
+	duration: calculateDuration(entry.startTime, entry.endTime),
+	description: entry.description ?? "",
 });
 
 interface OverlappingEntry extends ProcessedTimeEntry {
