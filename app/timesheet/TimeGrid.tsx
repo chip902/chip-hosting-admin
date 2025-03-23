@@ -24,17 +24,7 @@ interface TimeGridProps {
 	) => void;
 }
 
-// Debug helper function
-const logTimeDetails = (entry: any) => {
-	console.log(`Entry ${entry.id}:`, {
-		date: entry.date,
-		startTime: entry.startTime,
-		startHour: new Date(entry.startTime).getHours(),
-		startLocal: new Date(entry.startTime).toLocaleTimeString(),
-		duration: entry.duration,
-	});
-};
-
+// Helper function to safely parse ISO dates while handling timezone issues
 const parseISOWithOffset = (dateStr: string): Date => {
 	if (!dateStr) return new Date();
 
@@ -189,7 +179,7 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 };
 
 const throttle = (fn: Function, wait: number) => {
-	let timeout: NodeJS.Timeout | null = null;
+	let timeout: ReturnType<typeof setTimeout> | null = null;
 	return (args: any) => {
 		if (!timeout) {
 			fn(args);

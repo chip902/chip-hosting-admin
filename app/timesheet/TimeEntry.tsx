@@ -1,11 +1,13 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
 import { TimeEntry, TimeEntryProps } from "@/types";
+import { format, addMinutes, parseISO } from "date-fns";
 
+// Helper function to process and display time correctly
 const parseISOForDisplay = (dateStr: string): string => {
 	if (!dateStr) return "";
 
@@ -32,23 +34,269 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 
-	// Format times from entry
-	const formatTime = (dateStr: string | Date) => {
-		if (!dateStr) return "";
-		const date = new Date(dateStr);
-		return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-	};
+	// States for drag and resize
+	const [isDragging, setIsDragging] = useState(false);
+	const [isResizing, setIsResizing] = useState(false);
+	const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+	const [originalPosition, setOriginalPosition] = useState({ top: 0, left: 0, height: 0 });
+	const entryRef = useRef<HTMLDivElement>(null);
 
 	// Set initial form state with entry data
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		startTime: formatTime(entry.startTime).toLowerCase().replace(/\s/g, ""),
+		// Extract time directly from the ISO string
+		startTime: entry.startTime?.match(/T(\d{2}:\d{2})/) ? entry.startTime.match(/T(\d{2}:\d{2})/)![1] : "09:00",
 	});
 
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
+
+	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
+	const calculatePosition = () => {
+		// startSlot and endSlot are in minutes from start of day (0-1440)
+		const top = (startSlot / 1440) * 100; // Convert to percentage
+		const height = ((endSlot - startSlot) / 1440) * 100; // Height as percentage
+
+		return {
+			top: `${top}%`,
+			height: `${Math.max(height, 2)}%`, // Ensure at least 2% height for visibility
+		};
+	};
+
+	const { top, height } = calculatePosition();
+
+	// Handle drag start
+	const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+		// Prevent popover from opening during drag
+		e.stopPropagation();
+
+		// Only initiate drag on the main part, not controls or resize handle
+		if ((e.target as HTMLElement).classList.contains("resize-handle") || (e.target as HTMLElement).tagName === "BUTTON") {
+			return;
+		}
+
+		setIsDragging(true);
+
+		if (entryRef.current) {
+			const rect = entryRef.current.getBoundingClientRect();
+			setDragOffset({
+				x: e.clientX - rect.left,
+				y: e.clientY - rect.top,
+			});
+
+			// Store original position for calculation on drop
+			setOriginalPosition({
+				top: rect.top,
+				left: rect.left,
+				height: rect.height,
+			});
+		}
+
+		// Add global event listeners for move and end
+		document.addEventListener("mousemove", handleDragMove);
+		document.addEventListener("mouseup", handleDragEnd);
+	};
+
+	// Handle drag move
+	const handleDragMove = (e: MouseEvent) => {
+		if (!isDragging || !entryRef.current) return;
+
+		// Get parent grid dimensions
+		const gridElement = entryRef.current.closest(".col-span-1");
+		if (!gridElement) return;
+
+		const gridRect = gridElement.getBoundingClientRect();
+
+		// Calculate new position
+		let newY = e.clientY - gridRect.top - dragOffset.y;
+
+		// Constrain to parent bounds
+		newY = Math.max(0, Math.min(newY, gridRect.height - entryRef.current.offsetHeight));
+
+		// Set new position
+		entryRef.current.style.top = `${newY}px`;
+		entryRef.current.style.position = "absolute";
+		entryRef.current.style.zIndex = "100";
+	};
+
+	// Handle drag end
+	const handleDragEnd = (e: MouseEvent) => {
+		if (!isDragging || !entryRef.current) return;
+
+		setIsDragging(false);
+
+		// Remove global event listeners
+		document.removeEventListener("mousemove", handleDragMove);
+		document.removeEventListener("mouseup", handleDragEnd);
+
+		// Get parent grid and calculate new time
+		const gridElement = entryRef.current.closest(".col-span-1");
+		if (!gridElement) return;
+
+		const gridRect = gridElement.getBoundingClientRect();
+		const entryRect = entryRef.current.getBoundingClientRect();
+
+		// Calculate time from position
+		const relativeY = entryRect.top - gridRect.top;
+		const totalMinutes = 24 * 60; // Minutes in a day
+		const minutesFromTop = Math.round(((relativeY / gridRect.height) * totalMinutes) / 15) * 15;
+
+		// Get original duration
+		const duration = entry.duration || 60;
+
+		// Reset to percentage-based positioning
+		entryRef.current.style.position = "";
+		entryRef.current.style.top = "";
+		entryRef.current.style.zIndex = "";
+
+		// Create new date based on the day and minutes
+		const entryDate = new Date(entry.date);
+		const startDateTime = new Date(entryDate);
+		startDateTime.setHours(0, minutesFromTop, 0, 0);
+
+		const endDateTime = new Date(startDateTime);
+		endDateTime.setMinutes(endDateTime.getMinutes() + duration);
+
+		// Update via API
+		updateTimeEntry(
+			{
+				id: entry.id,
+				data: {
+					date: startDateTime.toISOString(),
+					startTime: startDateTime.toISOString(),
+					endTime: endDateTime.toISOString(),
+				},
+			},
+			{
+				onSuccess: () => {
+					// Refresh the grid
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
+				},
+				onError: (error) => {
+					console.error("Failed to update time entry after drag:", error);
+				},
+			}
+		);
+	};
+
+	// Handle resize start
+	const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
+		e.stopPropagation();
+		setIsResizing(true);
+
+		if (entryRef.current) {
+			const rect = entryRef.current.getBoundingClientRect();
+			setOriginalPosition({
+				top: rect.top,
+				left: rect.left,
+				height: rect.height,
+			});
+		}
+
+		// Add global event listeners for move and end
+		document.addEventListener("mousemove", handleResizeMove);
+		document.addEventListener("mouseup", handleResizeEnd);
+	};
+
+	// Handle resize move
+	const handleResizeMove = (e: MouseEvent) => {
+		if (!isResizing || !entryRef.current) return;
+
+		// Get parent grid dimensions
+		const gridElement = entryRef.current.closest(".col-span-1");
+		if (!gridElement) return;
+
+		const gridRect = gridElement.getBoundingClientRect();
+		const entryRect = entryRef.current.getBoundingClientRect();
+
+		// Calculate new height
+		let newHeight = e.clientY - entryRect.top;
+
+		// Constrain to grid bounds and minimum height
+		newHeight = Math.max(16, Math.min(newHeight, gridRect.height - (entryRect.top - gridRect.top)));
+
+		// Set new height
+		entryRef.current.style.height = `${newHeight}px`;
+		entryRef.current.style.zIndex = "100";
+	};
+
+	// Handle resize end
+	const handleResizeEnd = (e: MouseEvent) => {
+		if (!isResizing || !entryRef.current) return;
+
+		setIsResizing(false);
+
+		// Remove global event listeners
+		document.removeEventListener("mousemove", handleResizeMove);
+		document.removeEventListener("mouseup", handleResizeEnd);
+
+		// Get parent grid and calculate new time
+		const gridElement = entryRef.current.closest(".col-span-1");
+		if (!gridElement) return;
+
+		const gridRect = gridElement.getBoundingClientRect();
+		const entryRect = entryRef.current.getBoundingClientRect();
+
+		// Calculate time from position
+		const startRelativeY = entryRect.top - gridRect.top;
+		const endRelativeY = entryRect.bottom - gridRect.top;
+
+		const totalMinutes = 24 * 60; // Minutes in a day
+		const startMinutesFromTop = Math.round(((startRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
+		const endMinutesFromTop = Math.round(((endRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
+
+		// Reset to percentage-based positioning
+		entryRef.current.style.height = "";
+		entryRef.current.style.zIndex = "";
+
+		// Create new dates based on the day and minutes
+		const entryDate = new Date(entry.date);
+		const startDateTime = new Date(entryDate);
+		startDateTime.setHours(0, startMinutesFromTop, 0, 0);
+
+		const endDateTime = new Date(entryDate);
+		endDateTime.setHours(0, endMinutesFromTop, 0, 0);
+
+		// Calculate new duration in minutes
+		const newDuration = endMinutesFromTop - startMinutesFromTop;
+
+		// Update via API
+		updateTimeEntry(
+			{
+				id: entry.id,
+				data: {
+					duration: newDuration,
+					startTime: startDateTime.toISOString(),
+					endTime: endDateTime.toISOString(),
+				},
+			},
+			{
+				onSuccess: () => {
+					// Refresh the grid
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
+				},
+				onError: (error) => {
+					console.error("Failed to update time entry after resize:", error);
+				},
+			}
+		);
+	};
+
+	// Cleanup event listeners on unmount
+	useEffect(() => {
+		return () => {
+			document.removeEventListener("mousemove", handleDragMove);
+			document.removeEventListener("mouseup", handleDragEnd);
+			document.removeEventListener("mousemove", handleResizeMove);
+			document.removeEventListener("mouseup", handleResizeEnd);
+		};
+	}, []);
 
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
@@ -84,6 +332,11 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 					onSuccess: () => {
 						setIsOpen(false);
 						setLoading(false);
+
+						// Refresh the grid
+						if (onTimeSlotSelect) {
+							onTimeSlotSelect({});
+						}
 					},
 					onError: (error) => {
 						console.error("Failed to update time entry:", error);
@@ -108,6 +361,11 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 				onSuccess: () => {
 					setIsOpen(false);
 					setLoading(false);
+
+					// Refresh the grid
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
 				},
 				onError: (error) => {
 					console.error("Error deleting time entry:", error);
@@ -117,56 +375,61 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		);
 	};
 
-	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
-	const calculatePosition = () => {
-		// startSlot and endSlot are in minutes from start of day (0-1440)
-		const top = (startSlot / 1440) * 100; // Convert to percentage
-		const height = ((endSlot - startSlot) / 1440) * 100; // Height as percentage
-
-		return {
-			top: `${top}%`,
-			height: `${Math.max(height, 2)}%`, // Ensure at least 2% height for visibility
-		};
-	};
-
-	const { top, height } = calculatePosition();
-
-	// Format time for display
+	// Format time for display using our helper
 	const startTimeFormatted = parseISOForDisplay(entry.startTime);
 
 	// Format duration hours
-	const hours = Math.floor(entry.duration / 60).toString();
-	const mins = (entry.duration % 60).toString().padStart(2, "0");
-	const durationFormatted = `${hours}:${mins}`;
+	const hours = Math.floor(entry.duration / 60);
+	const mins = entry.duration % 60;
+	const durationFormatted = `${hours}:${mins.toString().padStart(2, "0")}`;
 
 	// Extract data from the entry
 	const projectName = entry.project?.name || "";
-	const taskName = entry.task?.name || "General Implementor";
+	const taskName = entry.task?.name || "";
 	const customerName = entry.customer?.name || "";
-	const description = entry.description || `${customerName} - ${taskName}`;
+	const description = entry.description || "";
 
 	return (
-		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+		<Popover.Root
+			open={isOpen}
+			onOpenChange={(open) => {
+				// Don't open popover during drag or resize
+				if (!isDragging && !isResizing) {
+					setIsOpen(open);
+				}
+			}}>
 			<Popover.Trigger asChild>
 				<div
-					className="absolute time-entry bg-opacity-90 text-white p-1 rounded-lg cursor-pointer overflow-hidden shadow-md"
+					ref={entryRef}
+					className={`absolute time-entry bg-opacity-90 text-white p-1 rounded-lg cursor-pointer overflow-hidden shadow-md ${
+						isDragging || isResizing ? "dragging" : ""
+					}`}
 					style={{
 						top,
 						height,
 						left: `${left * 100}%`,
 						width: `${width * 100}%`,
-						backgroundColor: color,
-						zIndex: 10,
-					}}>
+						backgroundColor: color || "#4893FF",
+						zIndex: isDragging || isResizing ? 100 : 10,
+						cursor: isDragging ? "grabbing" : "grab",
+					}}
+					onMouseDown={handleDragStart}>
 					<div className="flex flex-col h-full justify-between text-left">
 						<div>
 							<Text className="text-xs font-bold text-white truncate">{startTimeFormatted}</Text>
 							{customerName && <Text className="text-xs text-white truncate">{customerName}</Text>}
-							<Text className="text-xs text-white truncate">{projectName}</Text>
-							<Text className="text-xs text-white truncate">{taskName}</Text>
+							{projectName && <Text className="text-xs text-white truncate">{projectName}</Text>}
+							{taskName && <Text className="text-xs text-white truncate">{taskName}</Text>}
+							{description && <Text className="text-xs text-white truncate">{description}</Text>}
 						</div>
-						{entry.duration > 30 && <Text className="text-xs font-semibold text-white">{durationFormatted}h</Text>}
+						{entry.duration >= 60 && <Text className="text-xs font-semibold text-white">{durationFormatted}</Text>}
 					</div>
+
+					{/* Resize handle at the bottom */}
+					<div
+						className="resize-handle absolute bottom-0 w-full h-2 cursor-ns-resize bg-opacity-50 hover:bg-opacity-80 bg-white"
+						onMouseDown={handleResizeStart}
+					/>
 				</div>
 			</Popover.Trigger>
 			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 w-80">
@@ -180,7 +443,9 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 						{projectName && (
 							<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{projectName}</span>
 						)}
-						<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{taskName}</span>
+						{taskName && (
+							<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{taskName}</span>
+						)}
 					</div>
 
 					<label className="flex flex-col">
