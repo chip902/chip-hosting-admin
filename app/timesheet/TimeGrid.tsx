@@ -121,6 +121,10 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 		return entryDay.toDateString() === currentDay.toDateString();
 	});
 
+	if (dailyEntries.length === 0) {
+		return [];
+	}
+
 	// Sort entries by start time
 	const sortedEntries = [...dailyEntries].sort((a, b) => {
 		const aStart = parseISOWithOffset(a.startTime).getTime();
@@ -128,9 +132,11 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 		return aStart - bStart;
 	});
 
-	// Process for overlaps
-	return sortedEntries.map((entry, index) => {
-		// Create dates from the ISO strings
+	// Group overlapping entries
+	const groups: ProcessedTimeEntry[][] = [];
+
+	// For each entry, find a group it overlaps with or create a new group
+	sortedEntries.forEach((entry) => {
 		const entryStart = parseISOWithOffset(entry.startTime);
 		let entryEnd: Date;
 
@@ -141,41 +147,65 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Ov
 			entryEnd = new Date(entryStart.getTime() + entry.duration * 60 * 1000);
 		}
 
-		// Find overlapping entries that started before this one
-		const overlappingEntries = sortedEntries.slice(0, index).filter((otherEntry) => {
-			const otherStart = parseISOWithOffset(otherEntry.startTime);
-			let otherEnd: Date;
+		// Try to find an existing group that this entry overlaps with
+		let foundGroup = false;
+		for (const group of groups) {
+			// Check if this entry overlaps with any entry in the group
+			const hasOverlap = group.some((groupEntry) => {
+				const groupEntryStart = parseISOWithOffset(groupEntry.startTime);
+				const groupEntryEnd = groupEntry.endTime
+					? parseISOWithOffset(groupEntry.endTime)
+					: new Date(groupEntryStart.getTime() + groupEntry.duration * 60 * 1000);
 
-			if (otherEntry.endTime) {
-				otherEnd = parseISOWithOffset(otherEntry.endTime);
-			} else {
-				otherEnd = new Date(otherStart.getTime() + otherEntry.duration * 60 * 1000);
+				return areIntervalsOverlapping({ start: entryStart, end: entryEnd }, { start: groupEntryStart, end: groupEntryEnd });
+			});
+
+			if (hasOverlap) {
+				group.push(entry);
+				foundGroup = true;
+				break;
 			}
+		}
 
-			return areIntervalsOverlapping({ start: entryStart, end: entryEnd }, { start: otherStart, end: otherEnd });
-		});
-
-		// Calculate width and position based on overlaps
-		const width = 1 / (overlappingEntries.length + 1);
-		const left = overlappingEntries.length * width;
-
-		// Calculate minutes from day start for positioning
-		// Here we don't use a timezone offset, we use direct hour/minute from parsed date
-		const startMinutes = entryStart.getHours() * 60 + entryStart.getMinutes();
-		const endMinutes = entryEnd.getHours() * 60 + entryEnd.getMinutes();
-
-		// Ensure end slot is after start slot with a minimum duration
-		const finalEndSlot = endMinutes > startMinutes ? endMinutes : startMinutes + 60; // At least 1 hour
-
-		return {
-			...entry,
-			width,
-			left,
-			startSlot: startMinutes,
-			endSlot: finalEndSlot,
-			date: entryStart,
-		};
+		// If no overlapping group was found, create a new group
+		if (!foundGroup) {
+			groups.push([entry]);
+		}
 	});
+
+	// Process each group to calculate width and left position
+	const result: OverlappingEntry[] = [];
+	groups.forEach((group) => {
+		const groupLength = group.length;
+
+		// For entries in this group, calculate width and left position
+		group.forEach((entry, index) => {
+			const entryStart = parseISOWithOffset(entry.startTime);
+			const entryEnd = entry.endTime ? parseISOWithOffset(entry.endTime) : new Date(entryStart.getTime() + entry.duration * 60 * 1000);
+
+			// Calculate minutes from day start for positioning
+			const startMinutes = entryStart.getHours() * 60 + entryStart.getMinutes();
+			const endMinutes = entryEnd.getHours() * 60 + entryEnd.getMinutes();
+
+			// Ensure end slot is after start slot with a minimum duration
+			const finalEndSlot = endMinutes > startMinutes ? endMinutes : startMinutes + 60; // At least 1 hour
+
+			// Calculate width and left position based on number of overlapping entries
+			const width = 1 / groupLength;
+			const left = index * width;
+
+			result.push({
+				...entry,
+				width,
+				left,
+				startSlot: startMinutes,
+				endSlot: finalEndSlot,
+				date: entryStart,
+			});
+		});
+	});
+
+	return result;
 };
 
 const throttle = (fn: Function, wait: number) => {

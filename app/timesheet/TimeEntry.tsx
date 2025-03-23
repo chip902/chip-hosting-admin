@@ -5,9 +5,10 @@ import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
 import { TimeEntry, TimeEntryProps } from "@/types";
-import { format, addMinutes, parseISO } from "date-fns";
+import { format } from "date-fns";
+import axios from "axios";
 
-// Helper function to process and display time correctly
+// Helper function to safely parse time from ISO string
 const parseISOForDisplay = (dateStr: string): string => {
 	if (!dateStr) return "";
 
@@ -30,23 +31,47 @@ const parseISOForDisplay = (dateStr: string): string => {
 	}
 };
 
+/**
+ * Direct position update function that bypasses the problematic PATCH method
+ */
+const updateEntryPosition = async (
+	id: number,
+	data: {
+		date?: string;
+		startTime?: string;
+		endTime?: string;
+		duration?: number;
+	}
+) => {
+	try {
+		const response = await axios.post(`/api/timelog/position/${id}`, data);
+		return response.data;
+	} catch (error) {
+		console.error("Failed to update position:", error);
+		throw error;
+	}
+};
+
 const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onTimeSlotSelect }: TimeEntryProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
-
-	// States for drag and resize
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-	const [originalPosition, setOriginalPosition] = useState({ top: 0, left: 0, height: 0 });
+	const [dragStartTime, setDragStartTime] = useState<number>(0);
 	const entryRef = useRef<HTMLDivElement>(null);
 
-	// Set initial form state with entry data
+	// Track if the entry was actually moved during drag
+	const wasMoved = useRef(false);
+
+	// Store the original entry state to revert to if update fails
+	const originalEntryRef = useRef(entry);
+
+	// Set initial form state
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		// Extract time directly from the ISO string
 		startTime: entry.startTime?.match(/T(\d{2}:\d{2})/) ? entry.startTime.match(/T(\d{2}:\d{2})/)![1] : "09:00",
 	});
 
@@ -55,7 +80,6 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 
 	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
 	const calculatePosition = () => {
-		// startSlot and endSlot are in minutes from start of day (0-1440)
 		const top = (startSlot / 1440) * 100; // Convert to percentage
 		const height = ((endSlot - startSlot) / 1440) * 100; // Height as percentage
 
@@ -67,10 +91,13 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 
 	const { top, height } = calculatePosition();
 
-	// Handle drag start
+	// Handle drag start - capture a timestamp to distinguish between clicks and drags
 	const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
-		// Prevent popover from opening during drag
 		e.stopPropagation();
+		e.preventDefault(); // Prevent default to avoid triggering new entry creation
+
+		// Store the start time for later comparison
+		setDragStartTime(Date.now());
 
 		// Only initiate drag on the main part, not controls or resize handle
 		if ((e.target as HTMLElement).classList.contains("resize-handle") || (e.target as HTMLElement).tagName === "BUTTON") {
@@ -78,19 +105,13 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		}
 
 		setIsDragging(true);
+		wasMoved.current = false;
 
 		if (entryRef.current) {
 			const rect = entryRef.current.getBoundingClientRect();
 			setDragOffset({
 				x: e.clientX - rect.left,
 				y: e.clientY - rect.top,
-			});
-
-			// Store original position for calculation on drop
-			setOriginalPosition({
-				top: rect.top,
-				left: rect.left,
-				height: rect.height,
 			});
 		}
 
@@ -102,6 +123,8 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 	// Handle drag move
 	const handleDragMove = (e: MouseEvent) => {
 		if (!isDragging || !entryRef.current) return;
+
+		wasMoved.current = true; // Mark that actual movement occurred
 
 		// Get parent grid dimensions
 		const gridElement = entryRef.current.closest(".col-span-1");
@@ -122,8 +145,12 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 	};
 
 	// Handle drag end
-	const handleDragEnd = (e: MouseEvent) => {
+	const handleDragEnd = async (e: MouseEvent) => {
 		if (!isDragging || !entryRef.current) return;
+
+		// Check if this was just a click (no actual dragging)
+		const dragEndTime = Date.now();
+		const isDragOrClick = dragEndTime - dragStartTime < 200 && !wasMoved.current;
 
 		setIsDragging(false);
 
@@ -131,9 +158,25 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		document.removeEventListener("mousemove", handleDragMove);
 		document.removeEventListener("mouseup", handleDragEnd);
 
+		// If it was just a click, open the popover and reset position
+		if (isDragOrClick) {
+			setIsOpen(true);
+			entryRef.current.style.position = "";
+			entryRef.current.style.top = "";
+			entryRef.current.style.zIndex = "";
+			return;
+		}
+
+		// Otherwise, it was a drag - update the position
 		// Get parent grid and calculate new time
 		const gridElement = entryRef.current.closest(".col-span-1");
-		if (!gridElement) return;
+		if (!gridElement) {
+			// Reset if we can't find the grid
+			entryRef.current.style.position = "";
+			entryRef.current.style.top = "";
+			entryRef.current.style.zIndex = "";
+			return;
+		}
 
 		const gridRect = gridElement.getBoundingClientRect();
 		const entryRect = entryRef.current.getBoundingClientRect();
@@ -142,6 +185,9 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		const relativeY = entryRect.top - gridRect.top;
 		const totalMinutes = 24 * 60; // Minutes in a day
 		const minutesFromTop = Math.round(((relativeY / gridRect.height) * totalMinutes) / 15) * 15;
+
+		// Make sure minutesFromTop is within valid range (0-1440)
+		const constrainedMinutes = Math.max(0, Math.min(minutesFromTop, 1440));
 
 		// Get original duration
 		const duration = entry.duration || 60;
@@ -154,48 +200,38 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		// Create new date based on the day and minutes
 		const entryDate = new Date(entry.date);
 		const startDateTime = new Date(entryDate);
-		startDateTime.setHours(0, minutesFromTop, 0, 0);
+		startDateTime.setHours(0, constrainedMinutes, 0, 0);
 
 		const endDateTime = new Date(startDateTime);
 		endDateTime.setMinutes(endDateTime.getMinutes() + duration);
 
-		// Update via API
-		updateTimeEntry(
-			{
-				id: entry.id,
-				data: {
-					date: startDateTime.toISOString(),
-					startTime: startDateTime.toISOString(),
-					endTime: endDateTime.toISOString(),
-				},
-			},
-			{
-				onSuccess: () => {
-					// Refresh the grid
-					if (onTimeSlotSelect) {
-						onTimeSlotSelect({});
-					}
-				},
-				onError: (error) => {
-					console.error("Failed to update time entry after drag:", error);
-				},
+		// Update via direct position API
+		try {
+			await updateEntryPosition(entry.id, {
+				date: startDateTime.toISOString(),
+				startTime: startDateTime.toISOString(),
+				endTime: endDateTime.toISOString(),
+				duration: duration,
+			});
+
+			// Success! Refresh the grid
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
 			}
-		);
+		} catch (error) {
+			console.error("Failed to update time entry position:", error);
+			// On error, refresh the grid anyway to reset positions
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
+			}
+		}
 	};
 
 	// Handle resize start
 	const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
 		e.stopPropagation();
+		e.preventDefault();
 		setIsResizing(true);
-
-		if (entryRef.current) {
-			const rect = entryRef.current.getBoundingClientRect();
-			setOriginalPosition({
-				top: rect.top,
-				left: rect.left,
-				height: rect.height,
-			});
-		}
 
 		// Add global event listeners for move and end
 		document.addEventListener("mousemove", handleResizeMove);
@@ -225,7 +261,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 	};
 
 	// Handle resize end
-	const handleResizeEnd = (e: MouseEvent) => {
+	const handleResizeEnd = async (e: MouseEvent) => {
 		if (!isResizing || !entryRef.current) return;
 
 		setIsResizing(false);
@@ -236,7 +272,11 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 
 		// Get parent grid and calculate new time
 		const gridElement = entryRef.current.closest(".col-span-1");
-		if (!gridElement) return;
+		if (!gridElement) {
+			entryRef.current.style.height = "";
+			entryRef.current.style.zIndex = "";
+			return;
+		}
 
 		const gridRect = gridElement.getBoundingClientRect();
 		const entryRect = entryRef.current.getBoundingClientRect();
@@ -249,7 +289,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		const startMinutesFromTop = Math.round(((startRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
 		const endMinutesFromTop = Math.round(((endRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
 
-		// Reset to percentage-based positioning
+		// Reset styles
 		entryRef.current.style.height = "";
 		entryRef.current.style.zIndex = "";
 
@@ -261,31 +301,26 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		const endDateTime = new Date(entryDate);
 		endDateTime.setHours(0, endMinutesFromTop, 0, 0);
 
-		// Calculate new duration in minutes
-		const newDuration = endMinutesFromTop - startMinutesFromTop;
+		// Calculate new duration (minimum 15 minutes)
+		const newDuration = Math.max(15, endMinutesFromTop - startMinutesFromTop);
 
-		// Update via API
-		updateTimeEntry(
-			{
-				id: entry.id,
-				data: {
-					duration: newDuration,
-					startTime: startDateTime.toISOString(),
-					endTime: endDateTime.toISOString(),
-				},
-			},
-			{
-				onSuccess: () => {
-					// Refresh the grid
-					if (onTimeSlotSelect) {
-						onTimeSlotSelect({});
-					}
-				},
-				onError: (error) => {
-					console.error("Failed to update time entry after resize:", error);
-				},
+		// Update via direct position API
+		try {
+			await updateEntryPosition(entry.id, {
+				duration: newDuration,
+				startTime: startDateTime.toISOString(),
+				endTime: endDateTime.toISOString(),
+			});
+
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
 			}
-		);
+		} catch (error) {
+			console.error("Failed to update time entry size:", error);
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
+			}
+		}
 	};
 
 	// Cleanup event listeners on unmount
@@ -375,10 +410,10 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		);
 	};
 
-	// Format time for display using our helper
+	// Format time for display
 	const startTimeFormatted = parseISOForDisplay(entry.startTime);
 
-	// Format duration hours
+	// Format duration
 	const hours = Math.floor(entry.duration / 60);
 	const mins = entry.duration % 60;
 	const durationFormatted = `${hours}:${mins.toString().padStart(2, "0")}`;
