@@ -499,8 +499,8 @@ export interface ProcessedTimeEntry {
 	taskName: string;
 	width: number;
 	left: number;
-	startSlot: number;
-	endSlot: number;
+	startSlot: number | null;
+	endSlot: number | null;
 	duration: number;
 	description: string;
 	customer: { name: string };

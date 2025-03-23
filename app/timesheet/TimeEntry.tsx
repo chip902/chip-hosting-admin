@@ -1,74 +1,54 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState } from "react";
 import * as Popover from "@radix-ui/react-popover";
 import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
 import { TimeEntry, TimeEntryProps } from "@/types";
-import { addMinutes, differenceInMinutes, format, startOfDay } from "date-fns";
+
+const parseISOForDisplay = (dateStr: string): string => {
+	if (!dateStr) return "";
+
+	try {
+		// Extract time directly from the ISO string
+		const matches = dateStr.match(/T(\d{2}):(\d{2})/);
+		if (!matches) return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+		const hour = parseInt(matches[1], 10);
+		const minute = matches[2];
+
+		// Format for AM/PM display
+		const hourDisplay = hour % 12 || 12; // Convert 0 to 12 for 12-hour format
+		const ampm = hour >= 12 ? "PM" : "AM";
+
+		return `${hourDisplay}:${minute} ${ampm}`;
+	} catch (error) {
+		console.error("Error formatting time for display:", error);
+		return "";
+	}
+};
 
 const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onTimeSlotSelect }: TimeEntryProps) => {
-	const initialPosition = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
-	const [loader, setLoader] = useState(false);
+
+	// Format times from entry
+	const formatTime = (dateStr: string | Date) => {
+		if (!dateStr) return "";
+		const date = new Date(dateStr);
+		return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+	};
+
+	// Set initial form state with entry data
 	const [formState, setFormState] = useState({
 		duration: entry.duration?.toString() || "",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
-		startTime: entry.startTime.toString().split("T")[1].replace("Z", "") || "",
+		startTime: formatTime(entry.startTime).toLowerCase().replace(/\s/g, ""),
 	});
 
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
-
-	// Drag state management
-	const [isDragging, setIsDragging] = useState(false);
-	const [dragStart, setDragStart] = useState<{ dayIndex: number; minutes: number } | null>(null);
-	const [dragEnd, setDragEnd] = useState<{ dayIndex: number; minutes: number } | null>(null);
-
-	// Initialize time entry data
-	const [timeEntry, setTimeEntry] = useState({
-		id: entry.id,
-		date: new Date(entry.date),
-		startTime: new Date(entry.startTime),
-		endTime: new Date(entry.endTime),
-	});
-
-	const handleMouseDown = (event: React.MouseEvent<HTMLDivElement>) => {
-		if (event.target === event.currentTarget && !(event.target as Element).classList.contains("resize-handle")) {
-			setIsDragging(true);
-			setDragStart({ dayIndex: 0, minutes: getMinutesFromTime(timeEntry.startTime) });
-		}
-		initialPosition.current = { x: event.clientX, y: event.clientY };
-	};
-
-	const handleMouseMove = (dayIndex: number, event: React.MouseEvent<HTMLDivElement>) => {
-		if (!isDragging) return;
-
-		const rect = event.currentTarget.getBoundingClientRect();
-		const relativeY = event.clientY - rect.top;
-		const minutes = Math.floor((relativeY / rect.height) * 24 * 60);
-
-		setDragEnd({ dayIndex, minutes });
-	};
-
-	const handleMouseUp = () => {
-		if (!isDragging || !dragStart || !dragEnd) return;
-
-		const newStartTime = addMinutes(startOfDay(timeEntry.date), dragEnd.minutes);
-		const newEndTime = addMinutes(newStartTime, differenceInMinutes(timeEntry.endTime, timeEntry.startTime));
-
-		onTimeSlotSelect({
-			date: timeEntry.date,
-			startTime: format(newStartTime, "HH:mm"),
-			endTime: format(newEndTime, "HH:mm"),
-		});
-
-		setIsDragging(false);
-		setDragStart(null);
-		setDragEnd(null);
-	};
 
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
@@ -79,7 +59,18 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		setLoading(true);
 
 		try {
-			const isoDate = new Date(`${formState.entryDate}T${formState.startTime}`);
+			// Format the ISO date correctly
+			const dateParts = formState.entryDate.split("-");
+			const timeParts = formState.startTime.split(":");
+
+			const isoDate = new Date(
+				parseInt(dateParts[0]), // year
+				parseInt(dateParts[1]) - 1, // month (0-indexed)
+				parseInt(dateParts[2]), // day
+				parseInt(timeParts[0]), // hour
+				parseInt(timeParts[1]) // minute
+			);
+
 			updateTimeEntry(
 				{
 					id: entry.id,
@@ -101,7 +92,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 				}
 			);
 		} catch (error) {
-			console.error("Invalid date/time format");
+			console.error("Invalid date/time format:", error);
 			setLoading(false);
 		}
 	};
@@ -110,7 +101,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		e.preventDefault();
 		e.stopPropagation();
 
-		setLoader(true);
+		setLoading(true);
 		deleteTimeEntry(
 			{ id: entry.id },
 			{
@@ -126,43 +117,72 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		);
 	};
 
-	const calculatePosition = (start: number, end: number) => {
-		const offsetMinutes = 300;
-		const adjustedStart = start + offsetMinutes;
-		const adjustedEnd = end + offsetMinutes;
+	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
+	const calculatePosition = () => {
+		// startSlot and endSlot are in minutes from start of day (0-1440)
+		const top = (startSlot / 1440) * 100; // Convert to percentage
+		const height = ((endSlot - startSlot) / 1440) * 100; // Height as percentage
 
 		return {
-			top: `${(adjustedStart / 1440) * 100}%`,
-			height: `${Math.max(((adjustedEnd - adjustedStart) / 1440) * 100, 1)}%`,
+			top: `${top}%`,
+			height: `${Math.max(height, 2)}%`, // Ensure at least 2% height for visibility
 		};
 	};
 
-	const getMinutesFromTime = (date: Date) => {
-		return date.getHours() * 60 + date.getMinutes();
-	};
+	const { top, height } = calculatePosition();
 
-	const { top, height } = calculatePosition(startSlot, endSlot);
+	// Format time for display
+	const startTimeFormatted = parseISOForDisplay(entry.startTime);
+
+	// Format duration hours
+	const hours = Math.floor(entry.duration / 60).toString();
+	const mins = (entry.duration % 60).toString().padStart(2, "0");
+	const durationFormatted = `${hours}:${mins}`;
+
+	// Extract data from the entry
+	const projectName = entry.project?.name || "";
+	const taskName = entry.task?.name || "General Implementor";
+	const customerName = entry.customer?.name || "";
+	const description = entry.description || `${customerName} - ${taskName}`;
 
 	return (
 		<Popover.Root open={isOpen} onOpenChange={setIsOpen}>
 			<Popover.Trigger asChild>
 				<div
-					className="absolute time-entry bg-opacity-80 text-black-1 p-1 rounded-lg cursor-pointer overflow-hidden"
+					className="absolute time-entry bg-opacity-90 text-white p-1 rounded-lg cursor-pointer overflow-hidden shadow-md"
 					style={{
-						top: `${top}%`,
-						height: `${height}%`,
+						top,
+						height,
 						left: `${left * 100}%`,
 						width: `${width * 100}%`,
 						backgroundColor: color,
 						zIndex: 10,
 					}}>
-					<Text className="text-sm">{(entry.duration / 60).toFixed(1)} Hours</Text>
-					<br />
-					<Text className="text-sm">{entry.name}</Text>
+					<div className="flex flex-col h-full justify-between text-left">
+						<div>
+							<Text className="text-xs font-bold text-white truncate">{startTimeFormatted}</Text>
+							{customerName && <Text className="text-xs text-white truncate">{customerName}</Text>}
+							<Text className="text-xs text-white truncate">{projectName}</Text>
+							<Text className="text-xs text-white truncate">{taskName}</Text>
+						</div>
+						{entry.duration > 30 && <Text className="text-xs font-semibold text-white">{durationFormatted}h</Text>}
+					</div>
 				</div>
 			</Popover.Trigger>
-			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-20 w-80">
+			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 w-80">
 				<form className="flex flex-col space-y-4" onSubmit={(e) => e.preventDefault()}>
+					<div className="flex justify-between items-center mb-2">
+						<h3 className="text-md font-bold text-gray-900 dark:text-gray-100">{customerName || "Unknown Client"}</h3>
+						<span className="text-sm text-gray-700 dark:text-gray-300">{durationFormatted}</span>
+					</div>
+
+					<div className="flex flex-wrap gap-2 mb-2">
+						{projectName && (
+							<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{projectName}</span>
+						)}
+						<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{taskName}</span>
+					</div>
+
 					<label className="flex flex-col">
 						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description:</span>
 						<textarea
@@ -170,6 +190,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 							value={formState.description}
 							onChange={handleFormChange}
 							className="w-full h-24 px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+							placeholder="Add description..."
 						/>
 					</label>
 					<label className="flex flex-col">

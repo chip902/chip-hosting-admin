@@ -11,26 +11,10 @@ export const formatTime = (time: string): string => {
 	return new Date(time).toLocaleTimeString();
 };
 
-export const calculateWidth = (entry: RawTimeEntry): number => {
-	// Calculate width based on start and end times or other logic
-	return 10; // Example value
-};
-
-export const calculateLeftPosition = (entry: RawTimeEntry): number => {
-	// Calculate left position based on some criteria
-	return 20; // Example value
-};
-
 export const calculateStartSlot = (startTime: Date) => {
 	const startOfDayDate = startOfDay(startTime);
 	const minutesFromDayStart = differenceInMinutes(startTime, startOfDayDate);
 	return Math.floor(minutesFromDayStart / 60); // Each hour has 60 slots
-};
-
-export const calculateDuration = (startTime: string, endTime: string): number => {
-	const start = new Date(startTime);
-	const end = new Date(endTime);
-	return (end.getTime() - start.getTime()) / 1000 / 60; // Duration in minutes
 };
 
 // FORMAT DATE TIME
@@ -213,3 +197,85 @@ export function getParamsFromUrl(url: string): { params: { id: string } } {
 
 	return { params: { id } };
 }
+
+/**
+ * Calculate the duration of a time entry in minutes
+ */
+export const calculateDuration = (startTime: string, endTime: string): number => {
+	if (!startTime || !endTime) return 60; // Default to 1 hour if times are missing
+
+	try {
+		const start = new Date(startTime);
+		const end = new Date(endTime);
+		const duration = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60)); // Duration in minutes
+
+		// Return a minimum of 60 minutes (1 hour) if the calculated duration is less
+		return Math.max(60, duration);
+	} catch (error) {
+		console.error("Error calculating duration:", error);
+		return 60; // Default to 1 hour on error
+	}
+};
+
+/**
+ * Calculate width for a time entry based on overlapping entries
+ * Default to 100% width if no other calculation is provided
+ */
+export const calculateWidth = (entry: any): number => {
+	// This could be expanded to consider other entries that overlap
+	// For now, default to 100% (1.0)
+	return entry.width || 1.0;
+};
+
+/**
+ * Calculate left position (horizontal offset) for a time entry
+ * Default to 0 (aligned to left) if no other calculation is provided
+ */
+export const calculateLeftPosition = (entry: any): number => {
+	// This could be expanded to position entries side by side if they overlap
+	// For now, default to 0 (left aligned)
+	return entry.left || 0;
+};
+
+/**
+ * Convert a date to local time zone
+ * This helps with timezone differences between server and client
+ */
+export const toLocalTime = (dateStr: string): Date => {
+	if (!dateStr) return new Date();
+
+	try {
+		// If the date string already includes timezone info, use it as is
+		const date = new Date(dateStr);
+
+		// Ensure valid date
+		if (isNaN(date.getTime())) {
+			throw new Error("Invalid date");
+		}
+
+		return date;
+	} catch (error) {
+		console.error("Error converting to local time:", error);
+		return new Date();
+	}
+};
+
+/**
+ * Format a date to time string in 12-hour format
+ */
+export const formatTimeDisplay = (date: Date | string): string => {
+	if (!date) return "";
+
+	const dateObj = typeof date === "string" ? new Date(date) : date;
+
+	try {
+		return dateObj.toLocaleTimeString([], {
+			hour: "2-digit",
+			minute: "2-digit",
+			hour12: true,
+		});
+	} catch (error) {
+		console.error("Error formatting time:", error);
+		return "";
+	}
+};
