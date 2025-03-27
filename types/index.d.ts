@@ -421,6 +421,9 @@ export interface TimeEntry {
 	user: UserType;
 	invoice?: Invoice;
 	invoiceItem?: InvoiceItem;
+
+	zIndex?: number;
+	className?: string;
 }
 
 export interface TimeEntryData {
@@ -468,6 +471,7 @@ export interface TimeEntryProps {
 	color: string;
 	left: number;
 	width: number;
+	isDialogOpen?: boolean;
 	onTimeSlotSelect: (slot: { date?: Date; startTime?: string; endTime?: string; duration?: number }) => void;
 }
 
@@ -508,11 +512,12 @@ export interface ProcessedTimeEntry {
 	task: { name: string };
 	isInvoiced: boolean;
 	invoiceStatus?: boolean | string | null;
-	// Add other required properties
 	userId: number | string;
-	isBillable?: boolean; // Example of another property that might be needed
-	color: string; // Example of another property that might be needed
-	name: string; // Example of another property that might be needed
+	isBillable?: boolean;
+	color: string;
+	name: string;
+	zIndex?: number;
+	className?: string;
 }
 
 export interface GridItem {

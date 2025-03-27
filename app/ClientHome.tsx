@@ -5,8 +5,8 @@ import RecentTransactions from "@/components/RecentTransactions";
 import TotalBalanceBox from "@/components/TotalBalanceBox";
 import { useEffect, Suspense, useState } from "react";
 import { useToast } from "@/app/hooks/useToast";
-import { Skeleton } from "@radix-ui/themes";
 import { ErrorBoundary } from "react-error-boundary";
+import { Skeleton } from "@/components/ui/skeleton";
 
 function ClientHomeContent({ userId }: { userId: string }) {
 	const { data: plaidData, isLoading: isPlaidLoading, error: plaidError } = usePlaidBanks(userId);

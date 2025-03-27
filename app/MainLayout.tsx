@@ -11,15 +11,15 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { Fragment, useState } from "react";
 
-const poppins = Poppins({
-	subsets: ["latin"],
-	variable: "--font-poppins",
-	weight: "100",
-});
+// const poppins = Poppins({
+// 	subsets: ["latin"],
+// 	variable: "--font-poppins",
+// 	weight: "100",
+// });
 
-function classNames(...classes: string[]) {
-	return classes.filter(Boolean).join(" ");
-}
+// function classNames(...classes: string[]) {
+// 	return classes.filter(Boolean).join(" ");
+// }
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
@@ -38,7 +38,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 	const pathname = usePathname();
 
 	return (
-		<div className={classNames(poppins.variable, "h-full flex dark:bg-gray-900")}>
+		<div className="h-full flex dark:bg-gray-900">
 			<Transition show={sidebarOpen} as={Fragment}>
 				<Dialog className="relative z-50 lg:hidden" onClose={setSidebarOpen}>
 					<TransitionChild
@@ -134,10 +134,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 													<a
 														href={item.href}
 														onClick={item.onClick}
-														className={classNames(
-															active ? "bg-gray-50 dark:bg-gray-700" : "",
-															"block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-100"
-														)}>
+														className="block px-3 py-1 text-sm leading-6 text-gray-900 dark:text-gray-100">
 														{item.name}
 													</a>
 												)}

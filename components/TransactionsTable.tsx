@@ -10,7 +10,7 @@ const CategoryBadge = ({ category }: CategoryBadgeProps) => {
 		transactionCategoryStyles[category as unknown as keyof typeof transactionCategoryStyles] || transactionCategoryStyles.default;
 	return (
 		<div className={cn("category-badge", borderColor, chipBackgroundColor)}>
-			<div className={cn("size-2 rounded-full", backgroundColor)} />
+			<div className={cn("w-2 rounded-full", backgroundColor)} />
 			<p className={cn("text-[12px] font-medium", textColor)}>{formatCategory(category)}</p>
 		</div>
 	);

@@ -2,11 +2,13 @@ import React from "react";
 import AnimatedCounter from "./AnimatedCounter";
 import DoughnutChart from "./DoughnutChart";
 import { TotalBalanceBoxProps } from "@/types";
+import { Card } from "@/components/ui/card";
 
 const TotalBalanceBox: React.FC<TotalBalanceBoxProps> = ({ accounts, totalBanks, totalCurrentBalance }) => {
 	console.log("DEBUG totalCurrentBalance: ", totalCurrentBalance);
+
 	return (
-		<section className="total-balance">
+		<Card className="total-balance">
 			<div className="total-balance-chart">
 				<DoughnutChart accounts={accounts} />
 			</div>
@@ -22,7 +24,7 @@ const TotalBalanceBox: React.FC<TotalBalanceBoxProps> = ({ accounts, totalBanks,
 					</div>
 				</div>
 			</div>
-		</section>
+		</Card>
 	);
 };
 

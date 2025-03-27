@@ -1,6 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
-import { Flex, Table, Button, Skeleton, AlertDialog, DropdownMenu } from "@radix-ui/themes";
+import { useState } from "react";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -10,6 +9,11 @@ import PaginationComponent from "./PaginationComponent";
 import { format } from "date-fns-tz";
 import React from "react";
 import { TimeEntryData } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 const InvoiceGenerator = () => {
 	const router = useRouter();
@@ -103,8 +107,7 @@ const InvoiceGenerator = () => {
 	const timeZone = "America/New_York";
 
 	return (
-		<Flex direction="column" gap="4">
-			{/* FilterComponent allows applying filters */}
+		<div className="flex-col gap-4">
 			<FilterComponent onApplyFilters={setFilters} />
 
 			{isLoading ? (
@@ -112,64 +115,64 @@ const InvoiceGenerator = () => {
 					<div className="relative w-full h-fit" />
 				</Skeleton>
 			) : error ? (
-				<AlertDialog.Root defaultOpen={true}>
-					<AlertDialog.Content maxWidth="450px">
-						<AlertDialog.Title>Database Error</AlertDialog.Title>
-						<AlertDialog.Description size="2">
-							The Database connection cannot be established. Check your connection and try again.
-						</AlertDialog.Description>
-						<Flex gap="3" mt="4" justify="end">
-							<AlertDialog.Cancel>
-								<Button color="red">Dismiss</Button>
-							</AlertDialog.Cancel>
-						</Flex>
-					</AlertDialog.Content>
-				</AlertDialog.Root>
+				<AlertDialog defaultOpen={true}>
+					<div className="max-w-[450px]">
+						<AlertDialogContent>
+							<AlertDialogTitle>Database Error</AlertDialogTitle>
+							<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
+							<div className="gap-3 mt-4 justify-end">
+								<AlertDialogCancel>
+									<Button color="red">Dismiss</Button>
+								</AlertDialogCancel>
+							</div>
+						</AlertDialogContent>
+					</div>
+				</AlertDialog>
 			) : (
 				<>
-					<Table.Root variant="surface">
-						<Table.Header>
-							<Table.Row>
-								<Table.ColumnHeaderCell>
+					<Table>
+						<TableHeader>
+							<TableRow>
+								<TableCell>
 									<input type="checkbox" checked={isSelectAll} onChange={handleSelectAll} />
-								</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Customer</Table.ColumnHeaderCell>
-								<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
-							</Table.Row>
-						</Table.Header>
-						<Table.Body>
+								</TableCell>
+								<TableCell>Date</TableCell>
+								<TableCell>Description</TableCell>
+								<TableCell>Customer</TableCell>
+								<TableCell>Duration</TableCell>
+							</TableRow>
+						</TableHeader>
+						<TableBody>
 							{transformedEntries?.map((entry: TimeEntryData) => (
-								<Table.Row key={entry.id}>
-									<Table.Cell>
+								<TableRow key={entry.id}>
+									<TableCell>
 										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
-									</Table.Cell>
-									<Table.Cell>{format(new Date(entry.date), "MM/dd/yyyy")}</Table.Cell>
-									<Table.Cell>{entry.description}</Table.Cell>
-									<Table.Cell>{entry.customerName}</Table.Cell>
-									<Table.Cell>{entry.duration} minutes</Table.Cell>
-								</Table.Row>
+									</TableCell>
+									<TableCell>{format(new Date(entry.date), "MM/dd/yyyy")}</TableCell>
+									<TableCell>{entry.description}</TableCell>
+									<TableCell>{entry.customerName}</TableCell>
+									<TableCell>{entry.duration} minutes</TableCell>
+								</TableRow>
 							))}
-						</Table.Body>
-					</Table.Root>
+						</TableBody>
+					</Table>
 					<div className="flex justify-between pl-5">
 						<PaginationComponent totalItems={data?.totalEntries ?? 0} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
-						<DropdownMenu.Root>
-							<DropdownMenu.Trigger>
-								<Button variant="soft" size="2">
+						<DropdownMenu>
+							<DropdownMenuTrigger>
+								<Button>
 									{pageSize}
-									<DropdownMenu.TriggerIcon />
+									<DropdownMenuTrigger />
 								</Button>
-							</DropdownMenu.Trigger>
-							<DropdownMenu.Content size="2">
-								<DropdownMenu.Item onSelect={() => setPageSize(10)}>10</DropdownMenu.Item>
-								<DropdownMenu.Item onSelect={() => setPageSize(20)}>20</DropdownMenu.Item>
-								<DropdownMenu.Item onSelect={() => setPageSize(30)}>30</DropdownMenu.Item>
-								<DropdownMenu.Item onSelect={() => setPageSize(40)}>40</DropdownMenu.Item>
-								<DropdownMenu.Item onSelect={() => setPageSize(50)}>50</DropdownMenu.Item>
-							</DropdownMenu.Content>
-						</DropdownMenu.Root>
+							</DropdownMenuTrigger>
+							<DropdownMenuContent>
+								<DropdownMenuItem onSelect={() => setPageSize(10)}>10</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => setPageSize(20)}>20</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => setPageSize(30)}>30</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => setPageSize(40)}>40</DropdownMenuItem>
+								<DropdownMenuItem onSelect={() => setPageSize(50)}>50</DropdownMenuItem>
+							</DropdownMenuContent>
+						</DropdownMenu>
 					</div>
 				</>
 			)}
@@ -179,7 +182,7 @@ const InvoiceGenerator = () => {
 			</Button>
 
 			{errorMessage && <div className="text-red-500">{errorMessage}</div>}
-		</Flex>
+		</div>
 	);
 };
 

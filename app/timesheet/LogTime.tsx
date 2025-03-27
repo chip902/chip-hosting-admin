@@ -1,16 +1,20 @@
 "use client";
 import { useEffect, useState } from "react";
-import * as Form from "@radix-ui/react-form";
-import { Button, Flex, Spinner, TextField, Select, Grid, TextArea, Dialog } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { timeLogSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import axios from "axios";
-import ErrorMessage from "@/components/ErrorMessage";
 import { Customer, Project, Task, User } from "@prisma/client";
 import useCreateTimeEntry from "../hooks/useCreateTimeEntry";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Loader2 } from "lucide-react";
+import { Dialog, DialogClose, DialogContent, DialogOverlay } from "@/components/ui/dialog";
 
 export type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
@@ -34,14 +38,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	const router = useRouter();
 	const { mutate: createTimeEntry } = useCreateTimeEntry();
 
-	const {
-		register,
-		handleSubmit,
-		watch,
-		setValue,
-		reset,
-		formState: { errors },
-	} = useForm<TimeLogSchema>({
+	const form = useForm<TimeLogSchema>({
 		resolver: zodResolver(timeLogSchema),
 		defaultValues: {
 			date: initialValues?.date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
@@ -50,17 +47,18 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			duration: initialValues?.duration,
 		},
 	});
+
 	// Reset form when dialog is opened with new initial values
 	useEffect(() => {
 		if (initialValues) {
-			reset({
+			form.reset({
 				date: initialValues.date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
 				startTime: initialValues.startTime || "09:00",
 				endTime: initialValues.endTime || "17:00",
 				duration: initialValues.duration,
 			});
 		}
-	}, [open, initialValues, reset]);
+	}, [initialValues, form.reset]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -77,8 +75,8 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 		fetchData();
 	}, [error]);
 
-	const startTime = watch("startTime");
-	const endTime = watch("endTime");
+	const startTime = form.watch("startTime");
+	const endTime = form.watch("endTime");
 
 	useEffect(() => {
 		if (startTime && endTime) {
@@ -86,23 +84,23 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			const end = new Date(`1970-01-01T${endTime}:00`);
 			const diff = (end.getTime() - start.getTime()) / 60000;
 			if (diff > 0) {
-				setValue("duration", diff, { shouldValidate: true });
+				form.setValue("duration", diff, { shouldValidate: true });
 			}
 		} else {
-			setValue("duration", undefined as unknown as number, { shouldValidate: true });
+			form.setValue("duration", undefined as unknown as number, { shouldValidate: true });
 		}
-	}, [startTime, endTime, setValue, watch]);
+	}, [startTime, endTime, form.setValue, form.watch]);
 
 	useEffect(() => {
-		const durationValue = watch("duration");
+		const durationValue = form.watch("duration");
 		if (startTime && durationValue !== undefined) {
 			const start = new Date(`1970-01-01T${startTime}:00`);
 			const end = new Date(start.getTime() + durationValue * 60000);
 			const hours = end.getHours().toString().padStart(2, "0");
 			const minutes = end.getMinutes().toString().padStart(2, "0");
-			setValue("endTime", `${hours}:${minutes}`, { shouldValidate: true });
+			form.setValue("endTime", `${hours}:${minutes}`, { shouldValidate: true });
 		}
-	}, [startTime, endTime, setValue, watch]);
+	}, [startTime, form.setValue, form.watch]);
 
 	const onSubmit = async (data: TimeLogSchema) => {
 		try {
@@ -143,146 +141,233 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			setError("An unexpected error occurred");
 		} finally {
 			setSubmitting(false);
-			reset();
+			form.reset();
 			router.refresh();
 		}
 	};
 
 	return (
-		<Flex gap="3">
-			<Form.Root className="flex-col" onSubmit={handleSubmit(onSubmit)}>
-				<Grid className="flex w-fit" columns="2" gap="4">
-					<Form.Field className="flex flex-col" name="customerId">
-						<Form.Label className="mb-1">Customer</Form.Label>
-						<Form.Control asChild>
-							<Select.Root onValueChange={(value) => setValue("customerId", parseInt(value, 10), { shouldValidate: true })}>
-								<Select.Trigger className="w-full" placeholder="Select a Customer" />
-								<Select.Content>
-									{customers.map((customer) => (
-										<Select.Item key={customer.id} value={customer.id.toString()}>
-											{customer.name}
-										</Select.Item>
-									))}
-								</Select.Content>
-							</Select.Root>
-						</Form.Control>
-						{errors.customerId && <ErrorMessage>{errors.customerId.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field className="flex flex-col" name="projectId">
-						<Form.Label className="mb-1">Project</Form.Label>
-						<Form.Control asChild>
-							<Select.Root onValueChange={(value) => setValue("projectId", parseInt(value, 10), { shouldValidate: true })}>
-								<Select.Trigger className="w-full" placeholder="Select a Project" />
-								<Select.Content>
-									{projects.map((project) => (
-										<Select.Item key={project.id} value={project.id.toString()}>
-											{project.name}
-										</Select.Item>
-									))}
-								</Select.Content>
-							</Select.Root>
-						</Form.Control>
-						{errors.projectId && <ErrorMessage>{errors.projectId.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field className="flex flex-col" name="taskId">
-						<Form.Label className="mb-1">Task</Form.Label>
-						<Form.Control asChild>
-							<Select.Root onValueChange={(value) => setValue("taskId", parseInt(value, 10), { shouldValidate: true })}>
-								<Select.Trigger className="w-full" placeholder="Select a Task" />
-								<Select.Content>
-									{tasks.map((task) => (
-										<Select.Item key={task.id} value={String(task.id)}>
-											{task.name}
-										</Select.Item>
-									))}
-								</Select.Content>
-							</Select.Root>
-						</Form.Control>
-						{errors.taskId && <ErrorMessage>{errors.taskId.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field className="flex flex-col" name="userId">
-						<Form.Label className="mb-1">Employee</Form.Label>
-						<Form.Control asChild>
-							<Select.Root onValueChange={(value) => setValue("userId", parseInt(value, 10), { shouldValidate: true })}>
-								<Select.Trigger className="w-full" placeholder="Select an Employee" />
-								<Select.Content>
-									{users.map((user) => (
-										<Select.Item key={user.id} value={String(user.id)}>
-											{user.firstName} {user.lastName}
-										</Select.Item>
-									))}
-								</Select.Content>
-							</Select.Root>
-						</Form.Control>
-						{errors.userId && <ErrorMessage>{errors.userId.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field name="duration">
-						<Form.Label>Duration</Form.Label>
-						<Form.Control asChild>
-							<TextField.Root className="w-full" placeholder="Time spent in minutes" {...register("duration", { valueAsNumber: true })} />
-						</Form.Control>
-						{errors.duration && <ErrorMessage>{errors.duration.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field name="date">
-						<Form.Label>Date</Form.Label>
-						<Form.Control asChild>
-							<input className="time-input" type="date" {...register("date")} />
-						</Form.Control>
-						{errors.date && <ErrorMessage>{errors.date.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field name="startTime">
-						<Form.Label>Start Time</Form.Label>
-						<Form.Control asChild>
-							<input className="time-input" type="time" {...register("startTime")} />
-						</Form.Control>
-						{errors.startTime && <ErrorMessage>{errors.startTime.message}</ErrorMessage>}
-					</Form.Field>
-					<Form.Field name="endTime">
-						<Form.Label>End Time</Form.Label>
-						<Form.Control asChild>
-							<input className="time-input" type="time" {...register("endTime")} />
-						</Form.Control>
-						{errors.endTime && <ErrorMessage>{errors.endTime.message}</ErrorMessage>}
-					</Form.Field>
-				</Grid>
-				<Form.Field name="description">
-					<Form.Label>Description</Form.Label>
-					<Form.Control asChild>
-						<TextArea
-							className="dark:text-white dark:bg-slate-500 rounded px-2"
-							placeholder="Description of work done..."
-							{...register("description")}
-						/>
-					</Form.Control>
-					{errors.description && <ErrorMessage>{errors.description.message}</ErrorMessage>}
-				</Form.Field>
-				<Form.Field name="repeatInterval">
-					<Form.Label>Repeat for (days)</Form.Label>
-					<Form.Control asChild>
-						<TextField.Root
-							className="dark:text-white dark:bg-slate-500 rounded px-2"
-							placeholder="Number of days"
-							{...register("repeatInterval", {
-								setValueAs: (v) => (v === "" ? undefined : parseInt(v, 10)),
-							})}
-						/>
-					</Form.Control>
-					{errors.repeatInterval && <ErrorMessage>{errors.repeatInterval.message}</ErrorMessage>}
-				</Form.Field>
-				<Flex gap="3" mt="4">
-					<Dialog.Close>
-						<Button type="button" color="red" size="2">
-							Cancel
-						</Button>
-					</Dialog.Close>
-					<Dialog.Close>
-						<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
-							{submitting && <Spinner />} Log
-						</Button>
-					</Dialog.Close>
-				</Flex>
-			</Form.Root>
-		</Flex>
+		<Dialog open onOpenChange={onClose}>
+			<DialogOverlay />
+			<DialogContent className="sm:max-w-[600px]">
+				<div className="flex gap-3">
+					<Form {...form}>
+						<form className="flex flex-col space-y-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>
+							<div className="grid grid-cols-2 gap-4">
+								<FormField
+									control={form.control}
+									name="customerId"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Customer</FormLabel>
+											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select a Customer" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{customers.map((customer) => (
+														<SelectItem key={customer.id} value={customer.id.toString()}>
+															{customer.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="projectId"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Project</FormLabel>
+											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select a Project" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{projects.map((project) => (
+														<SelectItem key={project.id} value={project.id.toString()}>
+															{project.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="taskId"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Task</FormLabel>
+											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select a Task" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{tasks.map((task) => (
+														<SelectItem key={task.id} value={task.id.toString()}>
+															{task.name}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="userId"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Employee</FormLabel>
+											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+												<FormControl>
+													<SelectTrigger>
+														<SelectValue placeholder="Select an Employee" />
+													</SelectTrigger>
+												</FormControl>
+												<SelectContent>
+													{users.map((user) => (
+														<SelectItem key={user.id} value={user.id.toString()}>
+															{user.firstName} {user.lastName}
+														</SelectItem>
+													))}
+												</SelectContent>
+											</Select>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="duration"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Duration</FormLabel>
+											<FormControl>
+												<Input type="number" placeholder="Time spent in minutes" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="date"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Date</FormLabel>
+											<FormControl>
+												<Input type="date" {...field} value={field.value as string} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="startTime"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>Start Time</FormLabel>
+											<FormControl>
+												<Input type="time" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="endTime"
+									render={({ field }) => (
+										<FormItem>
+											<FormLabel>End Time</FormLabel>
+											<FormControl>
+												<Input type="time" {...field} />
+											</FormControl>
+											<FormMessage />
+										</FormItem>
+									)}
+								/>
+							</div>
+
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Description</FormLabel>
+										<FormControl>
+											<Textarea placeholder="Description of work done..." {...field} value={field.value as string} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="repeatInterval"
+								render={({ field: { value, onChange, ...field } }) => (
+									<FormItem>
+										<FormLabel>Repeat for (days)</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="Number of days"
+												value={value?.toString() || ""}
+												onChange={(e) => onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+												{...field}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<div className="flex justify-end gap-3 mt-4">
+								<DialogClose asChild>
+									<Button type="button" variant="destructive">
+										Cancel
+									</Button>
+								</DialogClose>
+								<DialogClose asChild>
+									<Button type="submit" disabled={submitting}>
+										{submitting ? (
+											<>
+												<Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
+											</>
+										) : (
+											"Log"
+										)}
+									</Button>
+								</DialogClose>
+							</div>
+						</form>
+					</Form>
+				</div>
+			</DialogContent>
+		</Dialog>
 	);
 };
 

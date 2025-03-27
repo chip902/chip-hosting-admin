@@ -1,12 +1,14 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
-import * as Popover from "@radix-ui/react-popover";
-import { Spinner, Text } from "@radix-ui/themes";
 import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
-import { TimeEntry, TimeEntryProps } from "@/types";
-import { format } from "date-fns";
+import { TimeEntryProps } from "@/types";
+import { addMinutes, format, startOfDay } from "date-fns";
 import axios from "axios";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Spinner } from "@/components/ui/spinner";
+import { Typography } from "@/components/ui/typography";
+import { Textarea } from "@/components/ui/textarea";
 
 // Helper function to safely parse time from ISO string
 const parseISOForDisplay = (dateStr: string): string => {
@@ -33,18 +35,38 @@ const parseISOForDisplay = (dateStr: string): string => {
 
 /**
  * Direct position update function that bypasses the problematic PATCH method
+ * by using a dedicated position-update endpoint
  */
 const updateEntryPosition = async (
 	id: number,
 	data: {
-		date?: string;
+		date?: string | Date;
 		startTime?: string;
 		endTime?: string;
 		duration?: number;
 	}
 ) => {
 	try {
-		const response = await axios.post(`/api/timelog/position/${id}`, data);
+		const updateData: any = {};
+
+		if (data.date) updateData.date = data.date;
+		if (data.duration) updateData.duration = data.duration;
+
+		if (data.startTime && !data.date) {
+			updateData.date = data.startTime;
+		}
+
+		if (data.endTime) {
+			updateData.endDate = data.endTime;
+		}
+
+		const params = new URLSearchParams();
+
+		if (updateData.date) params.append("date", updateData.date);
+		if (updateData.endDate) params.append("endDate", updateData.endDate);
+		if (updateData.duration) params.append("duration", updateData.duration.toString());
+
+		const response = await axios.get(`/api/timelog/position/${id}?${params.toString()}`);
 		return response.data;
 	} catch (error) {
 		console.error("Failed to update position:", error);
@@ -52,20 +74,17 @@ const updateEntryPosition = async (
 	}
 };
 
-const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onTimeSlotSelect }: TimeEntryProps) => {
+const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onTimeSlotSelect, isDialogOpen }: TimeEntryProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
-	const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
-	const [dragStartTime, setDragStartTime] = useState<number>(0);
 	const entryRef = useRef<HTMLDivElement>(null);
+	const [mouseDownTime, setMouseDownTime] = useState<number>(0);
+	const moveCount = useRef(0);
 
 	// Track if the entry was actually moved during drag
 	const wasMoved = useRef(false);
-
-	// Store the original entry state to revert to if update fails
-	const originalEntryRef = useRef(entry);
 
 	// Set initial form state
 	const [formState, setFormState] = useState({
@@ -91,138 +110,104 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 
 	const { top, height } = calculatePosition();
 
-	// Handle drag start - capture a timestamp to distinguish between clicks and drags
-	const handleDragStart = (e: React.MouseEvent<HTMLDivElement>) => {
+	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+		if (isDialogOpen) return;
 		e.stopPropagation();
-		e.preventDefault(); // Prevent default to avoid triggering new entry creation
+		e.preventDefault();
 
-		// Store the start time for later comparison
-		setDragStartTime(Date.now());
-
-		// Only initiate drag on the main part, not controls or resize handle
+		// Don't handle if clicking resize handle or buttons
 		if ((e.target as HTMLElement).classList.contains("resize-handle") || (e.target as HTMLElement).tagName === "BUTTON") {
 			return;
 		}
 
-		setIsDragging(true);
-		wasMoved.current = false;
+		setMouseDownTime(Date.now());
+		moveCount.current = 0;
 
-		if (entryRef.current) {
-			const rect = entryRef.current.getBoundingClientRect();
-			setDragOffset({
-				x: e.clientX - rect.left,
-				y: e.clientY - rect.top,
-			});
+		// Setup drag handling
+		document.addEventListener("mousemove", handleMouseMove);
+		document.addEventListener("mouseup", handleMouseUp);
+	};
+
+	const handleMouseMove = (e: MouseEvent) => {
+		moveCount.current += 1;
+
+		if (moveCount.current > 3 && !isDragging) {
+			setIsDragging(true);
+			wasMoved.current = true;
 		}
 
-		// Add global event listeners for move and end
-		document.addEventListener("mousemove", handleDragMove);
-		document.addEventListener("mouseup", handleDragEnd);
+		if (isDragging && entryRef.current) {
+			const gridElement = entryRef.current.closest(".col-span-1");
+			if (!gridElement) return;
+
+			const gridRect = gridElement.getBoundingClientRect();
+			const entryRect = entryRef.current.getBoundingClientRect();
+
+			// Calculate new position
+			let newY = e.clientY - gridRect.top - entryRect.height / 2;
+			newY = Math.max(0, Math.min(newY, gridRect.height - entryRect.height));
+
+			entryRef.current.style.position = "absolute";
+			entryRef.current.style.top = `${newY}px`;
+			entryRef.current.style.zIndex = "100";
+		}
 	};
 
-	// Handle drag move
-	const handleDragMove = (e: MouseEvent) => {
-		if (!isDragging || !entryRef.current) return;
+	const handleMouseUp = async (e: MouseEvent) => {
+		const mouseUpTime = Date.now();
+		const isClick = mouseUpTime - mouseDownTime < 200 && moveCount.current < 3;
 
-		wasMoved.current = true; // Mark that actual movement occurred
+		document.removeEventListener("mousemove", handleMouseMove);
+		document.removeEventListener("mouseup", handleMouseUp);
 
-		// Get parent grid dimensions
-		const gridElement = entryRef.current.closest(".col-span-1");
-		if (!gridElement) return;
-
-		const gridRect = gridElement.getBoundingClientRect();
-
-		// Calculate new position
-		let newY = e.clientY - gridRect.top - dragOffset.y;
-
-		// Constrain to parent bounds
-		newY = Math.max(0, Math.min(newY, gridRect.height - entryRef.current.offsetHeight));
-
-		// Set new position
-		entryRef.current.style.top = `${newY}px`;
-		entryRef.current.style.position = "absolute";
-		entryRef.current.style.zIndex = "100";
-	};
-
-	// Handle drag end
-	const handleDragEnd = async (e: MouseEvent) => {
-		if (!isDragging || !entryRef.current) return;
-
-		// Check if this was just a click (no actual dragging)
-		const dragEndTime = Date.now();
-		const isDragOrClick = dragEndTime - dragStartTime < 200 && !wasMoved.current;
-
-		setIsDragging(false);
-
-		// Remove global event listeners
-		document.removeEventListener("mousemove", handleDragMove);
-		document.removeEventListener("mouseup", handleDragEnd);
-
-		// If it was just a click, open the popover and reset position
-		if (isDragOrClick) {
+		if (isClick) {
 			setIsOpen(true);
-			entryRef.current.style.position = "";
-			entryRef.current.style.top = "";
-			entryRef.current.style.zIndex = "";
-			return;
-		}
-
-		// Otherwise, it was a drag - update the position
-		// Get parent grid and calculate new time
-		const gridElement = entryRef.current.closest(".col-span-1");
-		if (!gridElement) {
-			// Reset if we can't find the grid
-			entryRef.current.style.position = "";
-			entryRef.current.style.top = "";
-			entryRef.current.style.zIndex = "";
-			return;
-		}
-
-		const gridRect = gridElement.getBoundingClientRect();
-		const entryRect = entryRef.current.getBoundingClientRect();
-
-		// Calculate time from position
-		const relativeY = entryRect.top - gridRect.top;
-		const totalMinutes = 24 * 60; // Minutes in a day
-		const minutesFromTop = Math.round(((relativeY / gridRect.height) * totalMinutes) / 15) * 15;
-
-		// Make sure minutesFromTop is within valid range (0-1440)
-		const constrainedMinutes = Math.max(0, Math.min(minutesFromTop, 1440));
-
-		// Get original duration
-		const duration = entry.duration || 60;
-
-		// Reset to percentage-based positioning
-		entryRef.current.style.position = "";
-		entryRef.current.style.top = "";
-		entryRef.current.style.zIndex = "";
-
-		// Create new date based on the day and minutes
-		const entryDate = new Date(entry.date);
-		const startDateTime = new Date(entryDate);
-		startDateTime.setHours(0, constrainedMinutes, 0, 0);
-
-		const endDateTime = new Date(startDateTime);
-		endDateTime.setMinutes(endDateTime.getMinutes() + duration);
-
-		// Update via direct position API
-		try {
-			await updateEntryPosition(entry.id, {
-				date: startDateTime.toISOString(),
-				startTime: startDateTime.toISOString(),
-				endTime: endDateTime.toISOString(),
-				duration: duration,
-			});
-
-			// Success! Refresh the grid
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
+			if (entryRef.current) {
+				entryRef.current.style.position = "";
+				entryRef.current.style.top = "";
+				entryRef.current.style.zIndex = "";
 			}
-		} catch (error) {
-			console.error("Failed to update time entry position:", error);
-			// On error, refresh the grid anyway to reset positions
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
+			setIsDragging(false);
+			return;
+		}
+
+		if (isDragging && entryRef.current) {
+			const gridElement = entryRef.current.closest(".col-span-1");
+			if (!gridElement) return;
+
+			const gridRect = gridElement.getBoundingClientRect();
+			const entryRect = entryRef.current.getBoundingClientRect();
+			const relativeY = entryRect.top - gridRect.top;
+			const totalMinutes = 24 * 60;
+			const minutesFromTop = Math.round(((relativeY / gridRect.height) * totalMinutes) / 15) * 15;
+			const constrainedMinutes = Math.max(0, Math.min(minutesFromTop, 1440));
+
+			try {
+				// Keep visual position during update
+				await updateEntryPosition(entry.id, {
+					date: entry.date,
+					startTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes), "yyyy-MM-dd'T'HH:mm:ss"),
+					endTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes + entry.duration), "yyyy-MM-dd'T'HH:mm:ss"),
+					duration: entry.duration,
+				});
+
+				// Only reset after successful update
+				if (onTimeSlotSelect) {
+					onTimeSlotSelect({});
+				}
+			} catch (error) {
+				console.error("Failed to update position:", error);
+				if (onTimeSlotSelect) {
+					onTimeSlotSelect({});
+				}
+			}
+
+			// Reset drag state
+			setIsDragging(false);
+			if (entryRef.current) {
+				entryRef.current.style.position = "";
+				entryRef.current.style.top = "";
+				entryRef.current.style.zIndex = "";
 			}
 		}
 	};
@@ -323,16 +308,6 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		}
 	};
 
-	// Cleanup event listeners on unmount
-	useEffect(() => {
-		return () => {
-			document.removeEventListener("mousemove", handleDragMove);
-			document.removeEventListener("mouseup", handleDragEnd);
-			document.removeEventListener("mousemove", handleResizeMove);
-			document.removeEventListener("mouseup", handleResizeEnd);
-		};
-	}, []);
-
 	const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
 		const { name, value } = e.target;
 		setFormState((prevState) => ({ ...prevState, [name]: value }));
@@ -422,10 +397,17 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 	const projectName = entry.project?.name || "";
 	const taskName = entry.task?.name || "";
 	const customerName = entry.customer?.name || "";
-	const description = entry.description || "";
+
+	// Cleanup event listeners on unmount
+	useEffect(() => {
+		return () => {
+			document.removeEventListener("mousemove", handleResizeMove);
+			document.removeEventListener("mouseup", handleResizeEnd);
+		};
+	}, []);
 
 	return (
-		<Popover.Root
+		<Popover
 			open={isOpen}
 			onOpenChange={(open) => {
 				// Don't open popover during drag or resize
@@ -433,115 +415,117 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 					setIsOpen(open);
 				}
 			}}>
-			<Popover.Trigger asChild>
+			<PopoverTrigger asChild>
 				<div
 					ref={entryRef}
-					className={`absolute time-entry bg-opacity-90 text-white p-1 rounded-lg cursor-pointer overflow-hidden shadow-md ${
-						isDragging || isResizing ? "dragging" : ""
-					}`}
+					className={`
+						absolute time-entry
+						bg-opacity-90
+						text-white
+						p-1
+						rounded-lg
+						shadow-md
+						overflow-hidden
+						${entry.className || ""} 
+						${isDragging || isResizing ? "dragging" : ""}
+					`}
 					style={{
 						top,
 						height,
 						left: `${left * 100}%`,
 						width: `${width * 100}%`,
 						backgroundColor: color || "#4893FF",
-						zIndex: isDragging || isResizing ? 100 : 10,
-						cursor: isDragging ? "grabbing" : "grab",
+						zIndex: isDragging || isResizing ? 30 : entry.zIndex || 10,
 					}}
-					onMouseDown={handleDragStart}>
-					<div className="flex flex-col h-full justify-between text-left">
-						<div>
-							<Text className="text-xs font-bold text-white truncate">{startTimeFormatted}</Text>
-							{customerName && <Text className="text-xs text-white truncate">{customerName}</Text>}
-							{projectName && <Text className="text-xs text-white truncate">{projectName}</Text>}
-							{taskName && <Text className="text-xs text-white truncate">{taskName}</Text>}
-							{description && <Text className="text-xs text-white truncate">{description}</Text>}
+					onMouseDown={handleMouseDown}>
+					<div className="flex flex-col h-full justify-between text-left max-w-full">
+						<div className="w-full overflow-hidden">
+							<Typography className="text-xs font-bold text-white truncate block">{startTimeFormatted}</Typography>
+							{customerName && <Typography className="text-sm text-white truncate block">{customerName}</Typography>}
+							{projectName && <Typography className="text-sm text-white truncate block">{projectName}</Typography>}
+							{taskName && <Typography className="text-sm text-white truncate block">{taskName}</Typography>}
 						</div>
-						{entry.duration >= 60 && <Text className="text-xs font-semibold text-white">{durationFormatted}</Text>}
+						{entry.duration >= 60 && (
+							<Typography className="text-sm font-semibold text-white truncate block mt-auto">{durationFormatted} Hours</Typography>
+						)}
 					</div>
-
-					{/* Resize handle at the bottom */}
-					<div
-						className="resize-handle absolute bottom-0 w-full h-2 cursor-ns-resize bg-opacity-50 hover:bg-opacity-80 bg-white"
-						onMouseDown={handleResizeStart}
-					/>
 				</div>
-			</Popover.Trigger>
-			<Popover.Content className="p-6 bg-white dark:bg-gray-800 rounded-lg shadow-lg z-50 w-80">
+			</PopoverTrigger>
+			<PopoverContent className="p-6 bg-gray-900 rounded-lg shadow-lg z-50 w-80">
 				<form className="flex flex-col space-y-4" onSubmit={(e) => e.preventDefault()}>
 					<div className="flex justify-between items-center mb-2">
-						<h3 className="text-md font-bold text-gray-900 dark:text-gray-100">{customerName || "Unknown Client"}</h3>
-						<span className="text-sm text-gray-700 dark:text-gray-300">{durationFormatted}</span>
+						<h3 className="text-md font-bold text-gray-100">{customerName || "Unknown Client"}</h3>
+						<span className="text-sm text-gray-300">{durationFormatted}</span>
 					</div>
 
 					<div className="flex flex-wrap gap-2 mb-2">
-						{projectName && (
-							<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{projectName}</span>
-						)}
-						{taskName && (
-							<span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 rounded text-xs text-gray-800 dark:text-gray-200">{taskName}</span>
-						)}
+						{projectName && <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-200">{projectName}</span>}
+						{taskName && <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-200">{taskName}</span>}
 					</div>
 
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Description:</span>
-						<textarea
+						<span className="text-sm font-medium text-gray-400 mb-1">Description:</span>
+						<Textarea
 							name="description"
 							value={formState.description}
 							onChange={handleFormChange}
-							className="w-full h-24 px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+							className="w-full h-24 px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 							placeholder="Add description..."
 						/>
 					</label>
+
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date:</span>
+						<span className="text-sm font-medium text-gray-400 mb-1">Date:</span>
 						<input
 							type="date"
 							name="entryDate"
 							value={formState.entryDate}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						/>
 					</label>
+
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Start Time:</span>
+						<span className="text-sm font-medium text-gray-400 mb-1">Start Time:</span>
 						<input
 							type="time"
 							name="startTime"
 							value={formState.startTime}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						/>
 					</label>
+
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Duration (minutes):</span>
+						<span className="text-sm font-medium text-gray-400 mb-1">Duration (minutes):</span>
 						<input
 							type="number"
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-700 dark:text-gray-300 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:bg-gray-700"
+							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
 						/>
 					</label>
+
 					<div className="flex space-x-2">
 						<button
 							type="button"
 							onClick={handleUpdate}
 							disabled={isLoading}
-							className="flex-1 px-4 py-2 text-white bg-blue-500 rounded-md hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+							className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
 							{isLoading ? <Spinner /> : "Update"}
 						</button>
 						<button
 							type="button"
 							onClick={handleDelete}
 							disabled={isLoading}
-							className="flex-1 px-4 py-2 text-white bg-red-500 rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2">
+							className="flex-1 px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50">
 							{isLoading ? <Spinner /> : "Delete"}
 						</button>
 					</div>
 				</form>
-			</Popover.Content>
-		</Popover.Root>
+			</PopoverContent>
+		</Popover>
 	);
 };
 

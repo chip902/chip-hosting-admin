@@ -3,20 +3,19 @@
 import Image from "next/image";
 import Link from "next/link";
 import React, { useState } from "react";
-
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Form } from "@/components/ui/form";
-import CustomInput from "./CustomInput";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import PlaidLink from "./PlaidLink";
 import { authFormSchema } from "@/app/validationSchemas";
 import { signIn } from "next-auth/react";
 import axios from "axios";
-import { User } from "@prisma/client";
+import { User } from "@/types";
 
 const AuthForm = ({ type }: { type: string }) => {
 	const router = useRouter();
@@ -63,9 +62,10 @@ const AuthForm = ({ type }: { type: string }) => {
 				const response = await signIn("credentials", {
 					email: data.email,
 					password: data.password,
+					redirect: false,
 				});
 
-				if (response) router.push("/");
+				if (response?.ok) router.push("/");
 			}
 		} catch (error) {
 			console.log(error);
@@ -96,41 +96,155 @@ const AuthForm = ({ type }: { type: string }) => {
 			) : (
 				<>
 					<Form {...form}>
-						<form
-							onSubmit={(event) => {
-								console.log("Form submission event triggered:", event);
-								event.defaultPrevented = false;
-								form.handleSubmit(onSubmit)(event); // Call the original handleSubmit
-							}}
-							className="space-y-8">
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 							{type === "sign-up" && (
 								<>
 									<div className="flex gap-4">
-										<CustomInput control={form.control} name="firstName" label="First Name" placeholder="Enter your first name" />
-										<CustomInput control={form.control} name="lastName" label="Last Name" placeholder="Enter your first name" />
+										<FormField
+											control={form.control}
+											name="firstName"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>First Name</FormLabel>
+													<FormControl>
+														<Input placeholder="Enter your first name" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="lastName"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>Last Name</FormLabel>
+													<FormControl>
+														<Input placeholder="Enter your last name" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
 									</div>
-									<CustomInput control={form.control} name="address" label="Address" placeholder="Enter your specific address" />
-									<CustomInput control={form.control} name="city" label="City" placeholder="Enter your city" />
+									<FormField
+										control={form.control}
+										name="address"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>Address</FormLabel>
+												<FormControl>
+													<Input placeholder="Enter your specific address" {...field} value={field.value as string} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
+									<FormField
+										control={form.control}
+										name="city"
+										render={({ field }) => (
+											<FormItem>
+												<FormLabel>City</FormLabel>
+												<FormControl>
+													<Input placeholder="Enter your city" {...field} value={field.value as string} />
+												</FormControl>
+												<FormMessage />
+											</FormItem>
+										)}
+									/>
 									<div className="flex gap-4">
-										<CustomInput control={form.control} name="state" label="State" placeholder="Example: NY" />
-										<CustomInput control={form.control} name="postalCode" label="Postal Code" placeholder="Example: 11101" />
+										<FormField
+											control={form.control}
+											name="state"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>State</FormLabel>
+													<FormControl>
+														<Input placeholder="Example: NY" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="postalCode"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>Postal Code</FormLabel>
+													<FormControl>
+														<Input placeholder="Example: 11101" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
 									</div>
 									<div className="flex gap-4">
-										<CustomInput control={form.control} name="dob" label="Date of Birth" placeholder="YYYY-MM-DD" />
-										<CustomInput control={form.control} name="ssn" label="SSN" placeholder="Example: 1234" />
+										<FormField
+											control={form.control}
+											name="dob"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>Date of Birth</FormLabel>
+													<FormControl>
+														<Input placeholder="YYYY-MM-DD" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
+										<FormField
+											control={form.control}
+											name="ssnLastFour"
+											render={({ field }) => (
+												<FormItem className="flex-1">
+													<FormLabel>SSN</FormLabel>
+													<FormControl>
+														<Input placeholder="Example: 1234" {...field} value={field.value as string} />
+													</FormControl>
+													<FormMessage />
+												</FormItem>
+											)}
+										/>
 									</div>
 								</>
 							)}
 
-							<CustomInput control={form.control} name="email" label="Email" placeholder="Enter your email" />
+							<FormField
+								control={form.control}
+								name="email"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Email</FormLabel>
+										<FormControl>
+											<Input placeholder="Enter your email" {...field} value={field.value as string} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 
-							<CustomInput control={form.control} name="password" label="Password" placeholder="Enter your password" />
+							<FormField
+								control={form.control}
+								name="password"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Password</FormLabel>
+										<FormControl>
+											<Input type="password" placeholder="Enter your password" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
 
 							<div className="flex flex-col gap-4">
 								<Button type="submit" disabled={isLoading} className="form-btn">
 									{isLoading ? (
 										<>
-											<Loader2 size={20} className="animate-spin" /> &nbsp; Loading...
+											<Loader2 size={20} className="animate-spin mr-2" /> Loading...
 										</>
 									) : type === "sign-in" ? (
 										"Sign In"

@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
 import { endOfWeek, startOfWeek } from "date-fns";
-import { Flex, Skeleton, AlertDialog, Dialog, Button } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import TimeToolBar from "./TimeToolBar";
 import TimeGrid from "./TimeGrid";
 import LogTime from "./LogTime";
 import React from "react";
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Button } from "@/components/ui/button";
 
 interface Filters {
 	startDate?: Date;
@@ -43,37 +46,45 @@ const Page: React.FC = () => {
 	};
 
 	return (
-		<Dialog.Root open={logTimeOpen} onOpenChange={setLogTimeOpen}>
-			<Flex direction="column" gap="4">
+		<Dialog
+			open={logTimeOpen}
+			onOpenChange={(open) => {
+				if (!open || selectedTimeSlot) {
+					setLogTimeOpen(open);
+				}
+			}}>
+			<div className="flex-col gap-4">
 				{isLoading ? (
 					<Skeleton>
 						<div className="relative w-full h-fit" />
 					</Skeleton>
 				) : error ? (
-					<AlertDialog.Root defaultOpen={true}>
-						<AlertDialog.Content maxWidth="450px">
-							<AlertDialog.Title>Database Error</AlertDialog.Title>
-							<AlertDialog.Description size="2">
-								The Database connection cannot be established. Check your connection and try again.
-							</AlertDialog.Description>
-						</AlertDialog.Content>
-					</AlertDialog.Root>
+					<AlertDialog defaultOpen={true}>
+						<div className="w-[450px]">
+							<AlertDialogContent>
+								<AlertDialogTitle>Database Error</AlertDialogTitle>
+								<AlertDialogDescription>
+									The Database connection cannot be established. Check your connection and try again.
+								</AlertDialogDescription>
+							</AlertDialogContent>
+						</div>
+					</AlertDialog>
 				) : (
 					<>
 						<TimeToolBar filters={filters} setFilters={setFilters}>
-							<Dialog.Trigger>
-								<Button variant="solid">Log Time</Button>
-							</Dialog.Trigger>
+							<DialogTrigger>
+								<Button>Log Time</Button>
+							</DialogTrigger>
 						</TimeToolBar>
-						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} />
-						<Dialog.Content className="min-w-[600px]">
-							<Dialog.Title>Log Time</Dialog.Title>
+						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />
+						<DialogContent className="min-w-[600px]">
+							<DialogTitle>Log Time</DialogTitle>
 							<LogTime onClose={() => setLogTimeOpen(false)} initialValues={selectedTimeSlot || undefined} />
-						</Dialog.Content>
+						</DialogContent>
 					</>
 				)}
-			</Flex>
-		</Dialog.Root>
+			</div>
+		</Dialog>
 	);
 };
 

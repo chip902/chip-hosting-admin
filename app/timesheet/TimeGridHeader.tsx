@@ -1,7 +1,7 @@
 // app/timesheet/TimeGridHeader.tsx
 import React from "react";
 import { format, isToday } from "date-fns";
-import classNames from "classnames";
+import { cn } from "@/lib/utils";
 
 interface TimeGridHeaderProps {
 	days: Date[];
@@ -42,15 +42,15 @@ const TimeGridHeader = ({ days }: TimeGridHeaderProps) => {
 					{days.map((day, index) => (
 						<div key={index} className="flex items-center justify-center py-3 col-span-1">
 							<span
-								className={classNames(
-									isToday(day) ? "bg-indigo-600 text-white p-3 rounded-xl" : "text-gray-900 dark:text-gray-300",
-									"flex items-baseline"
+								className={cn(
+									"flex items-baseline",
+									isToday(day) ? "bg-indigo-600 text-white p-3 rounded-xl" : "text-gray-900 dark:text-gray-300"
 								)}>
 								{format(day, "EEE")}{" "}
 								<span
-									className={classNames(
-										isToday(day) ? "rounded-xl bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300",
-										"ml-1.5 flex h-8 w-8 items-center justify-center font-semibold"
+									className={cn(
+										"ml-1.5 flex h-8 w-8 items-center justify-center font-semibold",
+										isToday(day) ? "rounded-xl bg-indigo-600 text-white" : "text-gray-900 dark:text-gray-300"
 									)}>
 									{format(day, "d")}
 								</span>

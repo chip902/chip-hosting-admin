@@ -6,8 +6,8 @@ import { Button } from "./ui/button";
 import { PlaidLinkOnSuccessMetadata, PlaidLinkOptions, usePlaidLink } from "react-plaid-link";
 import { useRouter } from "next/navigation";
 import axios from "axios";
-import { Spinner } from "@radix-ui/themes";
 import Image from "next/image";
+import { Spinner } from "./ui/spinner";
 
 const PlaidLink = ({ user, variant }: PlaidLinkProps) => {
 	const [token, setToken] = useState<string | null>(null);

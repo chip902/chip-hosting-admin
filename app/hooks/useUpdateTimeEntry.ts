@@ -7,10 +7,10 @@ const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<Axi
 	try {
 		console.log(`Updating time entry ${id} with data:`, data);
 
-		// Create a new object for the formatted data
-		const formattedData: Record<string, any> = {};
+		// Create a URL with query parameters instead of sending a request body
+		const url = new URL(`/api/timelog/position/${id}`, window.location.origin);
 
-		// Copy all properties from data
+		// Add each property as a query parameter
 		for (const key in data) {
 			if (Object.prototype.hasOwnProperty.call(data, key)) {
 				const value = data[key as keyof typeof data];
@@ -20,24 +20,24 @@ const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<Axi
 					try {
 						// Check if the object has a toISOString method
 						if ("toISOString" in value && typeof value.toISOString === "function") {
-							formattedData[key] = value.toISOString();
+							url.searchParams.append(key, value.toISOString());
 						} else {
-							// If it's an object but not a Date, pass it as is
-							formattedData[key] = value;
+							// If it's an object but not a Date, convert to string
+							url.searchParams.append(key, JSON.stringify(value));
 						}
 					} catch (e) {
-						// If toISOString fails, pass the original value
-						formattedData[key] = value;
+						// If toISOString fails, convert to string
+						url.searchParams.append(key, String(value));
 					}
-				} else {
-					// For non-date fields, just copy the value
-					formattedData[key] = value;
+				} else if (value !== undefined && value !== null) {
+					// For non-date fields, convert to string
+					url.searchParams.append(key, String(value));
 				}
 			}
 		}
 
-		// Use POST to /api/timelog/update/[id] instead of PATCH
-		const response = await axios.post(`/api/timelog/${id}`, formattedData);
+		// Use GET request instead of POST
+		const response = await axios.get(url.toString());
 
 		if (response.status !== 200) {
 			console.error(`Received non-200 response: ${response.status}`, response.data);

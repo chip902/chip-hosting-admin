@@ -2,12 +2,13 @@
 
 module.exports = {
     darkMode: ["class", "dark"],
-    content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{js,ts,jsx,tsx}"],
-    optimizations: {
-        css: { enabled: true },
-        purge: true,
-    },
+    content: [
+        './pages/**/*.{js,ts,jsx,tsx,mdx}',
+        './components/**/*.{js,ts,jsx,tsx,mdx}',
+        './app/**/*.{js,ts,jsx,tsx,mdx}',
+    ],
     prefix: "",
+    plugins: [],
     theme: {
         container: {
             center: true,
@@ -69,7 +70,7 @@ module.exports = {
             },
             backgroundImage: {
                 "bank-gradient": "linear-gradient(90deg, #0179FE 0%, #4893FF 100%)",
-                "gradient-mesh": "url('/icons/gradient-mesh.svg')",
+                "gradient-mesh": "url('/public/icons/gradient-mesh.svg')",
                 "bank-green-gradient": "linear-gradient(90deg, #01797A 0%, #489399 100%)",
             },
             boxShadow: {
@@ -101,5 +102,4 @@ module.exports = {
             },
         },
     },
-    plugins: [require("tailwindcss"), require("tailwindcss-animate")],
 };

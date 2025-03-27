@@ -13,19 +13,16 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 
 		// Parse the request body
 		const data = await request.json();
-		console.log("Update request received for time entry ID:", id, "with data:", data);
-
-		// Remove _method if present (used for method spoofing)
-		const { _method, ...updateData } = data;
+		console.log("Update via POST received for time entry ID:", id, "with data:", data);
 
 		// If date is provided, ensure it's properly formatted
-		if (updateData.date) {
+		if (data.date) {
 			try {
-				const isoDate = new Date(updateData.date);
+				const isoDate = new Date(data.date);
 				if (isNaN(isoDate.getTime())) {
 					return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
 				}
-				updateData.date = isoDate;
+				data.date = isoDate;
 			} catch (error) {
 				console.error("Error parsing date:", error);
 				return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
@@ -35,16 +32,15 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 		// Update the time entry
 		const updatedEntry = await prisma.timeEntry.update({
 			where: { id },
-			data: updateData,
+			data,
 		});
 
 		return NextResponse.json(updatedEntry, { status: 200 });
 	} catch (error) {
-		console.error("Error updating time entry:", error);
+		console.error("Error updating time entry via POST:", error);
 		return NextResponse.json({ error: "Error updating time entry" }, { status: 500 });
 	}
 }
-
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
 		// Get ID from params
