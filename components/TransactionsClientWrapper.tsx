@@ -6,7 +6,6 @@ import { useQueryClient, useQuery } from "@tanstack/react-query";
 import { useSyncTransactions } from "@/app/hooks/useSyncTransactions";
 import axios from "axios";
 import { Bank } from "@/types";
-import { DateRangePicker } from "@/components/ui/date-range-picker";
 
 interface TransactionsClientWrapperProps {
 	userId: string;

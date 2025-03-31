@@ -1,6 +1,8 @@
 import React from "react";
-import { Flex, Select, Switch, TextField } from "@radix-ui/themes";
 import { SearchIcon } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Input } from "@/components/ui/input";
 
 interface ProjectFiltersProps {
 	searchQuery: string;
@@ -13,31 +15,29 @@ interface ProjectFiltersProps {
 
 const ProjectFilters = ({ searchQuery, onSearchChange, sortBy, onSortChange, showArchived, onArchivedChange }: ProjectFiltersProps) => {
 	return (
-		<Flex gap="4" align="center" className="p-4 rounded-lg">
-			<Flex gap="2" align="center" className="flex-1">
-				<SearchIcon className="text-gray-400" size={20} />
-				<TextField.Root className="flex-1">
-					<TextField.Root placeholder="Search projects..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
-				</TextField.Root>
-			</Flex>
+		<div className="flex items-center gap-4 p-4 rounded-lg bg-white">
+			<div className="flex-1 flex items-center relative">
+				<SearchIcon className="absolute left-3 text-gray-400" size={20} />
+				<Input className="pl-10" placeholder="Search projects..." value={searchQuery} onChange={(e) => onSearchChange(e.target.value)} />
+			</div>
 
-			<Select.Root value={sortBy} onValueChange={onSortChange}>
-				<Select.Trigger className="w-[200px]" />
-				<Select.Content>
-					<Select.Item value="name-asc">Name (A-Z)</Select.Item>
-					<Select.Item value="name-desc">Name (Z-A)</Select.Item>
-					<Select.Item value="rate-asc">Rate (Low to High)</Select.Item>
-					<Select.Item value="rate-desc">Rate (High to Low)</Select.Item>
-					<Select.Item value="date-asc">Date (Oldest first)</Select.Item>
-					<Select.Item value="date-desc">Date (Newest first)</Select.Item>
-				</Select.Content>
-			</Select.Root>
+			<Select value={sortBy} onValueChange={onSortChange}>
+				<SelectTrigger className="w-[200px]" />
+				<SelectContent>
+					<SelectItem value="name-asc">Name (A-Z)</SelectItem>
+					<SelectItem value="name-desc">Name (Z-A)</SelectItem>
+					<SelectItem value="rate-asc">Rate (Low to High)</SelectItem>
+					<SelectItem value="rate-desc">Rate (High to Low)</SelectItem>
+					<SelectItem value="date-asc">Date (Oldest first)</SelectItem>
+					<SelectItem value="date-desc">Date (Newest first)</SelectItem>
+				</SelectContent>
+			</Select>
 
-			<Flex gap="2" align="center">
+			<div className="flex items-center gap-2">
 				<Switch checked={showArchived} onCheckedChange={onArchivedChange} />
-				<span>Show Archived</span>
-			</Flex>
-		</Flex>
+				<span className="text-sm text-gray-700">Show Archived</span>
+			</div>
+		</div>
 	);
 };
 

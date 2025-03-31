@@ -1,8 +1,10 @@
 "use client";
 import { subWeeks, addWeeks, startOfWeek, endOfWeek } from "date-fns";
-import React, { ReactNode, useCallback } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import React, { ReactNode, useCallback, useState } from "react";
+import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+import LogTime from "./LogTime";
 
 interface ITimeToolBar {
 	filters: {
@@ -21,6 +23,8 @@ interface ITimeToolBar {
 }
 
 const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
+	const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
+
 	const handlePreviousWeek = useCallback(() => {
 		if (!filters.startDate) return;
 
@@ -62,39 +66,95 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 	}, [filters.customerId, setFilters]);
 
 	return (
-		<header className="flex flex-col items-center border-b border-gray-200 px-6 py-4 z-20 dark:border-gray-700">
-			<div className="flex w-full items-center justify-end">
-				<div className="ml-6 h-6 w-px bg-gray-300 dark:bg-gray-700" />
+		<header className="sticky top-0 bg-slate-50/80 backdrop-blur-sm dark:bg-gray-900/80 border-b border-slate-200 dark:border-gray-700 px-6 py-4 z-20">
+			<div className="flex w-full items-center justify-between">
+				{/* Left side - Log Time Button */}
+				<div className="flex items-center">
+					<Button
+						onClick={() => setIsLogTimeOpen(true)}
+						className={cn(
+							"flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+							// ... rest of your button styles
+						)}>
+						<Clock className="h-4 w-4" />
+						<span className="font-medium">Log Time</span>
+					</Button>
 
-				{children}
+					{/* Add the LogTime component */}
+					{isLogTimeOpen && (
+						<LogTime
+							onClose={() => setIsLogTimeOpen(false)}
+							initialValues={{
+								date: new Date(),
+								startTime: "09:00",
+								endTime: "17:00",
+							}}
+						/>
+					)}
+				</div>
 
-				<div className="flex items-center ml-5">
-					<div className="relative flex items-center rounded-md bg-white shadow-sm md:items-stretch dark:bg-gray-800">
+				{/* Right side - Date Navigation */}
+				<div className="flex items-center space-x-4">
+					{/* Date display */}
+					<div className="hidden md:flex items-center space-x-3 mr-4">
+						<Calendar className="h-4 w-4 text-slate-600 dark:text-gray-400" />
+						<span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+							{filters.startDate?.toLocaleDateString("en-US", {
+								month: "long",
+								day: "numeric",
+							})}{" "}
+							-{" "}
+							{filters.endDate?.toLocaleDateString("en-US", {
+								month: "long",
+								day: "numeric",
+								year: "numeric",
+							})}
+						</span>
+					</div>
+
+					{/* Navigation Controls */}
+					<div className="flex rounded-lg overflow-hidden shadow-sm">
 						<Button
-							type="button"
 							onClick={handlePreviousWeek}
-							variant="outline"
-							size="icon"
-							className="flex h-9 w-12 items-center justify-center rounded-l-md border-y border-l border-gray-300 pr-1 text-gray-400 hover:text-gray-500 focus:relative md:w-9 md:pr-0 md:hover:bg-gray-50 dark:border-gray-700 dark:text-gray-500 dark:hover:text-gray-400">
-							<span className="sr-only">Previous week</span>
-							<ChevronLeft className="h-5 w-5" aria-hidden="true" />
+							className={cn(
+								"relative px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700",
+								"hover:bg-slate-100 dark:hover:bg-gray-700",
+								"text-slate-700 dark:text-gray-300",
+								"transition-colors duration-200",
+								"flex items-center justify-center",
+								"first:rounded-l-lg last:rounded-r-lg",
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+							)}>
+							<ChevronLeft className="h-4 w-4" />
 						</Button>
+
 						<Button
-							type="button"
 							onClick={handleToday}
-							variant="outline"
-							className="hidden border-y border-gray-300 px-3.5 text-sm font-semibold text-gray-900 hover:bg-gray-50 focus:relative md:block dark:border-gray-700 dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-gray-800">
+							className={cn(
+								"relative px-4 py-2 bg-white dark:bg-gray-800 border-y border-x border-slate-200 dark:border-gray-700",
+								"hover:bg-slate-100 dark:hover:bg-gray-700",
+								"text-sm font-medium",
+								"text-slate-700 dark:!text-gray-300",
+								"hover:text-slate-900 dark:hover:!text-white",
+								"transition-colors duration-200",
+								"min-w-[80px]",
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+							)}>
 							Today
 						</Button>
-						<span className="relative -mx-px h-5 w-px bg-gray-300 md:hidden dark:bg-gray-700" />
+
 						<Button
-							type="button"
 							onClick={handleNextWeek}
-							variant="outline"
-							size="icon"
-							className="flex h-9 w-12 items-center justify-center rounded-r-md border-y border-r border-gray-300 pl-1 text-gray-400 hover:text-gray-500 focus:relative md:w-9 md:pl-0 md:hover:bg-gray-50 dark:border-gray-700 dark:text-gray-500 dark:hover:text-gray-400">
-							<span className="sr-only">Next week</span>
-							<ChevronRight className="h-5 w-5" aria-hidden="true" />
+							className={cn(
+								"relative px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700",
+								"hover:bg-slate-100 dark:hover:bg-gray-700",
+								"text-slate-700 dark:text-gray-300",
+								"transition-colors duration-200",
+								"flex items-center justify-center",
+								"first:rounded-l-lg last:rounded-r-lg",
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+							)}>
+							<ChevronRight className="h-4 w-4" />
 						</Button>
 					</div>
 				</div>

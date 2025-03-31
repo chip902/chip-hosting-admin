@@ -5,21 +5,28 @@ import { filterSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useCustomers } from "../hooks/useCustomers";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 
 interface FilterComponentProps {
-	onApplyFilters: (filters: FilterFormSchema) => void;
+	onApplyFilters: (filters: { startDate?: string; endDate?: string; customerId?: number; invoiceStatus?: string }) => void;
 }
 
 const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const { data: customers, isLoading, error } = useCustomers();
+	const [localFilters, setLocalFilters] = useState({
+		startDate: "",
+		endDate: "",
+		customerId: undefined as number | undefined,
+		invoiceStatus: "",
+	});
 	const form = useForm<FilterFormSchema>({
 		resolver: zodResolver(filterSchema),
 		defaultValues: {
@@ -29,6 +36,48 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 			invoiceStatus: "all",
 		},
 	});
+
+	const [filters, setFilters] = useState({
+		startDate: "",
+		endDate: "",
+		customerId: undefined,
+		invoiceStatus: "",
+	});
+
+	const handleFilterChange = (key: string, value: any) => {
+		console.log(`Updating ${key} to:`, value); // Debug log
+		setLocalFilters((prev) => ({
+			...prev,
+			[key]: value,
+		}));
+	};
+
+	const handleApplyFilters = () => {
+		console.log("Applying filters:", localFilters); // Debug log
+
+		// Create an object with only the non-empty values
+		const filtersToApply = Object.entries(localFilters).reduce((acc, [key, value]) => {
+			if (value !== "" && value !== undefined) {
+				acc[key] = value;
+			}
+			return acc;
+		}, {} as Record<string, any>);
+
+		console.log("Filtered values to apply:", filtersToApply); // Debug log
+		onApplyFilters(filtersToApply);
+	};
+
+	// Also update the reset handler to properly reset both states
+	// const handleReset = () => {
+	// 	const emptyFilters = {
+	// 		startDate: "",
+	// 		endDate: "",
+	// 		customerId: undefined,
+	// 		invoiceStatus: "",
+	// 	};
+	// 	setFilters(emptyFilters);
+	// 	onApplyFilters({});
+	// };
 
 	const customerId = form.watch("customerId");
 
@@ -65,91 +114,60 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 		return <div>Error fetching data from the database</div>;
 	}
 	return (
-		<div className="flex flex-row items-center gap-4">
-			<Form {...form}>
-				<form onSubmit={form.handleSubmit(onSubmit)}>
-					<FormField
-						control={form.control}
-						name="customerId"
-						render={({ field }) => (
-							<FormItem>
-								<FormLabel className="mr-2">Select Customer</FormLabel>
-								<FormControl>
-									<Select onValueChange={field.onChange} defaultValue={field.value?.toString()}>
-										<SelectTrigger>
-											<SelectValue placeholder="Select a customer" />
-										</SelectTrigger>
-										<SelectContent>
-											{customers.map((customer) => (
-												<SelectItem key={customer.id} value={customer.id.toString()}>
-													{customer.name}
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<FormField
-						control={form.control}
-						name="startDate"
-						render={({ field }) => (
-							<FormItem className="flex-1">
-								<FormLabel className="mr-2">Start Date</FormLabel>
-								<FormControl>
-									<Input type="date" className="time-input" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
+		<div className="p-4">
+			<div className="flex items-center space-x-4">
+				{/* Customer Select */}
+				<div className="flex-1">
+					<Label>Select Customer</Label>
+					<Select>
+						<SelectTrigger>
+							<SelectValue placeholder="Select a customer" />
+						</SelectTrigger>
+						<SelectContent>
+							{customers.map((customer) => (
+								<SelectItem key={customer.id} value={customer.id.toString()}>
+									{customer.name}
+								</SelectItem>
+							))}
+						</SelectContent>
+					</Select>
+				</div>
 
-					<FormField
-						control={form.control}
-						name="endDate"
-						render={({ field }) => (
-							<FormItem className="flex-1">
-								<FormLabel className="mr-2">End Date</FormLabel>
-								<FormControl>
-									<Input type="date" className="time-input" {...field} />
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
+				{/* Start Date */}
+				<div className="flex-1">
+					<Label>Start Date</Label>
+					<Input type="date" className="w-full" value={localFilters.startDate} onChange={(e) => handleFilterChange("startDate", e.target.value)} />
+				</div>
 
-					<FormField
-						control={form.control}
-						name="invoiceStatus"
-						render={({ field }) => (
-							<FormItem className="flex-1">
-								<FormLabel className="mr-2">Invoice Status</FormLabel>
-								<FormControl>
-									<Select onValueChange={field.onChange} defaultValue={field.value}>
-										<SelectTrigger>
-											<SelectValue placeholder="Select status" />
-										</SelectTrigger>
-										<SelectContent>
-											<SelectItem value="all">All Entries</SelectItem>
-											<SelectItem value="true">Invoiced Only</SelectItem>
-											<SelectItem value="false">Not Invoiced Only</SelectItem>
-										</SelectContent>
-									</Select>
-								</FormControl>
-								<FormMessage />
-							</FormItem>
-						)}
-					/>
-					<div className="gap-3">
-						<Button type="submit">Apply Filters</Button>
-						<Button type="button" onClick={handleReset}>
-							Reset
-						</Button>
-					</div>
-				</form>
-			</Form>
+				{/* End Date */}
+				<div className="flex-1">
+					<Label>End Date</Label>
+					<Input type="date" className="w-full" value={localFilters.endDate} onChange={(e) => handleFilterChange("endDate", e.target.value)} />
+				</div>
+
+				{/* Invoice Status */}
+				<div className="flex-1">
+					<Label>Invoice Status</Label>
+					<Select value={localFilters.invoiceStatus} onValueChange={(value) => handleFilterChange("invoiceStatus", value)}>
+						<SelectTrigger>
+							<SelectValue placeholder="All Entries" />
+						</SelectTrigger>
+						<SelectContent>
+							<SelectItem value="all">All Entries</SelectItem>
+							<SelectItem value="invoiced">Invoiced</SelectItem>
+							<SelectItem value="not-invoiced">Not Invoiced</SelectItem>
+						</SelectContent>
+					</Select>
+				</div>
+
+				{/* Action Buttons */}
+				<div className="flex items-end space-x-2">
+					<Button onClick={handleApplyFilters}>Apply Filters</Button>
+					<Button variant="outline" onClick={handleReset}>
+						Reset
+					</Button>
+				</div>
+			</div>
 		</div>
 	);
 };

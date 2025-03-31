@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { Dialog, DialogClose, DialogContent, DialogOverlay } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 export type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
@@ -36,7 +37,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
 	const router = useRouter();
-	const { mutate: createTimeEntry } = useCreateTimeEntry();
+	const { mutateAsync: createTimeEntry } = useCreateTimeEntry();
 
 	const form = useForm<TimeLogSchema>({
 		resolver: zodResolver(timeLogSchema),
@@ -112,6 +113,13 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 				...logData,
 				date: new Date(logData.date),
 			};
+
+			// Show loading toast for multiple entries
+			const loadingToast =
+				parsedRepeatInterval && parsedRepeatInterval > 1
+					? toast.loading(`Creating ${parsedRepeatInterval} time entries...`)
+					: toast.loading("Logging time entry...");
+
 			if (parsedRepeatInterval) {
 				let currentDate = new Date(logDataWithDate.date);
 				for (let i = 0; i < parsedRepeatInterval; i++) {
@@ -133,23 +141,59 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 				});
 			}
 
-			await Promise.all(logEntries.map((entry) => createTimeEntry(entry)));
+			await Promise.all(
+				logEntries.map((entry) =>
+					toast.promise(() => createTimeEntry(entry), {
+						loading: "Creating time entry...",
+						success: `Time entry for ${entry.date.toLocaleDateString()} created successfully`,
+						error: "Failed to create time entry",
+					})
+				)
+			);
+
+			// Dismiss loading toast if it exists
+			if (loadingToast) {
+				toast.dismiss(loadingToast);
+			}
+
+			// Show success message
+			toast.success(
+				parsedRepeatInterval && parsedRepeatInterval > 1
+					? `Successfully created ${parsedRepeatInterval} time entries`
+					: "Time entry logged successfully"
+			);
+
 			onClose();
+			form.reset();
+			router.refresh();
 		} catch (error) {
 			setSubmitting(false);
 			console.error("Failed to submit time log:", error);
+
+			// Show error toast
+			toast.error("Failed to log time", {
+				description: error instanceof Error ? error.message : "An unexpected error occurred while logging time",
+			});
+
 			setError("An unexpected error occurred");
 		} finally {
 			setSubmitting(false);
-			form.reset();
-			router.refresh();
 		}
+	};
+
+	// Add toast for form validation errors
+	const onError = (errors: any) => {
+		toast.error("Please fix the following errors:", {
+			description: Object.values(errors)
+				.map((error: any) => error.message)
+				.join(", "),
+		});
 	};
 
 	return (
 		<Dialog open onOpenChange={onClose}>
-			<DialogOverlay />
-			<DialogContent className="sm:max-w-[600px]">
+			<DialogOverlay className="bg-black/80" />
+			<DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-950 border">
 				<div className="flex gap-3">
 					<Form {...form}>
 						<form className="flex flex-col space-y-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>
@@ -166,7 +210,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 														<SelectValue placeholder="Select a Customer" />
 													</SelectTrigger>
 												</FormControl>
-												<SelectContent>
+												<SelectContent className="bg-white dark:bg-gray-950">
 													{customers.map((customer) => (
 														<SelectItem key={customer.id} value={customer.id.toString()}>
 															{customer.name}
@@ -191,7 +235,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 														<SelectValue placeholder="Select a Project" />
 													</SelectTrigger>
 												</FormControl>
-												<SelectContent>
+												<SelectContent className="bg-white dark:bg-gray-950">
 													{projects.map((project) => (
 														<SelectItem key={project.id} value={project.id.toString()}>
 															{project.name}
@@ -216,7 +260,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 														<SelectValue placeholder="Select a Task" />
 													</SelectTrigger>
 												</FormControl>
-												<SelectContent>
+												<SelectContent className="bg-white dark:bg-gray-950">
 													{tasks.map((task) => (
 														<SelectItem key={task.id} value={task.id.toString()}>
 															{task.name}
@@ -241,7 +285,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 														<SelectValue placeholder="Select an Employee" />
 													</SelectTrigger>
 												</FormControl>
-												<SelectContent>
+												<SelectContent className="bg-white dark:bg-gray-950">
 													{users.map((user) => (
 														<SelectItem key={user.id} value={user.id.toString()}>
 															{user.firstName} {user.lastName}
@@ -351,17 +395,16 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 										Cancel
 									</Button>
 								</DialogClose>
-								<DialogClose asChild>
-									<Button type="submit" disabled={submitting}>
-										{submitting ? (
-											<>
-												<Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
-											</>
-										) : (
-											"Log"
-										)}
-									</Button>
-								</DialogClose>
+								{/* Remove DialogClose from submit button */}
+								<Button type="submit" disabled={submitting}>
+									{submitting ? (
+										<>
+											<Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
+										</>
+									) : (
+										"Log"
+									)}
+								</Button>
 							</div>
 						</form>
 					</Form>

@@ -56,6 +56,13 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 		}
 	}, [isLoading]);
 
+	const handleTimeSlotSelect = (timeSlot: any) => {
+		// Only open LogTime dialog if timeSlot has actual data
+		if (timeSlot && Object.keys(timeSlot).length > 0) {
+			onTimeSlotSelect(timeSlot);
+		}
+	};
+
 	const handleGridMouseDown = (dayIndex: number, event: React.MouseEvent<HTMLDivElement>) => {
 		if (isDialogOpen) return;
 		event.stopPropagation();
@@ -212,7 +219,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 										color={entry.color || "#4893FF"}
 										width={entry.width}
 										left={entry.left}
-										onTimeSlotSelect={onTimeSlotSelect}
+										onTimeSlotSelect={handleTimeSlotSelect}
 										isDialogOpen={isDialogOpen}
 									/>
 								))}

@@ -1,14 +1,14 @@
 "use client";
 import React, { useState } from "react";
-import { Flex, Table, Button, Heading } from "@radix-ui/themes";
-import { Archive } from "lucide-react";
 import AddDocument from "./AddDocument";
-import EditDocument from "./EditDocument";
 import ProjectFilters from "./ProjectFilters";
 import { useProjects } from "../hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { Project } from "@prisma/client";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import ProjectActions from "./ProjectActions";
+import { toast } from "sonner";
 
 const ProjectsPage = () => {
 	const queryClient = useQueryClient();
@@ -27,18 +27,31 @@ const ProjectsPage = () => {
 				rate: project.rate || 0,
 				archived: !project.archived,
 			};
-
 			await axios.patch(`/api/projects/${project.id}`, payload);
 		},
-		onSuccess: () => {
+		onSuccess: (_, project) => {
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
+			toast.success(project.archived ? `Project "${project.name}" has been unarchived` : `Project "${project.name}" has been archived`);
 		},
 		onError: (error: unknown) => {
 			if (error instanceof Error) {
 				console.error("Mutation error:", error.message);
+				toast.error("Failed to archive project", {
+					description: error.message,
+				});
 			}
 		},
 	});
+
+	const handleArchiveProject = async (project: Project) => {
+		toast.promise(archiveMutation.mutateAsync(project), {
+			loading: "Updating project...",
+			success: () => {
+				return `Project ${project.archived ? "unarchived" : "archived"} successfully`;
+			},
+			error: "Failed to update project",
+		});
+	};
 
 	// Filter projects
 	const filteredProjects = projects?.filter((project) => {
@@ -69,16 +82,12 @@ const ProjectsPage = () => {
 		}
 	});
 
-	const handleArchiveProject = async (project: Project) => {
-		await archiveMutation.mutateAsync(project);
-	};
-
 	return (
 		<div className="space-y-4 p-4">
-			<Flex justify="between" align="center" className="mb-4">
-				<Heading className="text-2xl font-bold">Projects</Heading>
+			<div className="flex-col justify-between align-middle mb-4">
+				<h2 className="mt-10 scroll-m-20 border-b pb-2 text-2xl font-semibold tracking-tight transition-colors first:mt-0">Projects</h2>
 				<AddDocument />
-			</Flex>
+			</div>
 
 			<ProjectFilters
 				searchQuery={searchQuery}
@@ -89,40 +98,40 @@ const ProjectsPage = () => {
 				onArchivedChange={setShowArchived}
 			/>
 
-			<Table.Root variant="surface">
-				<Table.Header>
-					<Table.Row>
-						<Table.ColumnHeaderCell>Project Name</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Project Description</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Project Rate</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Status</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Actions</Table.ColumnHeaderCell>
-					</Table.Row>
-				</Table.Header>
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableCell>Project Name</TableCell>
+						<TableCell>Project Description</TableCell>
+						<TableCell>Project Rate</TableCell>
+						<TableCell>Status</TableCell>
+						<TableCell>Actions</TableCell>
+					</TableRow>
+				</TableHeader>
 
-				<Table.Body>
+				<TableBody>
 					{sortedProjects?.map((project) => (
-						<Table.Row key={project.id} className={project.archived ? "opacity-60" : ""}>
-							<Table.RowHeaderCell>{project.name}</Table.RowHeaderCell>
-							<Table.Cell>{project.description}</Table.Cell>
-							<Table.Cell>${project.rate}</Table.Cell>
-							<Table.Cell>{project.archived ? "Archived" : "Active"}</Table.Cell>
-							<Table.Cell>
-								<Flex gap="2">
-									<EditDocument project={project} />
-									<Button
-										variant="soft"
-										color={project.archived ? "green" : "red"}
-										onClick={() => handleArchiveProject({ ...project, name: project.name!, customerId: project.customerId! })}>
-										<Archive className="h-4 w-4" />
-										{project.archived ? "Unarchive" : "Archive"}
-									</Button>
-								</Flex>
-							</Table.Cell>
-						</Table.Row>
+						<TableRow key={project.id} className={project.archived ? "opacity-60" : ""}>
+							<TableCell>{project.name}</TableCell>
+							<TableCell>{project.description}</TableCell>
+							<TableCell>${project.rate}</TableCell>
+							<TableCell>{project.archived ? "Archived" : "Active"}</TableCell>
+							<TableCell>
+								<ProjectActions
+									project={{
+										...project,
+										name: project.name || "",
+										description: project.description || "",
+										customerId: project.customerId || 0,
+										rate: project.rate || 0,
+									}}
+									onArchive={handleArchiveProject}
+								/>
+							</TableCell>
+						</TableRow>
 					))}
-				</Table.Body>
-			</Table.Root>
+				</TableBody>
+			</Table>
 		</div>
 	);
 };

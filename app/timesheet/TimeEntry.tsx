@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Spinner } from "@/components/ui/spinner";
 import { Typography } from "@/components/ui/typography";
 import { Textarea } from "@/components/ui/textarea";
+import { toast } from "sonner";
 
 // Helper function to safely parse time from ISO string
 const parseISOForDisplay = (dateStr: string): string => {
@@ -270,7 +271,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		const startRelativeY = entryRect.top - gridRect.top;
 		const endRelativeY = entryRect.bottom - gridRect.top;
 
-		const totalMinutes = 24 * 60; // Minutes in a day
+		const totalMinutes = 24 * 60;
 		const startMinutesFromTop = Math.round(((startRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
 		const endMinutesFromTop = Math.round(((endRelativeY / gridRect.height) * totalMinutes) / 15) * 15;
 
@@ -313,49 +314,48 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left, width, onT
 		setFormState((prevState) => ({ ...prevState, [name]: value }));
 	};
 
-	const handleUpdate = () => {
+	const handleUpdate = async () => {
 		setLoading(true);
 
 		try {
-			// Format the ISO date correctly
 			const dateParts = formState.entryDate.split("-");
 			const timeParts = formState.startTime.split(":");
-
 			const isoDate = new Date(
-				parseInt(dateParts[0]), // year
-				parseInt(dateParts[1]) - 1, // month (0-indexed)
-				parseInt(dateParts[2]), // day
-				parseInt(timeParts[0]), // hour
-				parseInt(timeParts[1]) // minute
+				parseInt(dateParts[0]),
+				parseInt(dateParts[1]) - 1,
+				parseInt(dateParts[2]),
+				parseInt(timeParts[0]),
+				parseInt(timeParts[1])
 			);
 
-			updateTimeEntry(
-				{
-					id: entry.id,
-					data: {
-						duration: Number(formState.duration),
-						description: formState.description,
-						date: isoDate.toISOString(),
-					},
+			await toast.promise(
+				async () => {
+					return updateTimeEntry({
+						id: entry.id,
+						data: {
+							duration: Number(formState.duration),
+							description: formState.description,
+							date: isoDate.toISOString(),
+						},
+					});
 				},
 				{
-					onSuccess: () => {
-						setIsOpen(false);
-						setLoading(false);
-
-						// Refresh the grid
-						if (onTimeSlotSelect) {
-							onTimeSlotSelect({});
-						}
-					},
-					onError: (error) => {
-						console.error("Failed to update time entry:", error);
-						setLoading(false);
-					},
+					loading: "Updating time entry...",
+					success: "Time entry updated successfully",
+					error: "Failed to update time entry",
 				}
 			);
+
+			setIsOpen(false);
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
+			}
 		} catch (error) {
-			console.error("Invalid date/time format:", error);
+			console.error("Failed to update time entry:", error);
+			toast.error("Failed to update", {
+				description: error instanceof Error ? error.message : "Unknown error",
+			});
+		} finally {
 			setLoading(false);
 		}
 	};

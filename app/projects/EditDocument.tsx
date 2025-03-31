@@ -1,6 +1,4 @@
 import React from "react";
-import * as Form from "@radix-ui/react-form";
-import { Button, Dialog, Flex, IconButton, Spinner, TextField } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { projectSchema } from "../validationSchemas";
 import { z } from "zod";
@@ -12,6 +10,12 @@ import ErrorMessage from "@/components/ErrorMessage";
 import { Cross1Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import AlertDialog from "@/components/AlertDialog";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Form, FormControl, FormField, FormLabel } from "@/components/ui/form";
+import { Spinner } from "@/components/ui/spinner";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
 
 type ProjectSchema = z.infer<typeof projectSchema>;
 
@@ -30,11 +34,7 @@ const EditDocument = ({ project }: EditProjectProps) => {
 	const router = useRouter();
 	const [isOpen, setIsOpen] = useState(false);
 
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-	} = useForm<ProjectSchema>({
+	const form = useForm<ProjectSchema>({
 		resolver: zodResolver(projectSchema),
 		defaultValues: {
 			id: project?.id,
@@ -70,78 +70,106 @@ const EditDocument = ({ project }: EditProjectProps) => {
 			queryClient.invalidateQueries({ queryKey: ["projects"] });
 			setIsOpen(false);
 			router.refresh();
+			toast.success("Project updated successfully");
 		},
 		onError: (error: Error) => {
 			console.error("Error occurred during submission:", error.message);
-			setError(error.message);
+			toast.error("Failed to update project", {
+				description: error.message,
+			});
 		},
 	});
 
 	const onSubmit = async (data: ProjectSchema) => {
 		if (!project) return;
-		await mutation.mutateAsync(data);
+		toast.promise(mutation.mutateAsync(data), {
+			loading: "Updating project...",
+			success: "Project updated successfully",
+			error: "Failed to update project",
+		});
 	};
 
 	return (
-		<Flex direction="column" gap="2">
-			{error && <AlertDialog error={error} />}
+		<div className="flex items-center">
+			<Dialog open={isOpen} onOpenChange={setIsOpen}>
+				<DialogTrigger asChild>
+					<Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+						<DotsVerticalIcon className="h-4 w-4" />
+					</Button>
+				</DialogTrigger>
 
-			<Dialog.Root open={isOpen} onOpenChange={setIsOpen}>
-				<Dialog.Trigger>
-					<IconButton variant="ghost">
-						<DotsVerticalIcon />
-					</IconButton>
-				</Dialog.Trigger>
-
-				<Dialog.Content size="4">
-					<Dialog.Title>
-						<Flex justify="between">
-							Edit Project
-							<Dialog.Close>
-								<IconButton variant="ghost" size="2">
-									<Cross1Icon />
-								</IconButton>
-							</Dialog.Close>
-						</Flex>
-					</Dialog.Title>
-
-					<Form.Root onSubmit={handleSubmit(onSubmit)}>
-						<Form.Field name="name">
-							<Form.Label>Project Name</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Project Name" {...register("name")} />
-							</Form.Control>
-							{errors.name && <ErrorMessage>{errors.name.message}</ErrorMessage>}
-						</Form.Field>
-
-						<Form.Field name="description" className="flex-1">
-							<Form.Label className="mr-2">Project Description</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Description" {...register("description")} />
-							</Form.Control>
-							{errors.description && <ErrorMessage>{errors.description.message}</ErrorMessage>}
-						</Form.Field>
-
-						<Form.Field name="rate">
-							<Form.Label>Customer Rate</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Rate per hour USD" type="number" {...register("rate", { valueAsNumber: true })} />
-							</Form.Control>
-							{errors.rate && <ErrorMessage>{errors.rate.message}</ErrorMessage>}
-						</Form.Field>
-
-						<Flex gap="3" mt="4">
-							<Button type="button" color="red" size="2" onClick={() => setIsOpen(false)}>
-								Cancel
+				<DialogContent className="sm:max-w-[425px]">
+					<div className="flex items-center justify-between border-b pb-2">
+						<DialogTitle className="p-0">Edit Project</DialogTitle>
+						<DialogClose asChild>
+							<Button variant="ghost" className="h-6 w-6 p-0 hover:bg-transparent">
+								<span className="sr-only">Close</span>
 							</Button>
-							<Button type="submit" variant="solid" color="green" size="2" disabled={mutation.isPending}>
-								{mutation.isPending && <Spinner />} Save
-							</Button>
-						</Flex>
-					</Form.Root>
-				</Dialog.Content>
-			</Dialog.Root>
-		</Flex>
+						</DialogClose>
+					</div>
+
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
+							<FormField
+								control={form.control}
+								name="name"
+								render={({ field }) => (
+									<div className="space-y-2">
+										<FormLabel>Project Name</FormLabel>
+										<FormControl>
+											<Input placeholder="Project Name" {...field} />
+										</FormControl>
+										{error && <ErrorMessage>{error}</ErrorMessage>}
+									</div>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="description"
+								render={({ field }) => (
+									<div className="space-y-2">
+										<FormLabel>Description</FormLabel>
+										<FormControl>
+											<textarea
+												placeholder="Description"
+												className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+												{...field}
+											/>
+										</FormControl>
+										{error && <ErrorMessage>{error}</ErrorMessage>}
+									</div>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="rate"
+								render={({ field }) => (
+									<div className="space-y-2">
+										<FormLabel>Rate (USD)</FormLabel>
+										<FormControl>
+											<Input type="number" placeholder="Rate per hour" {...field} />
+										</FormControl>
+										{error && <ErrorMessage>{error}</ErrorMessage>}
+									</div>
+								)}
+							/>
+
+							<div className="flex justify-end space-x-4 pt-4">
+								<Button type="button" variant="outline" onClick={() => setIsOpen(false)}>
+									Cancel
+								</Button>
+								<Button type="submit" variant="default" disabled={mutation.isPending}>
+									{mutation.isPending && <Spinner className="mr-2 h-4 w-4" />}
+									Save Changes
+								</Button>
+							</div>
+						</form>
+					</Form>
+				</DialogContent>
+			</Dialog>
+		</div>
 	);
 };
 

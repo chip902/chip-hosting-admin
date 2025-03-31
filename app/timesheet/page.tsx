@@ -40,9 +40,15 @@ const Page: React.FC = () => {
 		customerId: filters.customerId !== null && filters.customerId !== undefined ? filters.customerId : undefined,
 	});
 
-	const handleTimeSlotSelect = (timeSlot: typeof selectedTimeSlot) => {
-		setSelectedTimeSlot(timeSlot);
-		setLogTimeOpen(true);
+	const handleTimeSlotSelect = (timeSlot: any) => {
+		// Only show LogTime dialog if timeSlot has actual data
+		if (timeSlot && Object.keys(timeSlot).length > 0) {
+			setLogTimeOpen(true);
+			setSelectedTimeSlot(timeSlot);
+		} else {
+			setLogTimeOpen(false);
+			setSelectedTimeSlot(null);
+		}
 	};
 
 	return (
@@ -72,8 +78,8 @@ const Page: React.FC = () => {
 				) : (
 					<>
 						<TimeToolBar filters={filters} setFilters={setFilters}>
-							<DialogTrigger>
-								<Button>Log Time</Button>
+							<DialogTrigger asChild>
+								<Button variant="default">Log Time</Button>
 							</DialogTrigger>
 						</TimeToolBar>
 						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />

@@ -1,6 +1,4 @@
 "use client";
-import * as Form from "@radix-ui/react-form";
-import { Button, Dialog, Flex, Spinner, TextField } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { customerSchema } from "../validationSchemas";
 import { z } from "zod";
@@ -10,16 +8,17 @@ import { Customer } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormLabel } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 
 const AddCustomer = ({ customer }: { customer?: Customer }) => {
 	const router = useRouter();
-	const {
-		register,
-		handleSubmit,
-		formState: { errors },
-	} = useForm<CustomerSchema>({
+	const form = useForm<CustomerSchema>({
 		resolver: zodResolver(customerSchema),
 	});
 	const [error, setError] = useState("");
@@ -49,75 +48,126 @@ const AddCustomer = ({ customer }: { customer?: Customer }) => {
 	};
 
 	return (
-		<Flex direction="column" gap="2">
-			<Dialog.Root>
-				<Dialog.Trigger>
-					<Button variant="solid">Add Customer</Button>
-				</Dialog.Trigger>
+		<div className="flex-col gap-2">
+			<Dialog>
+				<DialogTrigger>
+					<Button className="payment-transfer_btn">Add Customer</Button>
+				</DialogTrigger>
 
-				<Dialog.Content size="4">
-					<Dialog.Title>Add A New Customer</Dialog.Title>
-					<Form.Root onSubmit={handleSubmit(onSubmit)}>
-						<Flex className="flex flex-col">
-							<Form.Field name="name">
-								<Form.Label>Customer Name</Form.Label>
-								<Form.Control asChild>
-									<TextField.Root placeholder="Customer Name" {...register("name")} />
-								</Form.Control>
-								{errors.name && <ErrorMessage>{errors.name.message}</ErrorMessage>}
-							</Form.Field>
-							<Form.Field name="shortName" className="flex-1">
-								<Form.Label className="mr-2">Short Name</Form.Label>
-								<Form.Control asChild>
-									<TextField.Root placeholder="Invoice Code" {...register("shortname")} />
-								</Form.Control>
-								{errors.shortname && <ErrorMessage>{errors.shortname.message}</ErrorMessage>}
-							</Form.Field>
-							<Form.Field name="email">
-								<Form.Label>Customer Email</Form.Label>
-								<Form.Control asChild>
-									<TextField.Root placeholder="Primary Email Address" {...register("email")} />
-								</Form.Control>
-								{errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
-							</Form.Field>
-							<Form.Field name="defaultRate">
-								<Form.Label>Customer Rate</Form.Label>
-								<Form.Control asChild>
-									<TextField.Root placeholder="Rate per hour USD" {...register("defaultRate", { valueAsNumber: true })} />
-								</Form.Control>
-								{errors.defaultRate && <ErrorMessage>{errors.defaultRate.message}</ErrorMessage>}
-							</Form.Field>
-							<Form.Field name="paymentTerms">
-								<Form.Label>Payment Terms</Form.Label>
-								<Form.Control asChild>
-									<TextField.Root placeholder="ex. 30, for Net 30 Days" {...register("paymentTerms", { valueAsNumber: false })} />
-								</Form.Control>
-								{errors.paymentTerms && <ErrorMessage>{errors.paymentTerms.message}</ErrorMessage>}
-							</Form.Field>
-							<Form.Field name="color">
-								<Form.Label>Display Color</Form.Label>
-								<Form.Control asChild>
-									<input type="color" {...register("color")} />
-								</Form.Control>
-								{errors.color && <ErrorMessage>{errors.color.message}</ErrorMessage>}
-							</Form.Field>
-							<Flex gap="3" mt="4">
-								<Dialog.Close>
-									<Button type="button" color="red" size="2">
-										Cancel
-									</Button>
-								</Dialog.Close>
-								<Dialog.Close>
-									<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
+				<DialogContent className="bg-white dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
+					<DialogTitle className="text-20 font-semibold text-gray-900 dark:text-gray-100 mb-6">Add A New Customer</DialogTitle>
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+							<div className="flex flex-col">
+								<FormField
+									control={form.control}
+									name="name"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Customer Name</FormLabel>
+											<FormControl>
+												<Input className="form-item" placeholder="Customer Name" {...form.register("name", field)} />
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+								<FormField
+									control={form.control}
+									name="shortName"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Short Name</FormLabel>
+											<FormControl>
+												<Input className="form-item" placeholder="Invoice Code" {...form.register("shortName", field)} />
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="email"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Customer Email</FormLabel>
+											<FormControl>
+												<Input className="form-item" type="email" placeholder="Customer Email" {...form.register("email", field)} />
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="defaultRate"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Customer Rate</FormLabel>
+											<FormControl>
+												<Input
+													className="form-item"
+													type="number"
+													placeholder="Rate per hour USD"
+													{...form.register("defaultRate", field)}
+												/>
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="paymentTerms"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Payment Terms</FormLabel>
+											<FormControl>
+												<Input
+													className="form-item"
+													type="number"
+													placeholder="ex. 30, for Net 30 Days"
+													{...form.register("paymentTerms", field)}
+												/>
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+
+								<FormField
+									control={form.control}
+									name="color"
+									render={({ field }) => (
+										<div className="space-y-2">
+											<FormLabel className="form-label">Display Color</FormLabel>
+											<FormControl>
+												<Input type="color" className="form-item" placeholder="Display Color" {...form.register("color", field)} />
+											</FormControl>
+											{error && <ErrorMessage>{error}</ErrorMessage>}
+										</div>
+									)}
+								/>
+								<div className="flex justify-end gap-4 mt-6">
+									<DialogClose>
+										<Button type="button" color="red" size="lg">
+											Cancel
+										</Button>
+									</DialogClose>
+
+									<Button type="submit" variant="default" color="green" size="lg" disabled={submitting}>
 										{submitting && <Spinner />} Add
 									</Button>
-								</Dialog.Close>
-							</Flex>
-						</Flex>
-					</Form.Root>
-				</Dialog.Content>
-			</Dialog.Root>
-		</Flex>
+								</div>
+							</div>
+						</form>
+					</Form>
+				</DialogContent>
+			</Dialog>
+		</div>
 	);
 };
 

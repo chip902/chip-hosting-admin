@@ -1,73 +1,76 @@
 "use client";
-import { Box, Flex, Table } from "@radix-ui/themes";
 import AddCustomer from "./AddCustomer";
 import { useCustomers } from "../hooks/useCustomers";
 import EditCustomer from "./EditCustomer";
 import { Customer } from "@prisma/client";
 import React from "react";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Box } from "lucide-react";
 
 const CustomerTable = () => {
 	const { data: customers } = useCustomers();
 	return (
-		<>
-			<Flex justify="end" p="3px" my="3">
+		<div className="flex flex-col p-8 bg-gray-25 dark:bg-gray-900">
+			<div className="flex justify-between items-center mb-6">
+				<h2 className="header-box-title">Customers</h2>
 				<AddCustomer />
-			</Flex>
-			<Table.Root variant="surface">
-				<Table.Header>
-					<Table.Row>
-						<Table.ColumnHeaderCell>Customer name</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Primary Email</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Default Rate</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Display Color</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell />
-					</Table.Row>
-				</Table.Header>
+			</div>
 
-				<Table.Body>
-					{customers?.map((customer) => {
-						const customerData: Customer = {
-							id: customer.id,
-							name: customer.name ?? null,
-							shortName: customer.shortName,
-							email: customer.email,
-							dateCreated: new Date(customer.dateCreated),
-							defaultRate: customer.defaultRate,
-							color: customer.color ?? null,
-							paymentTerms: customer.paymentTerms,
-						};
+			<div className="rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800">
+				<Table>
+					<TableHeader>
+						<TableRow className="border-b border-gray-200 dark:border-gray-700">
+							<TableCell className="text-14 font-semibold text-gray-700 dark:text-gray-300">Customer name</TableCell>
+							<TableCell className="text-14 font-semibold text-gray-700 dark:text-gray-300">Primary Email</TableCell>
+							<TableCell className="text-14 font-semibold text-gray-700 dark:text-gray-300">Default Rate</TableCell>
+							<TableCell className="text-14 font-semibold text-gray-700 dark:text-gray-300">Display Color</TableCell>
+							<TableCell className="text-14 font-semibold text-gray-700 dark:text-gray-300" />
+						</TableRow>
+					</TableHeader>
 
-						return (
-							<Table.Row key={customerData.id}>
-								<Table.RowHeaderCell>{customerData.name}</Table.RowHeaderCell>
-								<Table.Cell>{customerData.email}</Table.Cell>
-								<Table.Cell>${customerData.defaultRate}</Table.Cell>
-								<Table.Cell>
-									<Flex>
-										<Flex align="center" gap="2">
+					<TableBody>
+						{customers?.map((customer) => {
+							const customerData: Customer = {
+								id: customer.id,
+								name: customer.name ?? null,
+								shortName: customer.shortName,
+								email: customer.email,
+								dateCreated: new Date(customer.dateCreated),
+								defaultRate: customer.defaultRate,
+								color: customer.color ?? null,
+								paymentTerms: customer.paymentTerms,
+							};
+
+							return (
+								<TableRow key={customerData.id} className="border-b border-gray-200 dark:border-gray-700">
+									<TableCell className="text-14 text-gray-900 dark:text-gray-100">{customerData.name}</TableCell>
+									<TableCell className="text-14 text-gray-900 dark:text-gray-100">{customerData.email}</TableCell>
+									<TableCell className="text-14 text-gray-900 dark:text-gray-100">${customerData.defaultRate}</TableCell>
+									<TableCell>
+										<div className="flex items-center">
 											<Box
 												style={{
 													backgroundColor: customer.color || "#fff",
-													width: "20px",
-													height: "20px",
-													borderRadius: "50%",
+													width: "24px",
+													height: "24px",
+													borderRadius: "6px",
 													border: "1px solid #ddd",
 												}}
 											/>
-										</Flex>
-									</Flex>
-								</Table.Cell>
-								<Table.Cell>
-									<Flex justify="center">
-										<EditCustomer customer={customerData} />
-									</Flex>
-								</Table.Cell>
-							</Table.Row>
-						);
-					})}
-				</Table.Body>
-			</Table.Root>
-		</>
+										</div>
+									</TableCell>
+									<TableCell>
+										<div className="flex justify-end">
+											<EditCustomer customer={customerData} />
+										</div>
+									</TableCell>
+								</TableRow>
+							);
+						})}
+					</TableBody>
+				</Table>
+			</div>
+		</div>
 	);
 };
 

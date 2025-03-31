@@ -12,6 +12,8 @@ import { TimeEntryData } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
+import { ChevronDown, Loader2 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
@@ -27,14 +29,13 @@ const InvoiceGenerator = () => {
 	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
 	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
 
-	// Call useGetTimeEntries with undefined filters initially to fetch all entries
 	const { data, error, isLoading } = useGetTimeEntries({
 		startDate: parsedStartDate,
 		endDate: parsedEndDate,
 		customerId: parsedCustomerId,
-		invoiceStatus: filters.invoiceStatus ?? undefined, // No filter by default for invoiced status
-		pageSize: pageSize,
-		page: page,
+		invoiceStatus: filters.invoiceStatus,
+		pageSize,
+		page,
 		sortBy: "date",
 		sortOrder: "desc",
 	});
@@ -83,6 +84,11 @@ const InvoiceGenerator = () => {
 		setIsSelectAll(!isSelectAll); // Toggle select all state
 	};
 
+	const handleApplyFilters = (newFilters: typeof filters) => {
+		console.log("Received new filters:", newFilters); // Debug log
+		setFilters(newFilters);
+	};
+
 	const mutation = useMutation({
 		mutationFn: async () => {
 			const response = await axios.post("/api/invoices", { timeEntryIds: selectedEntries });
@@ -107,81 +113,103 @@ const InvoiceGenerator = () => {
 	const timeZone = "America/New_York";
 
 	return (
-		<div className="flex-col gap-4">
-			<FilterComponent onApplyFilters={setFilters} />
+		<div className="flex flex-col space-y-6 p-6">
+			{/* Header Section */}
+			<div className="flex items-center justify-between">
+				<h1 className="text-2xl font-semibold text-foreground">Invoice Generator</h1>
+				<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0} className="w-[200px]">
+					{mutation.status === "pending" ? (
+						<>
+							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+							Generating...
+						</>
+					) : (
+						"Generate Invoice"
+					)}
+				</Button>
+			</div>
 
+			{/* Filters Section */}
+			<div className="rounded-lg border bg-card">
+				<FilterComponent onApplyFilters={handleApplyFilters} />
+			</div>
+
+			{/* Table Section */}
 			{isLoading ? (
-				<Skeleton>
-					<div className="relative w-full h-fit" />
-				</Skeleton>
+				<div className="space-y-3">
+					<Skeleton className="h-[40px] w-full" />
+					<Skeleton className="h-[400px] w-full" />
+				</div>
 			) : error ? (
 				<AlertDialog defaultOpen={true}>
-					<div className="max-w-[450px]">
-						<AlertDialogContent>
-							<AlertDialogTitle>Database Error</AlertDialogTitle>
-							<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
-							<div className="gap-3 mt-4 justify-end">
-								<AlertDialogCancel>
-									<Button color="red">Dismiss</Button>
-								</AlertDialogCancel>
-							</div>
-						</AlertDialogContent>
-					</div>
+					<AlertDialogContent>
+						<AlertDialogTitle>Database Error</AlertDialogTitle>
+						<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
+						<AlertDialogCancel asChild>
+							<Button variant="destructive">Dismiss</Button>
+						</AlertDialogCancel>
+					</AlertDialogContent>
 				</AlertDialog>
 			) : (
-				<>
+				<div className="rounded-md border bg-card">
 					<Table>
 						<TableHeader>
-							<TableRow>
-								<TableCell>
-									<input type="checkbox" checked={isSelectAll} onChange={handleSelectAll} />
+							<TableRow className="hover:bg-muted/50">
+								<TableCell className="w-[50px]">
+									<Checkbox checked={isSelectAll} onCheckedChange={handleSelectAll} aria-label="Select all" />
 								</TableCell>
-								<TableCell>Date</TableCell>
-								<TableCell>Description</TableCell>
-								<TableCell>Customer</TableCell>
-								<TableCell>Duration</TableCell>
+								<TableCell className="font-medium">Date</TableCell>
+								<TableCell className="font-medium">Description</TableCell>
+								<TableCell className="font-medium">Customer</TableCell>
+								<TableCell className="font-medium">Duration</TableCell>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
 							{transformedEntries?.map((entry: TimeEntryData) => (
-								<TableRow key={entry.id}>
+								<TableRow key={entry.id} className="hover:bg-muted/50">
 									<TableCell>
-										<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
+										<Checkbox
+											checked={selectedEntries.includes(entry.id)}
+											onCheckedChange={() => handleSelectEntry(entry.id)}
+											aria-label={`Select entry ${entry.id}`}
+										/>
 									</TableCell>
 									<TableCell>{format(new Date(entry.date), "MM/dd/yyyy")}</TableCell>
-									<TableCell>{entry.description}</TableCell>
+									<TableCell className="max-w-[300px] truncate">{entry.description}</TableCell>
 									<TableCell>{entry.customerName}</TableCell>
-									<TableCell>{entry.duration} minutes</TableCell>
+									<TableCell>
+										{Math.floor(entry.duration / 60)}h {entry.duration % 60}m
+									</TableCell>
 								</TableRow>
 							))}
 						</TableBody>
 					</Table>
-					<div className="flex justify-between pl-5">
+
+					{/* Pagination Section */}
+					<div className="flex items-center justify-between border-t p-4">
 						<PaginationComponent totalItems={data?.totalEntries ?? 0} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
-						<DropdownMenu>
-							<DropdownMenuTrigger>
-								<Button>
-									{pageSize}
-									<DropdownMenuTrigger />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent>
-								<DropdownMenuItem onSelect={() => setPageSize(10)}>10</DropdownMenuItem>
-								<DropdownMenuItem onSelect={() => setPageSize(20)}>20</DropdownMenuItem>
-								<DropdownMenuItem onSelect={() => setPageSize(30)}>30</DropdownMenuItem>
-								<DropdownMenuItem onSelect={() => setPageSize(40)}>40</DropdownMenuItem>
-								<DropdownMenuItem onSelect={() => setPageSize(50)}>50</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
+						<div className="flex items-center space-x-2">
+							<span className="text-sm text-muted-foreground">Rows per page</span>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button variant="outline" className="w-[80px]">
+										{pageSize} <ChevronDown className="ml-2 h-4 w-4" />
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent align="end">
+									{[10, 20, 30, 40, 50].map((size) => (
+										<DropdownMenuItem key={size} onClick={() => setPageSize(size)}>
+											{size} rows
+										</DropdownMenuItem>
+									))}
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</div>
 					</div>
-				</>
+				</div>
 			)}
 
-			<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0}>
-				{mutation.status === "pending" ? "Generating Invoice..." : "Generate Invoice"}
-			</Button>
-
-			{errorMessage && <div className="text-red-500">{errorMessage}</div>}
+			{errorMessage && <div className="rounded-md bg-destructive/15 p-3 text-destructive">{errorMessage}</div>}
 		</div>
 	);
 };
