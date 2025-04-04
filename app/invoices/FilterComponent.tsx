@@ -6,12 +6,12 @@ import { z } from "zod";
 import { useCustomers } from "../hooks/useCustomers";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useEffect, useState } from "react";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 
@@ -37,35 +37,35 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 		},
 	});
 
-	const [filters, setFilters] = useState({
-		startDate: "",
-		endDate: "",
-		customerId: undefined,
-		invoiceStatus: "",
-	});
+	// const [filters, setFilters] = useState({
+	// 	startDate: "",
+	// 	endDate: "",
+	// 	customerId: undefined,
+	// 	invoiceStatus: "",
+	// });
 
-	const handleFilterChange = (key: string, value: any) => {
-		console.log(`Updating ${key} to:`, value); // Debug log
-		setLocalFilters((prev) => ({
-			...prev,
-			[key]: value,
-		}));
-	};
+	// const handleFilterChange = (key: string, value: any) => {
+	// 	console.log(`Updating ${key} to:`, value); // Debug log
+	// 	setLocalFilters((prev) => ({
+	// 		...prev,
+	// 		[key]: value,
+	// 	}));
+	// };
 
-	const handleApplyFilters = () => {
-		console.log("Applying filters:", localFilters); // Debug log
+	// const handleApplyFilters = () => {
+	// 	console.log("Applying filters:", localFilters); // Debug log
 
-		// Create an object with only the non-empty values
-		const filtersToApply = Object.entries(localFilters).reduce((acc, [key, value]) => {
-			if (value !== "" && value !== undefined) {
-				acc[key] = value;
-			}
-			return acc;
-		}, {} as Record<string, any>);
+	// 	// Create an object with only the non-empty values
+	// 	const filtersToApply = Object.entries(localFilters).reduce((acc, [key, value]) => {
+	// 		if (value !== "" && value !== undefined) {
+	// 			acc[key] = value;
+	// 		}
+	// 		return acc;
+	// 	}, {} as Record<string, any>);
 
-		console.log("Filtered values to apply:", filtersToApply); // Debug log
-		onApplyFilters(filtersToApply);
-	};
+	// 	console.log("Filtered values to apply:", filtersToApply); // Debug log
+	// 	onApplyFilters(filtersToApply);
+	// };
 
 	// Also update the reset handler to properly reset both states
 	// const handleReset = () => {
@@ -82,18 +82,29 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const customerId = form.watch("customerId");
 
 	const onSubmit = (data: FilterFormSchema) => {
-		// Adjust the end date to include the full day
+		console.log("Form submission started");
+		console.log("Form submitted with data:", data);
 		const adjustedData = {
 			...data,
 			endDate: data.endDate ? `${data.endDate}T23:59:59.999` : undefined,
 		};
+		console.log("Adjusted data:", adjustedData);
 		onApplyFilters(adjustedData);
 	};
 
 	const handleReset = () => {
-		form.reset();
-		form.setValue("customerId", undefined);
-		form.handleSubmit(onSubmit)();
+		form.reset({
+			customerId: undefined,
+			startDate: "",
+			endDate: "",
+			invoiceStatus: "all",
+		});
+		onApplyFilters({
+			customerId: undefined,
+			startDate: "",
+			endDate: "",
+			invoiceStatus: "all",
+		});
 	};
 
 	useEffect(() => {
@@ -115,59 +126,98 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	}
 	return (
 		<div className="p-4">
-			<div className="flex items-center space-x-4">
-				{/* Customer Select */}
-				<div className="flex-1">
-					<Label>Select Customer</Label>
-					<Select>
-						<SelectTrigger>
-							<SelectValue placeholder="Select a customer" />
-						</SelectTrigger>
-						<SelectContent>
-							{customers.map((customer) => (
-								<SelectItem key={customer.id} value={customer.id.toString()}>
-									{customer.name}
-								</SelectItem>
-							))}
-						</SelectContent>
-					</Select>
-				</div>
+			<Form {...form}>
+				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+					<div className="flex space-x-2">
+						{/* Customer Select */}
+						<FormField
+							control={form.control}
+							name="customerId"
+							render={({ field }) => (
+								<FormItem className="w-full">
+									<FormLabel>Customer</FormLabel>
+									<Select
+										onValueChange={(value) => {
+											field.onChange(value ? parseInt(value) : undefined);
+										}}
+										value={field.value?.toString()}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select a customer" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent className="max-h-40">
+											{customers?.map((customer) => (
+												<SelectItem key={customer.id} value={customer.id.toString()}>
+													{customer.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+								</FormItem>
+							)}
+						/>
 
-				{/* Start Date */}
-				<div className="flex-1">
-					<Label>Start Date</Label>
-					<Input type="date" className="w-full" value={localFilters.startDate} onChange={(e) => handleFilterChange("startDate", e.target.value)} />
-				</div>
+						{/* Start Date */}
+						<FormField
+							control={form.control}
+							name="startDate"
+							render={({ field }) => (
+								<FormItem className="w-full">
+									<FormLabel>Start Date</FormLabel>
+									<FormControl>
+										<Input type="date" {...field} className="w-full" />
+									</FormControl>
+								</FormItem>
+							)}
+						/>
 
-				{/* End Date */}
-				<div className="flex-1">
-					<Label>End Date</Label>
-					<Input type="date" className="w-full" value={localFilters.endDate} onChange={(e) => handleFilterChange("endDate", e.target.value)} />
-				</div>
+						{/* End Date */}
+						<FormField
+							control={form.control}
+							name="endDate"
+							render={({ field }) => (
+								<FormItem className="w-full">
+									<FormLabel>End Date</FormLabel>
+									<FormControl>
+										<Input type="date" {...field} className="w-full" />
+									</FormControl>
+								</FormItem>
+							)}
+						/>
 
-				{/* Invoice Status */}
-				<div className="flex-1">
-					<Label>Invoice Status</Label>
-					<Select value={localFilters.invoiceStatus} onValueChange={(value) => handleFilterChange("invoiceStatus", value)}>
-						<SelectTrigger>
-							<SelectValue placeholder="All Entries" />
-						</SelectTrigger>
-						<SelectContent>
-							<SelectItem value="all">All Entries</SelectItem>
-							<SelectItem value="invoiced">Invoiced</SelectItem>
-							<SelectItem value="not-invoiced">Not Invoiced</SelectItem>
-						</SelectContent>
-					</Select>
-				</div>
-
-				{/* Action Buttons */}
-				<div className="flex items-end space-x-2">
-					<Button onClick={handleApplyFilters}>Apply Filters</Button>
-					<Button variant="outline" onClick={handleReset}>
-						Reset
-					</Button>
-				</div>
-			</div>
+						{/* Invoice Status */}
+						<FormField
+							control={form.control}
+							name="invoiceStatus"
+							render={({ field }) => (
+								<FormItem className="w-full">
+									<FormLabel>Invoice Status</FormLabel>
+									<Select onValueChange={field.onChange} value={field.value || "all"}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="All Entries" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent className="max-h-40">
+											<SelectItem value="all">All Entries</SelectItem>
+											<SelectItem value="invoiced">Invoiced</SelectItem>
+											<SelectItem value="not-invoiced">Not Invoiced</SelectItem>
+										</SelectContent>
+									</Select>
+								</FormItem>
+							)}
+						/>
+						{/* Action Buttons */}
+						<div className="flex items-end space-x-2">
+							<Button type="submit">Apply Filters</Button>
+							<Button variant="outline" onClick={handleReset} type="button">
+								Reset
+							</Button>
+						</div>
+					</div>
+				</form>
+			</Form>
 		</div>
 	);
 };

@@ -70,12 +70,7 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 			<div className="flex w-full items-center justify-between">
 				{/* Left side - Log Time Button */}
 				<div className="flex items-center">
-					<Button
-						onClick={() => setIsLogTimeOpen(true)}
-						className={cn(
-							"flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white"
-							// ... rest of your button styles
-						)}>
+					<Button onClick={() => setIsLogTimeOpen(true)} className={cn("flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white")}>
 						<Clock className="h-4 w-4" />
 						<span className="font-medium">Log Time</span>
 					</Button>

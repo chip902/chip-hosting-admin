@@ -30,10 +30,10 @@ export const timeLogSchema = z.object({
 });
 
 export const filterSchema = z.object({
-	invoiceStatus: z.string().optional(),
 	customerId: z.number().optional(),
 	startDate: z.string().optional(),
 	endDate: z.string().optional(),
+	invoiceStatus: z.enum(["all", "invoiced", "not-invoiced"]).optional(),
 });
 
 export const projectSchema = z.object({
