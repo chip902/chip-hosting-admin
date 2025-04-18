@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { plaidClient } from "@/lib/plaid";
 import { startOfDay, subYears } from "date-fns";
 

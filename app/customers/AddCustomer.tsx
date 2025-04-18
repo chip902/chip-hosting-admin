@@ -4,7 +4,6 @@ import { customerSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Customer } from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
@@ -13,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormLabel } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
+import { Customer } from "@/prisma/app/generated/prisma/client";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 

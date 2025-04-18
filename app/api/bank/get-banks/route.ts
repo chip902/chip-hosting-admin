@@ -1,8 +1,8 @@
 // app/api/bank/get-banks/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { getAccounts } from "@/lib/actions/bank.actions";
-import prisma from "@/prisma/client";
-import { Bank } from "@prisma/client";
+import type { Bank } from "@prisma/client";
+import { prisma } from "@/prisma/client";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);

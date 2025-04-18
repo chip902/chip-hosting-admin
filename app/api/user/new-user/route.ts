@@ -1,6 +1,6 @@
 // /app/api/user/new-user/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { authFormSchema } from "@/app/validationSchemas";
 import bcrypt from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";

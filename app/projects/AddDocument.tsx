@@ -6,7 +6,7 @@ import { projectSchema } from "../validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Customer, Project } from "@prisma/client";
+import Project from "@prisma/client";
 import { useForm } from "react-hook-form";
 import axios from "axios";
 import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -16,10 +16,11 @@ import { Spinner } from "@/components/ui/spinner";
 import { Input } from "@/components/ui/input";
 import { SelectContent, SelectItem, SelectTrigger, Select } from "@/components/ui/select";
 import { toast } from "sonner";
+import { Customer } from "@/types";
 
 type ProjectSchema = z.infer<typeof projectSchema>;
 
-const AddDocument = ({ project }: { project?: Project }) => {
+const AddDocument = ({ project }: { project?: typeof Project }) => {
 	const [customers, setCustomers] = useState<Customer[]>([]);
 	const [isModalOpen, setIsModalOpen] = useState(false);
 
@@ -52,7 +53,7 @@ const AddDocument = ({ project }: { project?: Project }) => {
 			};
 
 			if (project) {
-				await toast.promise(axios.patch("/api/projects/" + project.id, newData), {
+				await toast.promise(axios.patch("/api/projects/" + project, newData), {
 					loading: "Updating project...",
 					success: "Project updated successfully",
 					error: "Failed to update project",

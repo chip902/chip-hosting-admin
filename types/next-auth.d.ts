@@ -5,8 +5,8 @@ import NextAuth, { DefaultSession, DefaultUser } from "next-auth";
 declare module "next-auth" {
 	interface User extends DefaultUser {
 		id: number;
-		userId: string;
 		email: string;
+		userId?: string | null;
 		firstName?: string | null;
 		lastName?: string | null;
 		createdAt?: Date | null;
@@ -16,7 +16,7 @@ declare module "next-auth" {
 	interface Session {
 		user: {
 			id: string;
-			userId: string;
+			userId?: string | null;
 			firstName?: string | null;
 			lastName?: string | null;
 		} & DefaultSession["user"];
@@ -26,7 +26,7 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
 	interface JWT {
 		id: string;
-		userId: string;
+		userId?: string | null;
 		firstName?: string | null;
 		lastName?: string | null;
 	}

@@ -1,12 +1,13 @@
 // /auth.config.ts
 import type { NextAuthOptions, User } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
-import { PrismaAdapter } from "@next-auth/prisma-adapter";
-import prisma from "@/prisma/client";
+import { PrismaAdapter } from "@auth/prisma-adapter";
 import bcrypt from "bcryptjs";
+import { Prisma } from "@prisma/client";
+import { prisma } from "./prisma/client";
 
 export const authOptions: NextAuthOptions = {
-	adapter: PrismaAdapter(prisma),
+	adapter: PrismaAdapter(Prisma),
 	providers: [
 		CredentialsProvider({
 			name: "Credentials",

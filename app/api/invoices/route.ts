@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { generateInvoicePdf } from "@/app/utils/PdfService";
 import fs from "fs/promises";
 import path from "path";

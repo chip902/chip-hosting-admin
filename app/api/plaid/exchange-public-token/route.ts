@@ -1,7 +1,7 @@
 // app/api/plaid/exchange-public-token/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { Configuration, PlaidApi, PlaidEnvironments } from "plaid";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 
 const plaidClient = new PlaidApi(
 	new Configuration({

@@ -1,6 +1,6 @@
 // app/api/timelog/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { parseISO, isValid } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";

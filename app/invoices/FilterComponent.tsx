@@ -12,6 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
+import { Customer } from "@/types";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 
@@ -147,7 +148,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent className="max-h-40">
-											{customers?.map((customer) => (
+											{customers?.map((customer: Customer) => (
 												<SelectItem key={customer.id} value={customer.id.toString()}>
 													{customer.name}
 												</SelectItem>
