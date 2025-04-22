@@ -273,8 +273,8 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 	});
 
 	return (
-		<div className="flex flex-col gap-6">
-			<Card>
+        (<div className="flex flex-col gap-6">
+            <Card>
 				<CardHeader>
 					<CardTitle className="flex justify-between items-center">
 						<span>Import Transactions</span>
@@ -318,8 +318,8 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 											const isExpanded = expandedRows.has(index);
 
 											return (
-												<React.Fragment key={index}>
-													<tr className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
+                                                (<React.Fragment key={index}>
+                                                    <tr className="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800">
 														<td className="px-4 py-2">
 															<button
 																onClick={() => {
@@ -347,7 +347,7 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 														</td>
 														<td className="px-4 py-2 text-right">${parseFloat(originalRow.Balance).toFixed(2)}</td>
 													</tr>
-													{isExpanded && (
+                                                    {isExpanded && (
 														<tr>
 															<td colSpan={6} className="border-b dark:border-gray-700">
 																<div className="px-4 py-2 bg-gray-50 dark:bg-gray-800">
@@ -368,8 +368,8 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 															</td>
 														</tr>
 													)}
-												</React.Fragment>
-											);
+                                                </React.Fragment>)
+                                            );
 										})}
 									</tbody>
 								</table>
@@ -411,8 +411,8 @@ const TransactionImporter: React.FC<TransactionImporterProps> = ({ userId, bankI
 					)}
 				</CardContent>
 			</Card>
-		</div>
-	);
+        </div>)
+    );
 };
 
 export default TransactionImporter;

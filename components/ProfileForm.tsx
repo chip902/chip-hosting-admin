@@ -61,9 +61,12 @@ const ProfileForm = () => {
 	};
 
 	return (
-		<section className="auth-form">
-			<header className="flex flex-col gap-5 md:gap-8">
-				<Link href="/" className="cursor-pointer flex items-center gap-1 px-4">
+        (<section className="auth-form">
+            <header className="flex flex-col gap-5 md:gap-8">
+				<Link
+                    href="/"
+                    className="cursor-pointer flex items-center gap-1 px-4"
+                    legacyBehavior>
 					<Image className="rounded-lg" alt="Logo" width={34} height={34} src="/CHS_Logo.png" />
 					<h2 className="header-2">Chip Hosting Solutions</h2>
 				</Link>
@@ -71,8 +74,7 @@ const ProfileForm = () => {
 					<PlaidLink variant="primary" user={user} />
 				</div>
 			</header>
-
-			<Form {...form}>
+            <Form {...form}>
 				<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
 					<div className="flex flex-col gap-4">
 						<Button disabled={loading} className="form-btn" type="submit">
@@ -81,8 +83,8 @@ const ProfileForm = () => {
 					</div>
 				</form>
 			</Form>
-		</section>
-	);
+        </section>)
+    );
 };
 
 export default ProfileForm;

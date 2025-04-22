@@ -97,6 +97,7 @@ export interface GetAccountsResult {
 
 export interface Transaction {
 	id: string;
+	$id: string;
 	name: string;
 	paymentChannel: string;
 	type: string;
@@ -106,6 +107,8 @@ export interface Transaction {
 	category: string | PersonalFinanceCategory;
 	date: string;
 	image: string;
+	$createdAt: string;
+	channel: string;
 	senderBankId: string;
 	receiverBankId: string;
 	personal_finance_category?: {
@@ -122,24 +125,6 @@ export interface GetAccountsResult {
 	totalBanks: number;
 	totalCurrentBalance: number;
 }
-
-export type Transaction = {
-	id: string;
-	$id: string;
-	name: string;
-	paymentChannel: string;
-	type: string;
-	accountId: string;
-	amount: number;
-	pending: boolean;
-	category: string | PersonalFinanceCategory;
-	date: string;
-	image: string;
-	$createdAt: string;
-	channel: string;
-	senderBankId: string;
-	receiverBankId: string;
-};
 
 export type Bank = {
 	$id: string;
