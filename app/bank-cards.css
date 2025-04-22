@@ -1,0 +1,97 @@
+.hide-scrollbar {
+	scrollbar-width: none; /* Firefox */
+	-ms-overflow-style: none; /* IE and Edge */
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+	display: none; /* Chrome, Safari and Opera */
+}
+
+/* Smooth animations for bank cards */
+.bank-card {
+	background: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+	border-radius: 16px;
+	padding: 1.5rem;
+	height: 200px;
+	position: relative;
+	color: white;
+	transition: all 0.5s cubic-bezier(0.25, 0.8, 0.25, 1);
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	overflow: hidden;
+	box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1), 0 6px 6px rgba(0, 0, 0, 0.1);
+}
+
+.bank-card:hover {
+	transform: translateY(-5px);
+	box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15), 0 10px 10px rgba(0, 0, 0, 0.1);
+}
+
+.bank-card_content {
+	display: flex;
+	flex-direction: column;
+	justify-content: space-between;
+	height: 100%;
+	z-index: 1;
+}
+
+.bank-card_icon {
+	display: flex;
+	justify-content: flex-end;
+	align-items: center;
+	margin-top: 1rem;
+	z-index: 1;
+}
+
+/* Fade-in animation for card details */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(10px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+.animate-fadeIn {
+	animation: fadeIn 0.3s ease-in-out;
+}
+
+/* Card rotation effect */
+@keyframes rotateCard {
+	0% {
+		transform: perspective(1000px) rotateY(-10deg);
+	}
+	100% {
+		transform: perspective(1000px) rotateY(0deg);
+	}
+}
+
+.active-card {
+	animation: rotateCard 0.5s ease-out forwards;
+}
+
+/* Navigation buttons hover effects */
+.prev-button,
+.next-button {
+	opacity: 0.7;
+	transition: all 0.2s ease;
+}
+
+.prev-button:hover,
+.next-button:hover {
+	opacity: 1;
+	transform: scale(1.1);
+}
+
+/* Progress indicators */
+.progress-indicator {
+	transition: all 0.3s ease;
+}
+
+.progress-indicator.active {
+	transform: scale(1.3);
+}
