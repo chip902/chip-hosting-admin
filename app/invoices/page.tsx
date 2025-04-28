@@ -45,6 +45,7 @@ const InvoiceGenerator = () => {
 		const startDate = new Date(entry.date);
 		const endDate = new Date(startDate.getTime() + entry.duration * 60000);
 		const customerName = entry.customer.name;
+		const project = entry.project;
 		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
 
 		return {
@@ -57,7 +58,7 @@ const InvoiceGenerator = () => {
 			startTime: startDate.toISOString(),
 			endTime: endDate.toISOString(),
 			customerName,
-			project: entry.project?.name || "Unknown Project",
+			project: project || { name: "Unknown Project" },
 			customer: { name: customerName, defaultRate: entry.customer.defaultRate },
 			task: entry.task?.name || "Unknown Task",
 			user: { name: userName, id: entry.user?.id || 0 },
@@ -161,6 +162,7 @@ const InvoiceGenerator = () => {
 								<TableCell className="font-medium">Date</TableCell>
 								<TableCell className="font-medium">Description</TableCell>
 								<TableCell className="font-medium">Customer</TableCell>
+								<TableCell className="font-medium">Project</TableCell>
 								<TableCell className="font-medium">Duration</TableCell>
 							</TableRow>
 						</TableHeader>
@@ -177,6 +179,7 @@ const InvoiceGenerator = () => {
 									<TableCell>{format(new Date(entry.date), "MM/dd/yyyy")}</TableCell>
 									<TableCell className="max-w-[300px] truncate">{entry.description}</TableCell>
 									<TableCell>{entry.customerName}</TableCell>
+									<TableCell>{entry.project.name}</TableCell>
 									<TableCell>
 										{Math.floor(entry.duration / 60)}h {entry.duration % 60}m
 									</TableCell>

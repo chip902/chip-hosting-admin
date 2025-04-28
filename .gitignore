@@ -54,3 +54,8 @@ backup.dump
 # Python
 .venv/
 prisma/app/*
+pv_new.js
+lc_new.js
+utils.js
+lc.js
+pv.js

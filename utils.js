@@ -1,14 +1,15 @@
 // Western Union Analytics Utilities
 // Author: Andrew Chepurny for Western Union
-// Version: 2025.04.20
+// Version: 2025.04.22
 
 (function () {
     // Create global namespace if it doesn't exist
     window.WUAnalytics = window.WUAnalytics || {};
     window.WUAnalytics.pvFired = false;
+    window.WUAnalytics.pageViewSent = false;
 
     // Private variables
-    var _debugMode = false;
+    var _debugMode = true; // Set to true for development
     var _retryLimit = 3;
     var _retryDelay = 100;
     var _eventTypeMap = {
@@ -158,7 +159,7 @@
     }
 
     // Event Functions
-    function addEvent(xdm, eventNum, value) {
+    function addEvent(xdm, eventNum, value, serialId) {
         // Ensure XDM has proper structure
         xdm = ensureXDMStructure(xdm);
 
@@ -178,19 +179,68 @@
             return xdm;
         }
 
-        // Set event value in the appropriate object
+        // Create the proper event object structure with value
         const eventName = `event${eventNum}`;
-        targetObj[eventName] = value !== undefined ? value : 1;
+        const eventObj = {
+            value: value !== undefined ? value : 1
+        };
 
+        // Only add ID for serialization if explicitly provided
+        if (serialId) {
+            eventObj.serialization = {
+                id: serialId
+            };
+        }
+
+        // Set the event object in the target
+        targetObj[eventName] = eventObj;
+
+        log("info", `Added event${eventNum} with value ${eventObj.value}${serialId ? ' and serialization ID: ' + serialId : ''}`);
         return xdm;
     }
 
-    function addPurchaseEvent(xdm) {
+    function addPurchaseEvent(xdm, serialId) {
         xdm = ensureXDMStructure(xdm);
 
-        xdm._experience.analytics.events = xdm._experience.analytics.events || [];
-        xdm._experience.analytics.events.push({ name: 'purchase' });
+        // 1. Set up commerce object structure (standard XDM approach)
+        xdm.commerce = xdm.commerce || {};
+        xdm.commerce.purchases = xdm.commerce.purchases || {};
 
+        // Set the purchase value
+        xdm.commerce.purchases.value = 1;
+
+        // Only add ID for serialization if explicitly provided
+        if (serialId) {
+            xdm.commerce.purchases.id = serialId;
+        }
+
+        // 2. For backward compatibility, also set analytics custom dimension events
+        // This part can be removed once you fully migrate to the commerce object
+        if (!xdm._experience.analytics.customDimensions) {
+            xdm._experience.analytics.customDimensions = {};
+        }
+
+        if (!xdm._experience.analytics.customDimensions.events) {
+            xdm._experience.analytics.customDimensions.events = [];
+        }
+
+        // Create purchase event object
+        const purchaseEvent = {
+            name: 'purchase',
+            value: 1
+        };
+
+        // Add serialization only if explicitly provided
+        if (serialId) {
+            purchaseEvent.serialization = {
+                id: serialId
+            };
+        }
+
+        // Add the purchase event
+        xdm._experience.analytics.customDimensions.events.push(purchaseEvent);
+
+        log("info", `Added purchase event${serialId ? ' with serialization ID: ' + serialId : ''}`);
         return xdm;
     }
 
@@ -226,25 +276,6 @@
         return xdm;
     }
 
-    function validateAndSetIdentity(xdm, namespace, id, isPrimary) {
-        if (!id || typeof id !== 'string' || id.trim() === '') {
-            log("warn", `Skipping empty identity for namespace: ${namespace}`);
-            return xdm;
-        }
-
-        xdm.identityMap = xdm.identityMap || {};
-        xdm.identityMap[namespace] = xdm.identityMap[namespace] || [];
-
-        const identityObj = {
-            id: id.trim(),
-            primary: !!isPrimary,
-            authenticatedState: "ambiguous"
-        };
-
-        xdm.identityMap[namespace].push(identityObj);
-        return xdm;
-    }
-
     // Product Functions
     function setProduct(xdm, productName, price, eventData) {
         if (!productName) {
@@ -253,7 +284,8 @@
         }
 
         const product = {
-            name: productName
+            name: productName,
+            SKU: productName
         };
 
         if (price !== undefined && price !== null) {
@@ -313,7 +345,7 @@
                 };
             }
 
-            log("info", "Sending merged XDM object", JSON.stringify(mergedXDM));
+            log("info", "Sending XDM object", JSON.stringify(mergedXDM));
 
             return window.alloy("sendEvent", {
                 "xdm": mergedXDM
@@ -384,16 +416,23 @@
             // Ensure analytics data is initialized
             if (!isAnalyticsObjectAvailable()) {
                 log("warn", "Analytics object not available, waiting for initialization");
-                // Consider adding retry logic here
             }
 
+            // Set standard web properties
+            xdm.web = xdm.web || {};
+            xdm.web.webPageDetails = xdm.web.webPageDetails || {};
+            xdm.web.webPageDetails.name = pageNameTmp;
+            xdm.web.webPageDetails.siteSection = "web";
+            xdm.web.webPageDetails.isErrorPage = false;
+
+            // Initialize Western Union namespace
             xdm._westernunion = {
                 identity: {}
             };
 
             // Only add accountID to identity map if it exists
             if (accountID && accountID !== '') {
-                validateAndSetIdentity(xdm, "AACUSTOMID", accountID, false);
+                validateAndSetIdentity(xdm, "customerKey", accountID, false);
             }
 
             // Process product string
@@ -409,6 +448,8 @@
                 } else {
                     prod = platform + "|" + txnType + "|" + payMethod;
                 }
+
+                log("info", "Product string generated: " + prod);
             }
 
             // Store key values in the XDM object for common reference
@@ -434,6 +475,25 @@
             log("error", "Error building base XDM", e);
         }
 
+        return xdm;
+    }
+
+    function validateAndSetIdentity(xdm, namespace, id, isPrimary) {
+        if (!id || typeof id !== 'string' || id.trim() === '') {
+            log("warn", `Skipping empty identity for namespace: ${namespace}`);
+            return xdm;
+        }
+
+        xdm.identityMap = xdm.identityMap || {};
+        xdm.identityMap[namespace] = xdm.identityMap[namespace] || [];
+
+        const identityObj = {
+            id: id.trim(),
+            primary: !!isPrimary,
+            authenticatedState: "ambiguous"
+        };
+
+        xdm.identityMap[namespace].push(identityObj);
         return xdm;
     }
 
@@ -493,33 +553,14 @@
             window.WUAnalytics.pvFired = value;
             _satellite.setVar("Common_Page_Name_Based_Event_Firing_Rule", value);
         },
-
-        // Update your getPageViewFlag function
         getPageViewFlag: function () {
             return window.WUAnalytics.pvFired || getDataElement("Common_Page_Name_Based_Event_Firing_Rule", false);
         },
         resetPageViewFlag: function (delay) {
             setTimeout(function () {
+                window.WUAnalytics.pvFired = false;
                 _satellite.setVar("Common_Page_Name_Based_Event_Firing_Rule", false);
             }, delay || 5000);
-        },
-        validateAndSetIdentity: function (xdm, namespace, id, isPrimary) {
-            if (!id || typeof id !== 'string' || id.trim() === '') {
-                log("warn", `Skipping empty identity for namespace: ${namespace}`);
-                return xdm;
-            }
-
-            xdm.identityMap = xdm.identityMap || {};
-            xdm.identityMap[namespace] = xdm.identityMap[namespace] || [];
-
-            const identityObj = {
-                id: id.trim(),
-                primary: !!isPrimary,
-                authenticatedState: "ambiguous"
-            };
-
-            xdm.identityMap[namespace].push(identityObj);
-            return xdm;
         },
 
         // Handle potentially empty XDM
@@ -547,7 +588,7 @@
             }
 
             return xdm;
-        },
+        }
     };
 
     // Initialize debug mode

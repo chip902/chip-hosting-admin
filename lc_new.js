@@ -132,7 +132,7 @@ function buildWUEventsXDM() {
             WUAnalytics.setProduct(xdm, prod, txn_fee);
 
             // Add purchase event
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         }
     }
     /* SM - Receipt (Approval) */
@@ -143,7 +143,7 @@ function buildWUEventsXDM() {
 
             // Add purchase event
             WUAnalytics.setProduct(xdm, prod, txn_fee);
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         }
     }
     else if (pagenametmp !== "" && (pagenametmp.indexOf("send-money:declineoptions") !== -1 || pagenametmp.indexOf("send-money:bank-decline-lightbox") !== -1)) {
@@ -590,7 +590,7 @@ function buildWUEventsXDM() {
 
             WUAnalytics.addEvent(xdm, 133, _satellite.getVar("WUPrincipalJSObject") ?? 0);
             WUAnalytics.setProduct(xdm, prod, _satellite.getVar("WUPrincipalJSObject") ?? 0, { event34: txn_fee });
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         } else if (typeof prod != "undefined" && prod != "") {
             // on-hold, under review, null
             WUAnalytics.addEvent(xdm, 56);
@@ -606,7 +606,7 @@ function buildWUEventsXDM() {
 
             WUAnalytics.addEvent(xdm, 133, _satellite.getVar("WUPrincipalJSObject") ?? 0);
             WUAnalytics.setProduct(xdm, prod, txn_fee, { event34: txn_fee });
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
 
         } else if (typeof prod != "undefined" && prod != "") {
             // on-hold, under review, null

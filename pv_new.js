@@ -148,12 +148,14 @@ function buildWUPageViewXDM() {
         pagenametmp.indexOf("send-money:receipt") !== -1
     ) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            WUAnalytics.addPurchaseEvent(xdm);
+            // Get transaction ID first
+            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            // Pass txn_id as serialization parameter
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
 
-            // Add transaction ID
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            // Store transaction ID in XDM
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             // Add products
@@ -167,7 +169,8 @@ function buildWUPageViewXDM() {
             var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm);
+            // Pass txn_id as serialization parameter
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.setProduct(xdm, prod, txn_fee);
         }
     }
@@ -178,7 +181,8 @@ function buildWUPageViewXDM() {
             var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm);
+            // Pass txn_id as serialization parameter
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
@@ -194,7 +198,9 @@ function buildWUPageViewXDM() {
             var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm);
+            // Pass txn_id as serialization parameter
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.addEvent(xdm, 56);
@@ -212,7 +218,7 @@ function buildWUPageViewXDM() {
             var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
@@ -228,7 +234,7 @@ function buildWUPageViewXDM() {
             var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.setProduct(xdm, prod, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.addEvent(xdm, 56);
@@ -1254,23 +1260,4 @@ function buildWUPageViewXDM() {
 
     // Return the XDM object
     return xdm;
-}
-
-// Reset flag to ensure we're processing events
-WUAnalytics.setPageViewFlag(false);
-
-// Get XDM with all page view information
-var eventsXDM = buildWUPageViewXDM();
-
-// Ensure page view data
-if (eventsXDM) {
-    var finalXDM = WUAnalytics.ensurePageView(eventsXDM);
-
-    // Store for reference
-    _satellite.setVar('XDM westernunion Merged Object', finalXDM);
-
-    // DIRECT SEND
-    WUAnalytics.sendXDM(finalXDM);
-} else {
-    _satellite.logger.warn("No XDM data available for page view tracking");
 }
