@@ -6,7 +6,6 @@
  * Now uses the WUAnalytics utility for consistent XDM handling
  */
 
-// First, check if WUAnalytics exists, and if not, defer execution
 function attemptPageViewTracking(attempts) {
     // If tracking already happened, exit immediately
     if (typeof WUAnalytics !== "undefined" && WUAnalytics.getPageViewFlag()) {
@@ -18,17 +17,22 @@ function attemptPageViewTracking(attempts) {
     // Force execution of page name data element first to ensure analyticsObject is initialized
     var pagenametmp = _satellite.getVar("WUPageNameJSObject");
 
+    // Log the attempt for debugging
+    if (pagenametmp) {
+        console.log("Attempting to track page view for: " + pagenametmp + " (attempt " + (attempts + 1) + ")");
+    }
+
     // Check if utility is available
     if (typeof WUAnalytics === "undefined") {
-        if (attempts < 5) {
-            // Try again in 100ms, up to 5 times
+        if (attempts < 10) {  // Increased max attempts from 5 to 10
+            // Try again in 100ms, up to 10 times
             _satellite.logger.warn("WUAnalytics not available, retrying in 100ms (attempt " + (attempts + 1) + ")");
             setTimeout(function () {
                 attemptPageViewTracking(attempts + 1);
             }, 100);
             return;
         } else {
-            _satellite.logger.error("WUAnalytics utility not available after 5 attempts. Page view tracking aborted.");
+            _satellite.logger.error("WUAnalytics utility not available after 10 attempts. Page view tracking aborted.");
             return;
         }
     }
@@ -38,25 +42,86 @@ function attemptPageViewTracking(attempts) {
         WUAnalytics.preInitialize();
     }
 
-    // Continue with tracking since WUAnalytics is available
-    // Reset flag to ensure we're processing events
-    WUAnalytics.setPageViewFlag(false);
+    try {
+        // Reset flag to ensure we're processing events
+        WUAnalytics.setPageViewFlag(false);
 
-    // Get XDM with all page view information
-    var eventsXDM = buildWUPageViewXDM();
+        // Get XDM with all page view information
+        var eventsXDM = buildWUPageViewXDM();
 
-    // Ensure page view data and send
-    if (eventsXDM) {
-        var finalXDM = WUAnalytics.ensurePageView(eventsXDM);
-        _satellite.setVar('XDM westernunion Merged Object', finalXDM);
-        WUAnalytics.sendXDM(finalXDM);
-    } else {
-        _satellite.logger.warn("No XDM data available for page view tracking");
+        // Ensure page view data and send
+        if (eventsXDM) {
+            var finalXDM = WUAnalytics.ensurePageView(eventsXDM);
+            _satellite.setVar('XDM westernunion Merged Object', finalXDM);
+
+            // Log the page view attempt
+            _satellite.logger.info("Sending page view for: " + pagenametmp);
+
+            // Send XDM and handle any errors
+            WUAnalytics.sendXDM(finalXDM).catch(function (error) {
+                _satellite.logger.error("Error sending page view for " + pagenametmp + ": " + error);
+
+                // If we failed, reset the flag so we can try again
+                WUAnalytics.setPageViewFlag(false);
+
+                // Try again once more after a delay
+                if (attempts < 1) {
+                    setTimeout(function () {
+                        attemptPageViewTracking(attempts + 1);
+                    }, 500);
+                }
+            });
+        } else {
+            _satellite.logger.warn("No XDM data available for page view tracking on " + pagenametmp);
+
+            // If we don't have XDM data yet, retry after a delay
+            if (attempts < 2) {
+                setTimeout(function () {
+                    attemptPageViewTracking(attempts + 1);
+                }, 300);
+            }
+        }
+    } catch (e) {
+        _satellite.logger.error("Error during page view tracking: " + e.message);
+
+        // If we encounter an error, reset the flag so we can try again
+        WUAnalytics.setPageViewFlag(false);
+
+        // Try again once more after a delay
+        if (attempts < 1) {
+            setTimeout(function () {
+                attemptPageViewTracking(attempts + 1);
+            }, 500);
+        }
     }
 }
 
-// Initiate the attempt
+// Make sure the page view tracking initiates when the page is ready
+document.addEventListener('DOMContentLoaded', function () {
+    attemptPageViewTracking();
+});
+
+// Also try when the page is fully loaded (some SPAs might need this)
+window.addEventListener('load', function () {
+    if (typeof WUAnalytics !== "undefined" && !WUAnalytics.getPageViewFlag()) {
+        attemptPageViewTracking();
+    }
+});
+
+// For SPA support, listen for history changes (if this is a SPA)
+window.addEventListener('popstate', function () {
+    // Reset page view flag when navigation happens
+    if (typeof WUAnalytics !== "undefined") {
+        WUAnalytics.setPageViewFlag(false);
+        setTimeout(function () {
+            attemptPageViewTracking();
+        }, 100);
+    }
+});
+
+// Initiate the initial attempt
 attemptPageViewTracking();
+
 
 function buildWUPageViewXDM() {
     // Check if WUAnalytics utility is available
@@ -75,6 +140,17 @@ function buildWUPageViewXDM() {
 
     // Start with a base XDM object using the utility
     let xdm = WUAnalytics.buildBaseXDM();
+
+    // IMPORTANT: Force page view structure for all pages
+    // This ensures the page view event type is set properly
+    xdm.web = xdm.web || {};
+    xdm.web.webPageDetails = xdm.web.webPageDetails || {};
+    xdm.web.webPageDetails.pageViews = { value: 1 };
+    xdm.eventType = "web.webpagedetails.pageViews";
+
+    // Get page name for logging
+    var pageName = WUAnalytics.getDataElement("WUPageNameJSObject", "unknown");
+    _satellite.logger.info("Capturing page view for: " + pageName);
 
     // Get page context data elements
     var pagenametmp = WUAnalytics.getDataElement("WUPageNameJSObject", "");
@@ -1253,6 +1329,14 @@ function buildWUPageViewXDM() {
 
     if (analyticsObject.sc_fpstep4 && analyticsObject.sc_fpstep4 === "true") {
         WUAnalytics.addEvent(xdm, 87);
+    }
+
+    if (!xdm.web || !xdm.web.webPageDetails || !xdm.web.webPageDetails.pageViews) {
+        _satellite.logger.warn("Page view structure not set for " + pageName + ". Adding it explicitly.");
+        xdm.web = xdm.web || {};
+        xdm.web.webPageDetails = xdm.web.webPageDetails || {};
+        xdm.web.webPageDetails.pageViews = { value: 1 };
+        xdm.eventType = "web.webpagedetails.pageViews";
     }
 
     // Make sure the XDM isn't empty

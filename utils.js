@@ -249,12 +249,29 @@
         // First ensure structure is preserved
         xdm = ensureXDMStructure(xdm);
 
-        // PRESERVE existing web structure if present
+        // Ensure web structure exists and is properly populated
         xdm.web = xdm.web || {};
         xdm.web.webPageDetails = xdm.web.webPageDetails || {};
+
+        // Always set pageViews value to 1
         xdm.web.webPageDetails.pageViews = { value: 1 };
 
-        xdm.eventType = _eventTypeMap.pageView;
+        // Make sure page name is populated
+        if (!xdm.web.webPageDetails.name || xdm.web.webPageDetails.name === "") {
+            xdm.web.webPageDetails.name = getDataElement("WUPageNameJSObject", "unknown-page");
+            log("warn", "Page name was empty, setting from data element: " + xdm.web.webPageDetails.name);
+        }
+
+        // Always set proper eventType for page views
+        xdm.eventType = "web.webpagedetails.pageViews";
+
+        // Add page URL if available
+        if (window.location && window.location.href) {
+            xdm.web.webPageDetails.URL = window.location.href;
+        }
+
+        // Log the page view for debugging
+        log("info", "Ensuring page view for: " + xdm.web.webPageDetails.name);
 
         // Make sure we preserve the reference
         _satellite.setVar('XDM westernunion Merged Object', xdm);
