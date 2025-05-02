@@ -1,6 +1,6 @@
 // app/api/bookings/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { bookingSchema } from "@/app/validationSchemas";
 
 export async function POST(req: NextRequest) {

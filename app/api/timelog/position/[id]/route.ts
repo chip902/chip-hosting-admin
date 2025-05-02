@@ -1,6 +1,6 @@
 // app/api/timelog/position/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 
 /**
  * Special endpoint dedicated only to updating time entry positions
@@ -17,17 +17,27 @@ export async function OPTIONS(request: NextRequest) {
 		},
 	});
 }
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
-	try {
-		// Get ID from params
-		const id = parseInt(params.id, 10);
+export async function POST(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
 
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
+	try {
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
 		}
 
 		// Parse the request body
-		const data = await request.json();
+		const data = await req.json();
 		console.log("Position update received for time entry ID:", id, "with data:", data);
 
 		// Extract the position info
@@ -71,17 +81,24 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 		return NextResponse.json({ error: "Error updating time entry position" }, { status: 500 });
 	}
 }
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-	try {
-		// Get ID from params
-		const id = await parseInt(params.id, 10);
+export async function GET(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
 
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
+	try {
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
 		}
-
-		// Get query parameters
-		const searchParams = request.nextUrl.searchParams;
 
 		// Prepare update data
 		const updateData: any = {};

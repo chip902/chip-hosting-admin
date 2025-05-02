@@ -1,18 +1,28 @@
 // app/api/timelog/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 
-export async function POST(request: NextRequest, { params }: { params: { id: string } }) {
+export async function POST(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
+
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
 	try {
-		// Get ID from params
-		const id = parseInt(params.id, 10);
-
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
 		}
 
 		// Parse the request body
-		const data = await request.json();
+		const data = await req.json();
 		console.log("Update via POST received for time entry ID:", id, "with data:", data);
 
 		// If date is provided, ensure it's properly formatted
@@ -41,17 +51,27 @@ export async function POST(request: NextRequest, { params }: { params: { id: str
 		return NextResponse.json({ error: "Error updating time entry" }, { status: 500 });
 	}
 }
-export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
-	try {
-		// Get ID from params
-		const id = parseInt(params.id, 10);
+export async function PATCH(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
 
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
+	try {
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
 		}
 
 		// Parse the request body
-		const data = await request.json();
+		const data = await req.json();
 		console.log("Update request received for time entry ID:", id, "with data:", data);
 
 		// If date is provided, ensure it's properly formatted
@@ -79,10 +99,21 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 }
 
 // Delete a time entry
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-	try {
-		const id = parseInt(params.id, 10);
+export async function DELETE(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
 
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
+	try {
 		if (isNaN(id)) {
 			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
 		}
@@ -109,8 +140,20 @@ export async function DELETE(request: NextRequest, { params }: { params: { id: s
 }
 
 // GET route to fetch a specific time entry or filter time entries
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-	const id = parseInt(params.id, 10);
+export async function GET(req: Request) {
+	const { searchParams } = new URL(req.url);
+	const paramValue = searchParams.get("param");
+	let id: number | null;
+
+	if (paramValue) {
+		id = parseInt(paramValue, 10);
+		if (isNaN(id)) {
+			throw new Error("Invalid ID provided.");
+		}
+	} else {
+		// Handle the case where 'param' is not present
+		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+	}
 
 	try {
 		if (!isNaN(id)) {
@@ -132,7 +175,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 			return NextResponse.json(timeEntry, { status: 200 });
 		} else {
 			// Handle filters as an alternative
-			const { searchParams } = new URL(request.url);
+			const { searchParams } = new URL(req.url);
 			// Add filtering logic here if needed
 
 			return NextResponse.json({ error: "Invalid ID provided" }, { status: 400 });

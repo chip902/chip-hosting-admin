@@ -5,7 +5,7 @@ import { parseISO, isValid } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";
 import { format } from "date-fns-tz";
-import { Customer, Project, Task, TimeEntry } from "@prisma/client";
+import { Customer, Project, Task, TimeEntry } from "@/prisma/app/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
 	const { searchParams } = new URL(request.url);

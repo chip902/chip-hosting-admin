@@ -1,12 +1,15 @@
 "use client";
 import { useState } from "react";
-import { Flex, Table, Button, Skeleton, AlertDialog } from "@radix-ui/themes";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";
 import PaginationComponent from "./PaginationComponent";
 import { TimeEntryData } from "@/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { AlertDialog, AlertDialogCancel, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 
 interface InvoiceGeneratorProps {
 	userId: number;
@@ -101,47 +104,45 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 
 	if (error) {
 		return (
-			<AlertDialog.Root defaultOpen={true}>
-				<AlertDialog.Content maxWidth="450px">
-					<AlertDialog.Title>Database Error</AlertDialog.Title>
-					<AlertDialog.Description size="2">
-						The Database connection cannot be established. Check your connection and try again.
-					</AlertDialog.Description>
-					<Flex gap="3" mt="4" justify="end">
-						<AlertDialog.Cancel>
+			<AlertDialog defaultOpen={true}>
+				<AlertDialog>
+					<AlertDialogTitle>Database Error</AlertDialogTitle>
+					<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
+					<div className="flex gap-3 mt-4 justify-end">
+						<AlertDialogCancel>
 							<Button color="red">Dismiss</Button>
-						</AlertDialog.Cancel>
-					</Flex>
-				</AlertDialog.Content>
-			</AlertDialog.Root>
+						</AlertDialogCancel>
+					</div>
+				</AlertDialog>
+			</AlertDialog>
 		);
 	}
 
 	return (
-		<Flex direction="column" gap="4">
-			<Table.Root variant="surface">
-				<Table.Header>
-					<Table.Row>
-						<Table.ColumnHeaderCell>Select</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Description</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Duration</Table.ColumnHeaderCell>
-						<Table.ColumnHeaderCell>Date</Table.ColumnHeaderCell>
-					</Table.Row>
-				</Table.Header>
+		<div className="flex flex-col gap-4">
+			<Table>
+				<TableHeader>
+					<TableRow>
+						<TableCell>Select</TableCell>
+						<TableCell>Description</TableCell>
+						<TableCell>Duration</TableCell>
+						<TableCell>Date</TableCell>
+					</TableRow>
+				</TableHeader>
 
-				<Table.Body>
+				<TableBody>
 					{transformedEntries.map((entry: TimeEntryData) => (
-						<Table.Row key={entry.id}>
-							<Table.Cell>
+						<TableRow key={entry.id}>
+							<TableCell>
 								<input type="checkbox" checked={selectedEntries.includes(entry.id)} onChange={() => handleSelectEntry(entry.id)} />
-							</Table.Cell>
-							<Table.Cell>{entry.description}</Table.Cell>
-							<Table.Cell>{entry.duration} minutes</Table.Cell>
-							<Table.Cell>{new Date(entry.date).toLocaleDateString()}</Table.Cell>
-						</Table.Row>
+							</TableCell>
+							<TableCell>{entry.description}</TableCell>
+							<TableCell>{entry.duration} minutes</TableCell>
+							<TableCell>{new Date(entry.date).toLocaleDateString()}</TableCell>
+						</TableRow>
 					))}
-				</Table.Body>
-			</Table.Root>
+				</TableBody>
+			</Table>
 
 			<PaginationComponent currentPage={page} totalItems={totalEntries} onPageChange={setPage} pageSize={10} />
 
@@ -150,7 +151,7 @@ const CreateInvoice: React.FC<InvoiceGeneratorProps> = ({ userId }) => {
 			</Button>
 
 			{errorMessage && <div className="text-red-500 mt-2">{errorMessage}</div>}
-		</Flex>
+		</div>
 	);
 };
 

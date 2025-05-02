@@ -1,4 +1,4 @@
-import { Invoice } from "@prisma/client";
+import { Invoice } from "@/prisma/app/generated/prisma/client";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Papa from "papaparse";
 import { prisma } from "@/prisma/client";
-import { Transaction } from "@prisma/client";
+import { Transaction } from "@/prisma/app/generated/prisma/client";
 
 export async function POST(request: Request) {
 	try {

@@ -5,7 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import TransactionsTable from "./TransactionsTable";
-import { Transaction } from "@prisma/client";
+import { Transaction } from "@/prisma/app/generated/prisma/client";
 
 const RecentTransactions = ({ accounts, userId, startDate, endDate }: RecentTransactionsProps) => {
 	const [page, setPage] = useState(1);

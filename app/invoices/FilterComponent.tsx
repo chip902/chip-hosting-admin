@@ -12,7 +12,7 @@ import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Customer } from "@/types";
+import { Customer } from "@/prisma/app/generated/prisma/client";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 
@@ -25,7 +25,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	const [localFilters, setLocalFilters] = useState({
 		startDate: "",
 		endDate: "",
-		customerId: undefined as number | undefined,
+		customerId: undefined as string | undefined,
 		invoiceStatus: "",
 	});
 	const form = useForm<FilterFormSchema>({

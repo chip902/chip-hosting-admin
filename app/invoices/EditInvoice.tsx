@@ -1,6 +1,4 @@
 "use client";
-import * as Form from "@radix-ui/react-form";
-import { Button, Dialog, Flex, IconButton, Spinner, TextField } from "@radix-ui/themes";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { customerSchema } from "../validationSchemas";
 import { z } from "zod";
@@ -11,6 +9,11 @@ import axios from "axios";
 import ErrorMessage from "@/components/ErrorMessage";
 import { Cross1Icon, DotsVerticalIcon } from "@radix-ui/react-icons";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Dialog, DialogClose, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Form, FormField, FormLabel, FormControl, FormItem, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 
@@ -28,33 +31,28 @@ interface EditCustomerProps {
 const EditInvoice = ({ customer }: EditCustomerProps) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
-	const {
-		register,
-		handleSubmit,
-		setValue,
-		formState: { errors },
-	} = useForm<CustomerSchema>({
+	const [submitting, setSubmitting] = useState(false);
+
+	const form = useForm<CustomerSchema>({
 		resolver: zodResolver(customerSchema),
 		defaultValues: {
 			id: customer?.id,
-			color: customer?.color || "",
+			color: customer?.color || "#000000",
 			email: customer?.email || "",
 			name: customer?.name || "",
 			defaultRate: customer?.defaultRate || 0,
 		},
 	});
-	const [error, setError] = useState("");
-	const [submitting, setSubmitting] = useState(false);
 
 	useEffect(() => {
 		if (customer) {
-			setValue("id", customer.id || undefined);
-			setValue("name", customer.name || "");
-			setValue("email", customer.email || "");
-			setValue("defaultRate", customer.defaultRate || 0);
-			setValue("color", customer.color || "#000000");
+			form.setValue("id", customer.id || undefined);
+			form.setValue("name", customer.name || "");
+			form.setValue("email", customer.email || "");
+			form.setValue("defaultRate", customer.defaultRate || 0);
+			form.setValue("color", customer.color || "#000000");
 		}
-	}, [customer, setValue]);
+	}, [customer, form]);
 
 	const mutation = useMutation<void, Error, CustomerSchema>({
 		mutationFn: async (data: CustomerSchema) => {
@@ -79,7 +77,9 @@ const EditInvoice = ({ customer }: EditCustomerProps) => {
 		onError: (error: Error) => {
 			console.error("Error occurred during submission:", error);
 			setSubmitting(false);
-			setError("An unexpected error occurred");
+			form.setError("root", {
+				message: "An unexpected error occurred",
+			});
 		},
 	});
 
@@ -89,70 +89,105 @@ const EditInvoice = ({ customer }: EditCustomerProps) => {
 	};
 
 	return (
-		<Flex direction="column" gap="2">
-			<Dialog.Root>
-				<Dialog.Trigger>
-					<IconButton variant="ghost">
+		<div className="flex flex-col gap-2">
+			<Dialog>
+				<DialogTrigger>
+					<Button variant="ghost">
 						<DotsVerticalIcon />
-					</IconButton>
-				</Dialog.Trigger>
+					</Button>
+				</DialogTrigger>
 
-				<Dialog.Content size="4">
-					<Dialog.Title>
-						<Flex justify="between">
+				<DialogContent>
+					<DialogTitle>
+						<div className="flex justify-between">
 							Edit Customer
-							<Dialog.Close>
-								<IconButton variant="ghost" size="2">
+							<DialogClose>
+								<Button variant="ghost">
 									<Cross1Icon />
-								</IconButton>
-							</Dialog.Close>
-						</Flex>
-					</Dialog.Title>
-					<Form.Root onSubmit={handleSubmit(onSubmit)}>
-						<Form.Field name="name">
-							<Form.Label>Customer Name</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Customer Name" {...register("name")} />
-							</Form.Control>
-							{errors.name && <ErrorMessage>{errors.name.message}</ErrorMessage>}
-						</Form.Field>
-						<Form.Field name="email">
-							<Form.Label>Customer Email</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Primary Email Address" {...register("email")} />
-							</Form.Control>
-							{errors.email && <ErrorMessage>{errors.email.message}</ErrorMessage>}
-						</Form.Field>
-						<Form.Field name="defaultRate">
-							<Form.Label>Customer Rate</Form.Label>
-							<Form.Control asChild>
-								<TextField.Root placeholder="Rate per hour USD" {...register("defaultRate", { valueAsNumber: true })} />
-							</Form.Control>
-							{errors.defaultRate && <ErrorMessage>{errors.defaultRate.message}</ErrorMessage>}
-						</Form.Field>
-						<Form.Field name="color">
-							<Form.Label>Display Color</Form.Label>
-							<Form.Control asChild>
-								<input type="color" {...register("color")} />
-							</Form.Control>
-							{errors.color && <ErrorMessage>{errors.color.message}</ErrorMessage>}
-						</Form.Field>
-						<Flex gap="3" mt="4">
-							<Dialog.Close>
-								<Button type="button" color="red" size="2">
-									Cancel
 								</Button>
-							</Dialog.Close>
-							<Dialog.Close>
-								<Button type="submit" variant="solid" color="green" size="2" disabled={submitting}>
+							</DialogClose>
+						</div>
+					</DialogTitle>
+					<Form {...form}>
+						<form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+							<FormField
+								control={form.control}
+								name="name"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Customer Name</FormLabel>
+										<FormControl>
+											<Input placeholder="Customer Name" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="email"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Customer Email</FormLabel>
+										<FormControl>
+											<Input placeholder="Primary Email Address" {...field} />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="defaultRate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Customer Rate</FormLabel>
+										<FormControl>
+											<Input
+												placeholder="Rate per hour USD"
+												type="number"
+												{...field}
+												onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<FormField
+								control={form.control}
+								name="color"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>Display Color</FormLabel>
+										<FormControl>
+											<input type="color" {...field} value={field.value || "#000000"} className="w-full h-10" />
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							{form.formState.errors.root && <ErrorMessage>{form.formState.errors.root.message}</ErrorMessage>}
+
+							<div className="flex gap-3 mt-4">
+								<DialogClose>
+									<Button type="button" variant="destructive">
+										Cancel
+									</Button>
+								</DialogClose>
+								<Button type="submit" variant="default" disabled={submitting}>
 									{submitting && <Spinner />} Save
 								</Button>
-							</Dialog.Close>
-						</Flex>
-					</Form.Root>
-				</Dialog.Content>
-			</Dialog.Root>
-		</Flex>
+							</div>
+						</form>
+					</Form>
+				</DialogContent>
+			</Dialog>
+		</div>
 	);
 };
 

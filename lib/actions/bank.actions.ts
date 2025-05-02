@@ -1,6 +1,6 @@
 // lib/actions/bank.actions.ts
 import { plaidClient } from "@/lib/plaid";
-import prisma from "@/prisma/client";
+import { prisma } from "@/prisma/client";
 import { GetAccountsResult, Balances, Account } from "@/types";
 import { AccountBase as PlaidAccountBase, CountryCode } from "plaid";
 

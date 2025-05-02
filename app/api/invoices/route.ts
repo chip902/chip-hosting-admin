@@ -4,7 +4,7 @@ import { generateInvoicePdf } from "@/app/utils/PdfService";
 import fs from "fs/promises";
 import path from "path";
 import { TimeEntryData } from "@/types";
-import { TimeEntry, Project, User, Customer, Task } from "@prisma/client";
+import { Customer, Project, Task, TimeEntry, User } from "@/prisma/app/generated/prisma/client";
 
 function logError(step: string, error: any) {
 	console.error(`Error in ${step}:`, error.message);

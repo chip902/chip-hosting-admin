@@ -2,7 +2,7 @@
 import AddCustomer from "./AddCustomer";
 import { useCustomers } from "../hooks/useCustomers";
 import EditCustomer from "./EditCustomer";
-import { Customer } from "@prisma/client";
+import { Customer } from "@/prisma/app/generated/prisma/client";
 import React from "react";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Box } from "lucide-react";

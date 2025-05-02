@@ -75,12 +75,9 @@ const AuthForm = ({ type }: { type: string }) => {
 	};
 
 	return (
-        (<section className="auth-form">
-            <header className="flex flex-col gap-5 md:gap-8">
-				<Link
-                    href="/"
-                    className="cursor-pointer flex items-center gap-1"
-                    legacyBehavior>
+		<section className="auth-form">
+			<header className="flex flex-col gap-5 md:gap-8">
+				<Link href="/" className="cursor-pointer flex items-center gap-1">
 					<Image src="/CHS_Logo.png" width={34} height={34} alt="logo" />
 					<h1 className="text-26 font-ibm-plex-serif font-bold text-black-1">Chip Hosting Solutions</h1>
 				</Link>
@@ -92,7 +89,7 @@ const AuthForm = ({ type }: { type: string }) => {
 					</h1>
 				</div>
 			</header>
-            {user ? (
+			{user ? (
 				<div className="flex flex-col gap-4">
 					<PlaidLink user={user} variant="primary" />
 				</div>
@@ -261,17 +258,14 @@ const AuthForm = ({ type }: { type: string }) => {
 
 					<footer className="flex justify-center gap-1">
 						<p className="text-14 font-normal text-gray-600">{type === "sign-in" ? "Don't have an account?" : "Already have an account?"}</p>
-						<Link
-                            href={type === "sign-in" ? "/sign-up" : "/sign-in"}
-                            className="form-link"
-                            legacyBehavior>
+						<Link href={type === "sign-in" ? "/sign-up" : "/sign-in"} className="form-link">
 							{type === "sign-in" ? "Sign up" : "Sign in"}
 						</Link>
 					</footer>
 				</>
 			)}
-        </section>)
-    );
+		</section>
+	);
 };
 
 export default AuthForm;

@@ -3,9 +3,9 @@ import React, { useEffect, useRef, useState } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
-import { areIntervalsOverlapping, parseISO, startOfDay, endOfDay, format, addMinutes, differenceInMinutes } from "date-fns";
+import { startOfDay, endOfDay, format, addMinutes, differenceInMinutes } from "date-fns";
 import { ProcessedTimeEntry, TimeEntry } from "@/types";
-import { calculateDuration, calculateLeftPosition, calculateWidth } from "@/lib/utils";
+import { calculateLeftPosition, calculateWidth } from "@/lib/utils";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 

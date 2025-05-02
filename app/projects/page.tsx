@@ -5,7 +5,7 @@ import ProjectFilters from "./ProjectFilters";
 import { useProjects } from "../hooks/useProjects";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
-import Project from "@/prisma/client";
+import { Project } from "@/prisma/app/generated/prisma/client";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import ProjectActions from "./ProjectActions";
 import { toast } from "sonner";
@@ -18,7 +18,7 @@ const ProjectsPage = () => {
 	const [showArchived, setShowArchived] = useState(false);
 
 	const archiveMutation = useMutation({
-		mutationFn: async (project: typeof Project) => {
+		mutationFn: async (project: Project) => {
 			const payload = {
 				id: project.id,
 				name: project.name,
@@ -43,7 +43,7 @@ const ProjectsPage = () => {
 		},
 	});
 
-	const handleArchiveProject = async (project: typeof Project) => {
+	const handleArchiveProject = async (project: Project) => {
 		toast.promise(archiveMutation.mutateAsync(project), {
 			loading: "Updating project...",
 			success: () => {
@@ -125,7 +125,7 @@ const ProjectsPage = () => {
 										customerId: project.customerId || 0,
 										rate: project.rate || 0,
 									}}
-									onArchive={handleArchiveProject}
+									onArchive={() => handleArchiveProject}
 								/>
 							</TableCell>
 						</TableRow>

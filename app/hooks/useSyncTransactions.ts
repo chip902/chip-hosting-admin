@@ -1,7 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 
-export const useSyncTransactions = (userId: string | null | undefined) => {
+export const useSyncTransactions = (userId: string) => {
 	const queryClient = useQueryClient();
 	return useMutation({
 		mutationFn: async () => {

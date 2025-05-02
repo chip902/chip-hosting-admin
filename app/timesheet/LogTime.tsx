@@ -6,7 +6,7 @@ import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import axios from "axios";
-import { Customer, Project, Task, User } from "@prisma/client";
+import { Customer, Project, Task, User } from "@/prisma/app/generated/prisma/client";
 import useCreateTimeEntry from "../hooks/useCreateTimeEntry";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";

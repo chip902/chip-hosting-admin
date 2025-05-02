@@ -27,7 +27,7 @@ const TransactionHistory = async () => {
 			<div className="transactions-header flex justify-between items-center">
 				<HeaderBox title="Transaction History" subtext={`${accounts.length} Account${accounts.length !== 1 ? "s" : ""}`} />
 			</div>
-			<TransactionView accounts={accounts} userId={session?.user?.userId} />
+			<TransactionView accounts={accounts} userId={session?.user.userId || undefined} />
 		</div>
 	);
 };

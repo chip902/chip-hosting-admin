@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "@/prisma/client";
 import { getParamsFromUrl } from "@/lib/utils";
-
-const prisma = new PrismaClient();
 
 export async function GET(request: Request) {
 	const { params } = getParamsFromUrl(request.url);

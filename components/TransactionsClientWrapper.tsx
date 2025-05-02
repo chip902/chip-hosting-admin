@@ -13,7 +13,7 @@ interface TransactionsClientWrapperProps {
 
 export default function TransactionsClientWrapper({ userId }: TransactionsClientWrapperProps) {
 	const queryClient = useQueryClient();
-	const { mutate: syncTransactions } = useSyncTransactions(userId); // Add this hook
+	const { mutate: syncTransactions } = useSyncTransactions(userId);
 
 	const { data: banksData } = useQuery({
 		queryKey: ["banks"],
