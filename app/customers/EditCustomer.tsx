@@ -105,9 +105,7 @@ const EditCustomer = ({ customer }: EditCustomerProps) => {
 				<div className="flex justify-between items-center mb-6">
 					<DialogTitle className="text-20 font-semibold text-gray-900 dark:text-gray-100">Edit Customer</DialogTitle>
 					<DialogClose>
-						<Button variant="ghost" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
-							<Cross1Icon className="h-5 w-5 text-gray-600 dark:text-gray-400" />
-						</Button>
+						<Button variant="ghost" className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full" />
 					</DialogClose>
 				</div>
 				<Form {...form}>

@@ -1,3 +1,4 @@
+// app/invoices/page.tsx
 "use client";
 import { useState } from "react";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
@@ -16,6 +17,7 @@ import { ChevronDown, Loader2 } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import CompactFileUploader from "./CompactFileUploader";
 
 const InvoiceGenerator = () => {
 	const router = useRouter();
@@ -47,7 +49,6 @@ const InvoiceGenerator = () => {
 		const customerName = entry.customer.name;
 		const project = entry.project;
 		const userName = entry.user ? [entry.user.firstName, entry.user.lastName].filter(Boolean).join(" ") : "No Name";
-
 		return {
 			duration: entry.duration,
 			name: userName,
@@ -99,7 +100,6 @@ const InvoiceGenerator = () => {
 			setSelectedEntries([]);
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			router.push("/invoices");
-			router.refresh();
 		},
 		onError: (error: Error) => {
 			console.error("Error occurred during submission:", error);
@@ -118,6 +118,7 @@ const InvoiceGenerator = () => {
 			{/* Header Section */}
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold text-foreground">Invoice Generator</h1>
+				<CompactFileUploader />
 				<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0} className="w-[200px]">
 					{mutation.status === "pending" ? (
 						<>
@@ -129,12 +130,10 @@ const InvoiceGenerator = () => {
 					)}
 				</Button>
 			</div>
-
 			{/* Filters Section */}
 			<div className="rounded-lg border bg-card">
 				<FilterComponent onApplyFilters={handleApplyFilters} />
 			</div>
-
 			{/* Table Section */}
 			{isLoading ? (
 				<div className="space-y-3">
@@ -187,7 +186,6 @@ const InvoiceGenerator = () => {
 							))}
 						</TableBody>
 					</Table>
-
 					{/* Pagination Section */}
 					<div className="flex items-center justify-between border-t p-4">
 						<PaginationComponent totalItems={data?.totalEntries ?? 0} pageSize={pageSize} currentPage={page} onPageChange={setPage} />
@@ -211,7 +209,6 @@ const InvoiceGenerator = () => {
 					</div>
 				</div>
 			)}
-
 			{errorMessage && <div className="rounded-md bg-destructive/15 p-3 text-destructive">{errorMessage}</div>}
 		</div>
 	);

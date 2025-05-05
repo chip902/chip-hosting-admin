@@ -51,6 +51,9 @@ function buildWUEventsXDM() {
 
     // Start with a base XDM object using the utility
     let xdm = WUAnalytics.buildBaseXDM();
+    let txn_id = "";
+    let campId = "";
+    let tempmtcn = "";
 
     // Get page context data elements
     var pagenametmp = WUAnalytics.getDataElement("WUPageNameJSObject", "");
@@ -61,8 +64,308 @@ function buildWUEventsXDM() {
     var txn_fee = WUAnalytics.getDataElement("WUTransactionFeeJSObject", "");
     var refundAmnt = WUAnalytics.getDataElement("WURefundAmntJSObject", "");
 
+    // Get link name from data elements
+    let linkName = WUAnalytics.getDataElement("WUDataLinkJSObject", "") ||
+        WUAnalytics.getDataElement("WULinkIDJSObject", "") ||
+        WUAnalytics.getAnalyticsObjectValue("sc_link_name", "");
+
     // Get product info from base XDM
     var prod = xdm._wu?.product || "";
+
+    // Process link click specific events
+    if (linkName) {
+        // Set eVar61 for the link name
+        xdm._experience.analytics.customDimensions.eVars.eVar61 = linkName;
+
+        // Process events based on link name - mapping from legacy code
+        switch (linkName) {
+            // Common event183 cases
+            case 'canceltxn-chat':
+            case 'namechange-resendpin':
+            case 'mpname-checkbox':
+            case 'namechange-cancel':
+            case 'myreceiver-history':
+            case 'myreceiver-delete':
+            case 'sendagain-newreceiver':
+            case 'continue-web':
+            case 'report-fraud-btn':
+            case 'redeem-points':
+            case 'ifsc-applied':
+            case 'edit-resend-history':
+            case 'edit-resend-inmate':
+            case 'edit-resend-billpay':
+            case 'canceltxn-cancel':
+            case 'add-card':
+            case 'edit-billingaddress':
+            case 'add-bank':
+            case 'edit-summary':
+            case 'change-amount':
+            case 'select-call':
+            case 'call-tryagain':
+            case 'select-loweramount':
+            case 'amount-tryagain':
+            case 'change-payment':
+            case 'return-smo':
+            case 'ct-resendpin':
+            case 'btn-email-self':
+            case 'visit-website':
+            case 'default-interstitial-continue':
+            case 'sm-interstitial-continue':
+            case 'namechange-cont':
+            case 'namechange-review-editagain':
+            case 'banner-smartapp-install':
+            case 'btn-contact-cont':
+            case 'button-mywu-signup':
+            case 'button-mywu-rewards':
+            case 'link-pdf-download':
+            case 'btn-info-cancel':
+            case 'btn-info-cancel-yes':
+            case 'btn-info-cancel-no':
+            case 'btn-upload-cancel':
+            case 'btn-upload-cancel-yes':
+            case 'btn-upload-cancel-no':
+            case 'btn-signup-for-free-hero-banner':
+            case 'btn-login-to-mywu-hero-banner':
+            case 'btn-redeem-now-hero-banner':
+            case 'btn-learn-more-hero-banner':
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'link-i-accept':
+            case 'link-i-do-not-accept':
+                WUAnalytics.addEvent(xdm, 183);
+                // Clear analyticsObject properties if needed
+                if (typeof analyticsObject !== "undefined" &&
+                    typeof analyticsObject.sc_section !== "undefined" &&
+                    typeof analyticsObject.sc_sub_section !== "undefined" &&
+                    analyticsObject.sc_section === "register-rp" &&
+                    analyticsObject.sc_sub_section === "tnc-popup") {
+                    analyticsObject.sc_sub_section = "";
+                }
+                break;
+
+            // UDM cases
+            case 'link-showdetails':
+            case 'link-hidedetails':
+                WUAnalytics.addEvent(xdm, 3);
+                break;
+
+            case 'update-delivery-method':
+            case 'menu-update-delivery-method':
+                WUAnalytics.addEvent(xdm, 251);
+                break;
+
+            case 'btn-udm-sd-start-cont':
+                WUAnalytics.addEvent(xdm, 268);
+                break;
+
+            case 'btn-udm-sd-review-cont':
+                WUAnalytics.addEvent(xdm, 269);
+                break;
+
+            case 'btn-sd-review-edit':
+                WUAnalytics.addEvent(xdm, 274);
+                break;
+
+            case 'btn-udm-ra-cont':
+                WUAnalytics.addEvent(xdm, 270);
+                break;
+
+            case 'btn-udm-ra-start-cont':
+                WUAnalytics.addEvent(xdm, 271);
+                break;
+
+            case 'btn-ra-review-confirm':
+                WUAnalytics.addEvent(xdm, 272);
+                break;
+
+            case 'btn-ra-review-edit':
+                WUAnalytics.addEvent(xdm, 273);
+                break;
+
+            case 'btn-pr-register':
+                WUAnalytics.addEvent(xdm, 3);
+                break;
+
+            case 'button-smo-continue':
+                WUAnalytics.addEvent(xdm, 134);
+                // Trigger additional tag if needed
+                if (typeof _satellite !== "undefined") {
+                    _satellite.track('3rd_Party_Tag_Global_FL_Send_Money_Start_Currency_Tool_Events');
+                }
+                break;
+            case 'button-review-continue':
+                WUAnalytics.addEvent(xdm, 183);
+                WUAnalytics.addEvent(xdm, 10);
+                break;
+
+            case 'button-Enroll':
+                xdm._experience.analytics.customDimensions.eVars.eVar61 = "mywuoptedin-button-Enroll";
+                WUAnalytics.addEvent(xdm, 183);
+                WUAnalytics.addEvent(xdm, 40);
+                break;
+
+            case 'cont-add-receiver':
+                WUAnalytics.addEvent(xdm, 240);
+                break;
+
+            case 'cont-update-receiver':
+                WUAnalytics.addEvent(xdm, 241);
+                break;
+
+            case 'canceltxn-reason-cancel':
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = WUAnalytics.getDataElement("WUCancelStatusJSObject", "");
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'return-to-partner':
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'canceltxn-reason-cont':
+                var reasoncode = WUAnalytics.getDataElement("WUReasonCategoryJSObject", "");
+                var hiphenloc = reasoncode.indexOf("-");
+                if (hiphenloc > 0) {
+                    xdm._experience.analytics.customDimensions.eVars.eVar68 = reasoncode.substring(0, hiphenloc);
+                }
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'canceltxn-history':
+            case 'link-cancel-transfer':
+            case 'canceltxn-tt':
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = "canceltxn-initiated";
+                WUAnalytics.addEvent(xdm, 196);
+                WUAnalytics.addEvent(xdm, 197);
+                break;
+
+            case 'canceltxn-reason':
+                xdm._experience.analytics.customDimensions.eVars.eVar68 = WUAnalytics.getDataElement("WUReasonCategoryJSObject", "");
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = WUAnalytics.getDataElement("WUCancelStatusJSObject", "");
+                WUAnalytics.addEvent(xdm, 183);
+                WUAnalytics.addEvent(xdm, 233);
+                break;
+
+            case 'canceltxn-submit-cr':
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = WUAnalytics.getDataElement("WUCancelStatusJSObject", "");
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'retailct-namechange':
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = 'canceltxn-namechange';
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'link-edit-receiver-name':
+                WUAnalytics.addEvent(xdm, 211);
+                break;
+
+            case 'namechange-submit':
+                WUAnalytics.addEvent(xdm, 212);
+                break;
+
+            case 'namechange-decline-ct':
+                xdm._experience.analytics.customDimensions.eVars.eVar65 = "canceltxn-initiated";
+                WUAnalytics.addEvent(xdm, 196);
+                WUAnalytics.addEvent(xdm, 197);
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'button-lookup':
+            case 'yes-cancel-lookup':
+            case 'button-doc-submit':
+            case 'yes-cancel-docupload':
+            case 'mywu-tat-cta':
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'sendagain_continue':
+                WUAnalytics.addEvent(xdm, 181);
+                WUAnalytics.addEvent(xdm, 182);
+                break;
+
+            case 'download-app':
+                WUAnalytics.addEvent(xdm, 68);
+                break;
+
+            // Resend cases
+            case 'resend-history':
+            case 'resend-billpay':
+            case 'resend-inmate':
+            case 'resend-receiver':
+            case 'rvw-resend-history':
+            case 'rvw-resend-inmate':
+            case 'rvw-resend-billpay':
+            case 'cont-resend-history':
+            case 'cont-resend-inmate':
+            case 'cont-resend-billpay':
+            case 'link-resend':
+                WUAnalytics.addEvent(xdm, 201);
+                WUAnalytics.addEvent(xdm, 202);
+                break;
+
+            case 'continue_details':
+            case 'continue_details_ta':
+                WUAnalytics.addEvent(xdm, 144);
+                WUAnalytics.addEvent(xdm, 145);
+                break;
+
+            case 'payment-continue':
+                WUAnalytics.addEvent(xdm, 222);
+                WUAnalytics.addEvent(xdm, 223);
+                break;
+
+            case 'doddfrankedit':
+                WUAnalytics.addEvent(xdm, 204);
+                break;
+
+            case 'button-video':
+            case 'button-geniii':
+            case 'button-start-video':
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'btn-info-next':
+                WUAnalytics.addEvent(xdm, 283);
+                // Get unique reference number from form field
+                try {
+                    var uniRefNum = document.getElementById('postalCode') ? document.getElementById('postalCode').value : '';
+                    if (uniRefNum) {
+                        xdm._experience.analytics.customDimensions.eVars.eVar75 = uniRefNum;
+                        _satellite.cookie.set('uniRefNumCookie', uniRefNum);
+                    }
+                } catch (e) {
+                    _satellite.logger.error("Error getting postalCode value: " + e);
+                }
+                break;
+
+            case 'btn-upload-submit':
+                WUAnalytics.addEvent(xdm, 284);
+                // Get verification document type
+                try {
+                    var kycIdSelected = document.getElementById("fieldid0");
+                    if (kycIdSelected) {
+                        xdm._experience.analytics.customDimensions.eVars.eVar76 = kycIdSelected.options[kycIdSelected.selectedIndex].text;
+                    }
+                } catch (e) {
+                    _satellite.logger.error("Error getting fieldid0 value: " + e);
+                }
+                break;
+
+            case 'btn-login':
+                WUAnalytics.addEvent(xdm, 1);
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+
+            case 'btn-register-user':
+                WUAnalytics.addEvent(xdm, 3);
+                WUAnalytics.addEvent(xdm, 183);
+                break;
+        }
+
+        // Always add event183 to any link click (as per the original code)
+        WUAnalytics.addEvent(xdm, 183);
+    }
 
     // UDM Start
     switch (pagenameEvnt) {
@@ -125,7 +428,7 @@ function buildWUEventsXDM() {
             WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
 
             // Store transaction ID in XDM
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             // Store products in XDM
@@ -138,7 +441,7 @@ function buildWUEventsXDM() {
     /* SM - Receipt (Approval) */
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-money:confirmationscreen") !== -1) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             // Add purchase event
@@ -181,7 +484,7 @@ function buildWUEventsXDM() {
     }
 
     // Send Money flow
-    if (pagenametmp !== "" && pagenametmp.indexOf("fraudprotection") === -1) {
+    if (pagenametmp !== "" && pagenametmp.indexOf("fraudprotection") == -1) {
         if (pagenametmp !== "" && pagenametmp.indexOf("send-money:start") !== -1) {
             _satellite.cookie.remove("SM_Start_Cookie");
             if (country) {
@@ -225,7 +528,7 @@ function buildWUEventsXDM() {
             }
 
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -238,7 +541,7 @@ function buildWUEventsXDM() {
             WUAnalytics.addEvent(xdm, 13);
 
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -251,7 +554,7 @@ function buildWUEventsXDM() {
             WUAnalytics.addEvent(xdm, 14);
 
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -262,7 +565,7 @@ function buildWUEventsXDM() {
     // SM - Confirm Identity
     if (pagenametmp != "" && pagenametmp.indexOf("send-money:confirmidentity") != -1) {
         if (analyticsObject.sc_quicksend_id) {
-            var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+            campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
             xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
         } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
             xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -272,7 +575,7 @@ function buildWUEventsXDM() {
     // SM - Receiver Information (More Info)
     if (pagenametmp != "" && pagenametmp.indexOf("send-money:receiverinformation:more-info") != -1) {
         if (analyticsObject.sc_quicksend_id) {
-            var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+            campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
             xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
         } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
             xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -433,7 +736,7 @@ function buildWUEventsXDM() {
         WUAnalytics.addEvent(xdm, 11);
 
         if (analyticsObject.sc_quicksend_id) {
-            var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+            campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
             xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
         } else if (_satellite.getVar("WUInternalCampaignJSObject") != "") {
             xdm._experience.analytics.customDimensions.eVars.eVar47 = _satellite.getVar("WUInternalCampaignJSObject");
@@ -446,13 +749,13 @@ function buildWUEventsXDM() {
             analyticsObject.sc_transaction_id != "" &&
             analyticsObject.sc_transaction_id != null) {
             var tid = analyticsObject.sc_transaction_id.toLowerCase();
-            var tempmtcn = tid.slice(6).trim();
+            tempmtcn = tid.slice(6).trim();
         }
 
         xdm._experience.analytics.customDimensions.eVars.eVar20 = tempmtcn;
         xdm._experience.analytics.customDimensions.eVars.eVar21 = "staged";
-        WUAnalytics.addEvent(xdm, 118); // with tempmtcn
-        WUAnalytics.addEvent(xdm, 120, txn_fee); // with tempmtcn
+        WUAnalytics.addEvent(xdm, 118);
+        WUAnalytics.addEvent(xdm, 120, txn_fee);
     }
 
     // HSFP
@@ -681,7 +984,7 @@ function buildWUEventsXDM() {
     }
 
     // Profile Page Events
-    var linkName = "link-profile-icon";
+    linkName = "link-profile-icon";
     switch (pagenameEvnt) {
         case "profile:personal-info":
             if (analyticsObject.sc_link_name && analyticsObject.sc_link_name != "" &&
@@ -772,6 +1075,21 @@ function buildWUEventsXDM() {
         WUAnalytics.addEvent(xdm, 88);
     }
 
+    // Progressive Register
+    if ((pagenametmp != "" && pagenametmp.indexOf("register") != -1 && pagenametmp.indexOf("verifycode") == -1 && pagenametmp.indexOf("progressive-register:contact") == -1) || pagenametmp.indexOf("referee:tnc-popup") != -1) {
+
+        xdm._experience.analytics.customDimensions.eVars.eVar45 = pagenametmp;
+        xdm._experience.analytics.customDimensions.props.prop20 = pagenametmp;
+        xdm._experience.analytics.customDimensions.eVars.eVar23 = 'progressive-register';
+
+        // Ensure the web.webInteraction object exists
+        xdm.web = xdm.web || {};
+        xdm.web.webInteraction = xdm.web.webInteraction || {};
+        xdm.web.webInteraction.name = 'progressive-flow';
+        WUAnalytics.addEvent(xdm, 281);
+
+    }
+
     // Registration success via analyticsObject
     if (analyticsObject.sc_registersuccess && analyticsObject.sc_registersuccess == "true") {
         WUAnalytics.addEvent(xdm, 4);
@@ -853,16 +1171,20 @@ function buildWUEventsXDM() {
  * This function is reactionary to the current page state
  */
 function handleLinkClick() {
+    let linkName = WUAnalytics.getDataElement("WULinkIDJSObject", "");
+
     // Make sure Page is Done Loading...
     if (!linkName && document.readyState !== "complete") {
         _satellite.logger.info("Skipping link click handler during page load");
         return false;
     }
+
     // Check if WUAnalytics utility is available
     if (typeof WUAnalytics === "undefined") {
         _satellite.logger.error("WUAnalytics utility not available. Make sure utility/setup rule has fired first.");
         // Reset flag the old way as fallback
         _satellite.setVar("Common_Events_Based_Event_Firing_Rule", false);
+        return false;
     } else {
         // Reset flag using utility
         WUAnalytics.setPageViewFlag(false);
@@ -870,10 +1192,12 @@ function handleLinkClick() {
 
     try {
         // Get link name from context if available
-        var linkName = WUAnalytics.getDataElement("WULinkIDJSObject", "");
+        linkName = WUAnalytics.getDataElement("WULinkIDJSObject", "");
         if (!linkName) {
             linkName = WUAnalytics.getAnalyticsObjectValue("sc_link_name", "");
         }
+
+        _satellite.logger.info("Processing link click for: " + linkName);
 
         // Get events from buildWUEventsXDM
         var eventsXDM = buildWUEventsXDM();
@@ -885,6 +1209,11 @@ function handleLinkClick() {
                 eventsXDM._experience.analytics.customDimensions.eVars.eVar61 = linkName;
             }
 
+            // Ensure web.webInteraction exists
+            eventsXDM.web = eventsXDM.web || {};
+            eventsXDM.web.webInteraction = eventsXDM.web.webInteraction || {};
+            eventsXDM.web.webInteraction.name = linkName || "link_click";
+
             // Ensure link click structure using utility
             var finalXDM = WUAnalytics.ensureLinkClick(eventsXDM);
 
@@ -893,6 +1222,9 @@ function handleLinkClick() {
 
             // Send using utility
             return WUAnalytics.sendXDM(finalXDM);
+        } else {
+            _satellite.logger.error("Failed to build XDM object for link click");
+            return false;
         }
     } catch (e) {
         _satellite.logger.error("Error in handleLinkClick:", e);

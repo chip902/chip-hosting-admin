@@ -38,15 +38,14 @@ export default function Sidebar({ currentPath, className }: Props) {
 						<ul role="list" className="-mx-2 space-y-1">
 							{navigation.map((item) => (
 								<li key={item.name}>
-									<Link legacyBehavior href={item.href}>
-										<a
-											className={classNames(
-												item.href === currentPath ? "bg-gray-800 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white",
-												"group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
-											)}>
-											<item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-											{item.name}
-										</a>
+									<Link
+										href={item.href}
+										className={classNames(
+											item.href === currentPath ? "bg-gray-800 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white",
+											"group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
+										)}>
+										<item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
+										{item.name}
 									</Link>
 								</li>
 							))}

@@ -1,8 +1,10 @@
-// Western Union Analytics Utilities
+// Western Union Analytics Middleware Utilities
 // Author: Andrew Chepurny for Western Union
-// Version: 2025.04.22
+// Version: 2025.05.03
 
 (function () {
+
+
     // Create global namespace if it doesn't exist
     window.WUAnalytics = window.WUAnalytics || {};
     window.WUAnalytics.pvFired = false;
@@ -130,6 +132,10 @@
         return xdm;
     }
 
+    function deepCloneXDM(xdm) {
+        return JSON.parse(JSON.stringify(xdm));
+    }
+
     function mergeXDMWithTemplate(xdm) {
         // Get the template from data element
         const template = _satellite.getVar('XDMTemplate') || {};
@@ -202,20 +208,31 @@
     function addPurchaseEvent(xdm, serialId) {
         xdm = ensureXDMStructure(xdm);
 
-        // 1. Set up commerce object structure (standard XDM approach)
-        xdm.commerce = xdm.commerce || {};
-        xdm.commerce.purchases = xdm.commerce.purchases || {};
-
-        // Set the purchase value
-        xdm.commerce.purchases.value = 1;
-
-        // Only add ID for serialization if explicitly provided
-        if (serialId) {
-            xdm.commerce.purchases.id = serialId;
+        // Check for products - log warning if missing
+        if (!xdm.productListItems || xdm.productListItems.length === 0) {
+            log("warn", "Adding purchase event without products! Call setProduct before addPurchaseEvent.");
+            // Initialize empty array if missing
+            xdm.productListItems = xdm.productListItems || [];
+        } else {
+            log("info", `Purchase event includes ${xdm.productListItems.length} products`);
         }
 
-        // 2. For backward compatibility, also set analytics custom dimension events
-        // This part can be removed once you fully migrate to the commerce object
+        // Set up commerce object structure
+        xdm.commerce = xdm.commerce || {};
+
+        xdm.commerce.purchases = xdm.commerce.purchases || {};
+        xdm.commerce.purchases.value = 1;
+
+        // Add serialization ID if provided
+        if (serialId) {
+            xdm.commerce.purchases.id = serialId;
+
+            // Also set order ID in commerce object
+            xdm.commerce.order = xdm.commerce.order || {};
+            xdm.commerce.order.purchaseID = serialId;
+        }
+
+        // For backward compatibility with analytics events
         if (!xdm._experience.analytics.customDimensions) {
             xdm._experience.analytics.customDimensions = {};
         }
@@ -246,8 +263,8 @@
 
     // XDM Type Functions
     function ensurePageView(xdm) {
-        // First ensure structure is preserved
-        xdm = ensureXDMStructure(xdm);
+        // First ensure structure is preserved and Deep Clone to prevent Race Conditions
+        xdm = deepCloneXDM(ensureXDMStructure(xdm));
 
         // Ensure web structure exists and is properly populated
         xdm.web = xdm.web || {};
@@ -262,8 +279,13 @@
             log("warn", "Page name was empty, setting from data element: " + xdm.web.webPageDetails.name);
         }
 
-        // Always set proper eventType for page views
+        // Always set proper eventType for page views - CRITICAL FIX
         xdm.eventType = "web.webpagedetails.pageViews";
+
+        // Remove linkClicks property but preserve webInteraction name if set
+        if (xdm.web.webInteraction && xdm.web.webInteraction.linkClicks) {
+            delete xdm.web.webInteraction.linkClicks;
+        }
 
         // Add page URL if available
         if (window.location && window.location.href) {
@@ -272,6 +294,7 @@
 
         // Log the page view for debugging
         log("info", "Ensuring page view for: " + xdm.web.webPageDetails.name);
+        log("info", "Page view eventType set to: " + xdm.eventType);
 
         // Make sure we preserve the reference
         _satellite.setVar('XDM westernunion Merged Object', xdm);
@@ -280,15 +303,24 @@
     }
 
     function ensureLinkClick(xdm) {
-        // First ensure structure is preserved
-        xdm = ensureXDMStructure(xdm);
+        // First ensure structure is preserved and Deep Clone to prevent Race Conditions
+        xdm = deepCloneXDM(ensureXDMStructure(xdm));
 
         // PRESERVE existing web structure if present
         xdm.web = xdm.web || {};
         xdm.web.webInteraction = xdm.web.webInteraction || {};
+
+        // CRITICAL: Initialize the name property to prevent "Cannot set properties of undefined" error
+        xdm.web.webInteraction.name = xdm.web.webInteraction.name || "link_click";
+
+        // Set link clicks value
         xdm.web.webInteraction.linkClicks = { value: 1 };
 
-        xdm.eventType = _eventTypeMap.linkClick;
+        // Set proper event type
+        xdm.eventType = "web.webInteraction.linkClicks";
+
+        // Log for debugging
+        log("info", "Link click structure ensured with name: " + xdm.web.webInteraction.name);
 
         return xdm;
     }
@@ -327,11 +359,26 @@
                 return Promise.reject(new Error("Cannot send empty XDM object"));
             }
 
+            // Store the original eventType to ensure it doesn't get lost
+            const originalEventType = xdm.eventType;
+
+            // Deep clone the XDM object to prevent reference issues
+            const clonedXDM = JSON.parse(JSON.stringify(xdm));
+
+            // Restore the eventType (just in case it was lost in serialization)
+            clonedXDM.eventType = originalEventType;
+
             // Merge with template before sending
-            const mergedXDM = mergeXDMWithTemplate(xdm);
+            const mergedXDM = mergeXDMWithTemplate(clonedXDM);
+
+            // Make sure the eventType is preserved after merging
+            mergedXDM.eventType = originalEventType;
 
             // Store for reference/debugging
             _satellite.setVar('XDM westernunion Merged Object', mergedXDM);
+
+            // Log the event type for debugging
+            log("info", "Sending XDM with eventType: " + mergedXDM.eventType);
 
             // Handle identity map to prevent empty values
             if (mergedXDM.identityMap) {
@@ -358,14 +405,71 @@
 
             if (_debugMode) {
                 mergedXDM._debug = {
-                    timestamp: new Date().toISOString()
+                    timestamp: new Date().toISOString(),
+                    eventType: mergedXDM.eventType  // Add to debug for easy inspection
                 };
             }
 
             log("info", "Sending XDM object", JSON.stringify(mergedXDM));
 
-            return window.alloy("sendEvent", {
-                "xdm": mergedXDM
+            // Create a key to track events that have been sent to prevent collisions
+            const eventKey = mergedXDM.eventType + '_' + new Date().getTime();
+
+            // Track current events being processed
+            window.WUAnalytics = window.WUAnalytics || {};
+            window.WUAnalytics.pendingEvents = window.WUAnalytics.pendingEvents || {};
+
+            // For page views in SPAs, clear previous page view attempts
+            if (mergedXDM.eventType === "web.webpagedetails.pageViews") {
+                // Store this as the current page view
+                window.WUAnalytics.currentPageView = eventKey;
+
+                // Create a tracking property to avoid duplicate page views
+                window.WUAnalytics.pageViewTimestamp = new Date().getTime();
+
+                // Set global flag for page view
+                window.WUAnalytics.pageViewSent = true;
+            }
+
+            // For link clicks, check if we need to wait for a recent page view
+            let delay = 0;
+            if (mergedXDM.eventType === "web.webInteraction.linkClicks") {
+                const pageViewTimestamp = window.WUAnalytics.pageViewTimestamp || 0;
+                const timeSincePageView = new Date().getTime() - pageViewTimestamp;
+
+                // If a page view happened in the last 500ms, wait for it to complete
+                if (timeSincePageView < 500) {
+                    delay = Math.max(200, 500 - timeSincePageView);
+                }
+            }
+
+            // Register this event as pending
+            window.WUAnalytics.pendingEvents[eventKey] = true;
+
+            return new Promise((resolve, reject) => {
+                setTimeout(() => {
+                    // Only send if this event is still valid (not superseded by another)
+                    if (window.WUAnalytics.pendingEvents[eventKey]) {
+                        // IMPORTANT: Log the eventType just before sending
+                        log("info", "Sending event with type: " + mergedXDM.eventType);
+
+                        window.alloy("sendEvent", {
+                            "xdm": mergedXDM
+                        }).then((result) => {
+                            // Clean up
+                            delete window.WUAnalytics.pendingEvents[eventKey];
+                            log("info", "Successfully sent event with type: " + mergedXDM.eventType);
+                            resolve(result);
+                        }).catch((error) => {
+                            delete window.WUAnalytics.pendingEvents[eventKey];
+                            log("error", "Error in alloy.sendEvent for type " + mergedXDM.eventType, error);
+                            reject(error);
+                        });
+                    } else {
+                        // This event was superseded, resolve without sending
+                        resolve({ superseded: true });
+                    }
+                }, delay);
             });
         } catch (e) {
             log("error", "Error sending XDM", e);
@@ -442,6 +546,10 @@
             xdm.web.webPageDetails.siteSection = "web";
             xdm.web.webPageDetails.isErrorPage = false;
 
+            // IMPORTANT: Initialize webInteraction object
+            xdm.web.webInteraction = xdm.web.webInteraction || {};
+            xdm.web.webInteraction.name = linkName || "page_interaction";
+
             // Initialize Western Union namespace
             xdm._westernunion = {
                 identity: {}
@@ -493,6 +601,52 @@
         }
 
         return xdm;
+    }
+
+    function detectSPAPageName() {
+        const url = window.location.href;
+        let pageName = "";
+
+        // Extract path and remove trailing slash
+        const path = window.location.pathname.replace(/\/$/, "");
+
+        // Parse the URL to extract SPA route information
+        if (path.includes("send-money")) {
+            if (path.includes("review")) {
+                pageName = "send-money:review";
+            } else if (path.includes("receipt")) {
+                if (url.includes("staged")) {
+                    pageName = "send-money:receipt-staged";
+                } else if (url.includes("under-review")) {
+                    pageName = "send-money:receipt:under-review";
+                } else if (url.includes("on-hold")) {
+                    pageName = "send-money:receipt:on-hold";
+                } else {
+                    pageName = "send-money:receipt";
+                }
+            } else if (path.includes("paymentinformation")) {
+                pageName = "send-money:paymentinformation";
+            } else if (path.includes("receiverinformation")) {
+                pageName = "send-money:receiverinformation";
+            } else if (path.includes("start")) {
+                pageName = "send-money:start";
+            }
+        }
+
+        // If we detected a meaningful page name, update the data elements
+        if (pageName && pageName !== "") {
+            log("info", "SPA page name detected: " + pageName);
+            _satellite.setVar("WUPageNameJSObject", pageName);
+
+            // Update analytics object if available
+            if (typeof analyticsObject !== "undefined") {
+                analyticsObject.sc_page_name = pageName;
+            }
+
+            return pageName;
+        }
+
+        return null;
     }
 
     function validateAndSetIdentity(xdm, namespace, id, isPrimary) {
@@ -566,12 +720,42 @@
         withRetry: withRetry,
 
         // Page view flag management
+        detectSPAPageName: detectSPAPageName,
         setPageViewFlag: function (value) {
             window.WUAnalytics.pvFired = value;
             _satellite.setVar("Common_Page_Name_Based_Event_Firing_Rule", value);
         },
         getPageViewFlag: function () {
-            return window.WUAnalytics.pvFired || getDataElement("Common_Page_Name_Based_Event_Firing_Rule", false);
+            // Store the current URL
+            const currentUrl = window.location.href;
+
+            // If we haven't initialized lastTrackedUrl, do it now
+            if (!window.WUAnalytics.lastTrackedUrl) {
+                window.WUAnalytics.lastTrackedUrl = currentUrl;
+            }
+
+            // If URL has significantly changed, force a new page view
+            if (currentUrl !== window.WUAnalytics.lastTrackedUrl) {
+                // Update the last tracked URL
+                window.WUAnalytics.lastTrackedUrl = currentUrl;
+
+                // Check if the change is significant (not just a hash or query param change)
+                const oldPath = window.WUAnalytics.lastTrackedUrl.split('?')[0].split('#')[0];
+                const newPath = currentUrl.split('?')[0].split('#')[0];
+
+                if (oldPath !== newPath) {
+                    // Path has changed significantly, reset tracking flags
+                    log("info", "URL path changed from " + oldPath + " to " + newPath + " - resetting page view flags");
+                    window.WUAnalytics.pvFired = false;
+                    window.WUAnalytics.pageViewSent = false;
+                    return false;
+                }
+            }
+
+            // Return the current tracking state
+            return window.WUAnalytics.pvFired ||
+                window.WUAnalytics.pageViewSent ||
+                getDataElement("Common_Page_Name_Based_Event_Firing_Rule", false);
         },
         resetPageViewFlag: function (delay) {
             setTimeout(function () {
@@ -614,4 +798,158 @@
     // Log initialization
     log("info", "WUAnalytics utility initialized at page top");
     window.WUAnalytics.isInitialized = true;
+
+    // ===== RUN SPA DETECTION CODE FIRST =====
+    (function () {
+        // Add time-based tracking protection
+        var lastNavigationTime = 0;
+        var minNavigationInterval = 500; // milliseconds
+
+        // Helper function to handle navigation events with time check
+        function handleNavigation(source) {
+            var now = new Date().getTime();
+
+            // Skip if another navigation was processed too recently
+            if (now - lastNavigationTime < minNavigationInterval) {
+                _satellite.logger.info("Skipping duplicate SPA navigation from " + source +
+                    " (" + (now - lastNavigationTime) + "ms since last event)");
+                return;
+            }
+
+            // Update the timestamp
+            lastNavigationTime = now;
+
+            // Log the navigation
+            _satellite.logger.info("SPA navigation detected (" + source + "): " + window.location.href);
+
+            // Reset tracking flags
+            window.WUAnalytics = window.WUAnalytics || {};
+            window.WUAnalytics.pvFired = false;
+            window.WUAnalytics.pageViewSent = false;
+
+            // Attempt to track the page view after a small delay
+            setTimeout(function () {
+                if (typeof attemptPageViewTracking === 'function') {
+                    attemptPageViewTracking();
+                } else {
+                    _satellite.logger.info("attemptPageViewTracking not available yet, will try to track via rule");
+                    // Try to trigger via rule
+                    if (typeof _satellite !== "undefined" && _satellite.track) {
+                        _satellite.track("spa-page-view");
+                    }
+                }
+            }, 150);
+        }
+
+        // Store original history methods to detect SPA navigation
+        var originalPushState = window.history.pushState;
+        var originalReplaceState = window.history.replaceState;
+
+        // Override history.pushState
+        window.history.pushState = function () {
+            // Call the original function
+            originalPushState.apply(this, arguments);
+
+            // Handle navigation with safety check
+            handleNavigation("pushState");
+        };
+
+        // Override history.replaceState
+        window.history.replaceState = function () {
+            // Call the original function
+            originalReplaceState.apply(this, arguments);
+
+            // Handle navigation with safety check
+            handleNavigation("replaceState");
+        };
+
+        // Add hash change listener
+        window.addEventListener('hashchange', function () {
+            // Handle navigation with safety check
+            handleNavigation("hashchange");
+        });
+
+        // Add URL polling to detect changes that don't use history API
+        var lastUrl = window.location.href;
+        setInterval(function () {
+            var currentUrl = window.location.href;
+            if (currentUrl !== lastUrl) {
+                lastUrl = currentUrl;
+
+                // Handle navigation with safety check
+                handleNavigation("URL polling");
+            }
+        }, 500); // Check every 500ms
+    })();
+    // ===== RUN ANGULAR OBSERVER DETECTION CODE SECOND =====
+    (function () {
+        // Create observer to detect Angular view changes
+        function setupAngularViewObserver() {
+            // Target element that contains Angular views - adjust selector as needed
+            const viewContainer = document.querySelector('#OptimusApp') || document.body;
+
+            if (!viewContainer) return;
+
+            const observer = new MutationObserver(function (mutations) {
+                // Check if mutations indicate a view change
+                let viewChanged = false;
+
+                for (let mutation of mutations) {
+                    if (mutation.type === 'childList' && mutation.addedNodes.length > 0) {
+                        // Look for Angular components being added
+                        for (let node of mutation.addedNodes) {
+                            if (node.nodeType === Node.ELEMENT_NODE) {
+                                if (node.hasAttribute('ng-view') ||
+                                    node.hasAttribute('data-ng-view') ||
+                                    node.classList.contains('ng-view') ||
+                                    node.querySelector('[ng-view],[data-ng-view],.ng-view')) {
+                                    viewChanged = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (viewChanged) break;
+                }
+
+                if (viewChanged) {
+                    _satellite.logger.info("Angular view change detected via DOM mutation");
+
+                    // Reset page view tracking
+                    window.WUAnalytics = window.WUAnalytics || {};
+                    window.WUAnalytics.pvFired = false;
+                    window.WUAnalytics.pageViewSent = false;
+
+                    // Trigger custom event
+                    document.dispatchEvent(new CustomEvent('spa:navigation'));
+
+                    // Delay to let Angular finish rendering
+                    setTimeout(function () {
+                        if (typeof attemptPageViewTracking === 'function') {
+                            attemptPageViewTracking();
+                        }
+                    }, 200);
+                }
+            });
+
+            // Start observing
+            observer.observe(viewContainer, {
+                childList: true,
+                subtree: true,
+                attributes: false,
+                characterData: false
+            });
+
+            _satellite.logger.info("Angular view observer initialized");
+        }
+
+        // Wait for DOM to be ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', setupAngularViewObserver);
+        } else {
+            setupAngularViewObserver();
+        }
+    })();
 })();
+

@@ -19,7 +19,7 @@ function attemptPageViewTracking(attempts) {
 
     // Log the attempt for debugging
     if (pagenametmp) {
-        console.log("Attempting to track page view for: " + pagenametmp + " (attempt " + (attempts + 1) + ")");
+        _satellite.logger.info("Attempting to track page view for: " + pagenametmp + " (attempt " + (attempts + 1) + ")");
     }
 
     // Check if utility is available
@@ -42,6 +42,12 @@ function attemptPageViewTracking(attempts) {
         WUAnalytics.preInitialize();
     }
 
+    // Add detection of SPA page name
+    var detectedPageName = WUAnalytics.detectSPAPageName();
+    if (detectedPageName) {
+        _satellite.logger.info("Using detected SPA page name: " + detectedPageName);
+    }
+
     try {
         // Reset flag to ensure we're processing events
         WUAnalytics.setPageViewFlag(false);
@@ -51,18 +57,34 @@ function attemptPageViewTracking(attempts) {
 
         // Ensure page view data and send
         if (eventsXDM) {
+            // Critical fix: Explicitly set eventType to page view before sending
+            eventsXDM.eventType = "web.webpagedetails.pageViews";
+
             var finalXDM = WUAnalytics.ensurePageView(eventsXDM);
+
+            // Again, make sure it's set as a page view
+            finalXDM.eventType = "web.webpagedetails.pageViews";
+
             _satellite.setVar('XDM westernunion Merged Object', finalXDM);
 
             // Log the page view attempt
             _satellite.logger.info("Sending page view for: " + pagenametmp);
+            _satellite.logger.info("Page view eventType: " + finalXDM.eventType);
+
+            // Set page view flag BEFORE sending to prevent race conditions
+            WUAnalytics.setPageViewFlag(true);
 
             // Send XDM and handle any errors
-            WUAnalytics.sendXDM(finalXDM).catch(function (error) {
+            WUAnalytics.sendXDM(finalXDM).then(function (result) {
+                _satellite.logger.info("Successfully sent page view for: " + pagenametmp);
+                // Keep the flag set after success
+                WUAnalytics.pageViewSent = true;
+            }).catch(function (error) {
                 _satellite.logger.error("Error sending page view for " + pagenametmp + ": " + error);
 
                 // If we failed, reset the flag so we can try again
                 WUAnalytics.setPageViewFlag(false);
+                WUAnalytics.pageViewSent = false;
 
                 // Try again once more after a delay
                 if (attempts < 1) {
@@ -86,6 +108,7 @@ function attemptPageViewTracking(attempts) {
 
         // If we encounter an error, reset the flag so we can try again
         WUAnalytics.setPageViewFlag(false);
+        WUAnalytics.pageViewSent = false;
 
         // Try again once more after a delay
         if (attempts < 1) {
@@ -113,6 +136,18 @@ window.addEventListener('popstate', function () {
     // Reset page view flag when navigation happens
     if (typeof WUAnalytics !== "undefined") {
         WUAnalytics.setPageViewFlag(false);
+        WUAnalytics.pageViewSent = false;
+        setTimeout(function () {
+            attemptPageViewTracking();
+        }, 100);
+    }
+});
+
+// Also listen for custom events that might indicate a SPA navigation
+document.addEventListener('spa:navigation', function () {
+    if (typeof WUAnalytics !== "undefined") {
+        WUAnalytics.setPageViewFlag(false);
+        WUAnalytics.pageViewSent = false;
         setTimeout(function () {
             attemptPageViewTracking();
         }, 100);
@@ -122,6 +157,238 @@ window.addEventListener('popstate', function () {
 // Initiate the initial attempt
 attemptPageViewTracking();
 
+
+/**
+ * Initialize global link click listener for data-linkname attributes now that the
+ * page is loaded. This implementation avoids explicit loops for better performance
+ */
+(function () {
+    // Map of known link prefixes/names for efficient lookups
+    var knownLinkMap = {
+        // Exact matches
+        "doddfrankedit": true,
+        "mpname-checkbox": true,
+        "menu-update-delivery-method": true,
+        "update-delivery-method": true,
+        "button-add-myself": true,
+        "button-add-receiver": true,
+        "button-review-continue": true,
+
+        // Common prefixes
+        "button-": true,
+        "icon-": true,
+        "tile-": true,
+        "link-": true,
+        "btn-": true,
+        "ct-": true,
+        "select-": true,
+        "change-": true,
+        "return-": true,
+        "edit-": true,
+        "continue_details": true,
+        "canceltxn-": true,
+        "namechange-": true,
+        "myreceiver-": true,
+        "sendagain-": true,
+        "continue-": true,
+        "report-fraud-": true,
+        "redeem-": true,
+        "ifsc-": true,
+        "resend-": true,
+        "rvw-resend-": true,
+        "cont-resend-": true,
+        "payment-": true,
+        "default-interstitial-": true,
+        "sm-interstitial-": true,
+        "mywu-": true,
+        "yes-cancel-": true,
+        "btn-udm-": true,
+        "btn-sd-": true,
+        "btn-ra-": true,
+        "btn-info-": true,
+        "btn-upload-": true,
+        "btn-signup-": true,
+        "btn-login-": true,
+        "btn-redeem-": true,
+        "btn-learn-": true
+    };
+
+    // Regex pattern for special btn- pattern - only used when needed
+    var btnCapitalPattern = /^btn-[A-Z-]+$/;
+
+    // Throttle cache to prevent duplicate tracking
+    var trackedLinks = {};
+
+    // Function to check if we should track a link
+    function shouldTrackLink(linkName) {
+        // First check if it's an exact match
+        if (knownLinkMap[linkName]) {
+            return true;
+        }
+
+        // Check for prefix matches
+        for (var prefix in knownLinkMap) {
+            if (linkName.indexOf(prefix) === 0) {
+                return true;
+            }
+        }
+
+        // Special case for btn-[A-Z-]+ pattern
+        if (linkName.indexOf('btn-') === 0 && btnCapitalPattern.test(linkName)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    // Main click event handler using existing knownLinkMap
+    document.addEventListener('click', function (event) {
+        // Find the clicked element
+        var element = event.target;
+
+        // Get link name from element or its parent using various attributes
+        var linkName = null;
+        var attributeSource = null; // For debugging
+
+        // Try getting data-linkname (primary method)
+        if (element.getAttribute && element.getAttribute('data-linkname')) {
+            linkName = element.getAttribute('data-linkname');
+            attributeSource = 'data-linkname';
+        }
+        // Then try finding a parent with data-linkname
+        else if (element.closest && element.closest('[data-linkname]')) {
+            linkName = element.closest('[data-linkname]').getAttribute('data-linkname');
+            attributeSource = 'parent-data-linkname';
+        }
+
+        // If no linkName yet, try element ID
+        if (!linkName && element.id) {
+            // Special case handling for specific IDs
+            var specialIds = {
+                "fundsIn_CreditCard": "fundsin-creditcard-tile"
+                // Add more special cases as needed
+            };
+
+            if (specialIds[element.id]) {
+                linkName = specialIds[element.id];
+                attributeSource = 'special-id';
+            } else {
+                // Use the element ID directly
+                linkName = element.id;
+                attributeSource = 'id';
+            }
+        }
+
+        // If no linkName yet, try parent element ID
+        if (!linkName && element.closest && element.closest('[id]')) {
+            var parent = element.closest('[id]');
+            var parentId = parent.id;
+
+            // Special case handling for specific parent IDs
+            var specialParentIds = {
+                "fundsIn_CreditCard": "fundsin-creditcard-tile"
+                // Add more special cases as needed
+            };
+
+            if (specialParentIds[parentId]) {
+                linkName = specialParentIds[parentId];
+                attributeSource = 'special-parent-id';
+            } else {
+                // Use the parent ID directly
+                linkName = parentId;
+                attributeSource = 'parent-id';
+            }
+        }
+
+        // If no linkName yet, try amplitude-id (as a fallback)
+        if (!linkName) {
+            let specialAmplitudeIds = "";
+            // Check for amplitude-id on the element
+            if (element.getAttribute && element.getAttribute('amplitude-id')) {
+                var amplitudeId = element.getAttribute('amplitude-id');
+                // Map for specific amplitude-ids to linkName values
+                specialAmplitudeIds = {
+                    "tile-fundsin-creditcard": "fundsin-creditcard-tile"
+                    // Add more special cases as needed
+                };
+
+                linkName = specialAmplitudeIds[amplitudeId] || amplitudeId;
+                attributeSource = 'amplitude-id';
+            }
+            // Check for amplitude-id on parent elements
+            else if (element.closest && element.closest('[amplitude-id]')) {
+                var parentAmplitudeId = element.closest('[amplitude-id]').getAttribute('amplitude-id');
+                linkName = specialAmplitudeIds[parentAmplitudeId] || parentAmplitudeId;
+                attributeSource = 'parent-amplitude-id';
+            }
+        }
+
+        // If still no linkName, check for specific classes
+        if (!linkName) {
+            // Check specific class combinations that indicate important elements
+            if (element.classList) {
+                if (element.classList.contains("wu-thumbnail-selected") &&
+                    element.classList.contains("wu-payin-thumbnail")) {
+                    linkName = "fundsin-creditcard-tile";
+                    attributeSource = 'class-combination';
+                }
+                else if (element.classList.contains("btn-primary")) {
+                    // Try to get text content for more specific identification
+                    linkName = "btn-" + (element.textContent || "primary").trim().toLowerCase().replace(/\s+/g, '-');
+                    attributeSource = 'class-btn-primary';
+                }
+                else if (element.classList.contains("btn-secondary")) {
+                    linkName = "btn-" + (element.textContent || "secondary").trim().toLowerCase().replace(/\s+/g, '-');
+                    attributeSource = 'class-btn-secondary';
+                }
+            }
+        }
+
+        // Exit if no link name was found after all checks
+        if (!linkName) {
+            return;
+        }
+
+        // Special handling for mpname-checkbox
+        if (linkName === 'mpname-checkbox' && element.tagName === 'INPUT' && (!element.checked)) {
+            return;
+        }
+
+        // Check if this link should be tracked using the existing knownLinkMap and patterns
+        if (shouldTrackLink(linkName)) {
+            // Prevent duplicate tracking within 1 second
+            var now = new Date().getTime();
+            if (trackedLinks[linkName] && (now - trackedLinks[linkName] < 1000)) {
+                return;
+            }
+
+            trackedLinks[linkName] = now;
+
+            // Log for debugging
+            _satellite.logger.info("Detected trackable click: " + linkName + " (via " + attributeSource + ")");
+
+            // Store the link name in data elements and analytics object
+            _satellite.setVar("WUDataLinkJSObject", linkName);
+            _satellite.setVar("WULinkIDJSObject", linkName);
+
+            if (typeof analyticsObject !== "undefined") {
+                analyticsObject.sc_link_name = linkName;
+
+                // Special handling for specific cases
+                if (linkName === "fundsin-creditcard-tile") {
+                    analyticsObject.sc_fundsin_selected = "creditcard";
+                }
+            }
+
+            // Trigger the direct call rule
+            setTimeout(function () {
+                _satellite.track('linkClick');
+            }, 50);
+        }
+    }, true); // Use capture phase to catch all clicks
+
+    _satellite.logger.info("Link click listener initialized");
+})();
 
 function buildWUPageViewXDM() {
     // Check if WUAnalytics utility is available
@@ -140,6 +407,11 @@ function buildWUPageViewXDM() {
 
     // Start with a base XDM object using the utility
     let xdm = WUAnalytics.buildBaseXDM();
+    let txn_id = "";
+    let campId = "";
+    let loginStatus = "";
+    let lastPageUrl = document.referrer;
+
 
     // IMPORTANT: Force page view structure for all pages
     // This ensures the page view event type is set properly
@@ -224,43 +496,36 @@ function buildWUPageViewXDM() {
         pagenametmp.indexOf("send-money:receipt") !== -1
     ) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            // Get transaction ID first
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
-            // Pass txn_id as serialization parameter
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.setProduct(xdm, prod, txn_fee);
+            xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
-
-            // Store transaction ID in XDM
-            xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
-
-            // Add products
-            WUAnalytics.setProduct(xdm, prod, txn_fee);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         }
     }
 
     // SM - Receipt (Approval)
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-money:confirmationscreen") !== -1) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
-            xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
-
-            // Pass txn_id as serialization parameter
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             WUAnalytics.setProduct(xdm, prod, txn_fee);
+            xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
+            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
+            WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         }
     }
 
     // SM - Kyc Confirmation
     else if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:receipt") !== -1) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             // Pass txn_id as serialization parameter
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
@@ -271,17 +536,17 @@ function buildWUPageViewXDM() {
     // PB - Receipt
     else if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:confirmationscreen") !== -1) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             // Pass txn_id as serialization parameter
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
-            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
+            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         } else if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         }
     }
 
@@ -291,31 +556,31 @@ function buildWUPageViewXDM() {
         (pagenametmp.indexOf("send-inmate:inmatereceipt") !== -1 || pagenametmp.indexOf("send-inmate:receipt") !== -1)
     ) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
-            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
+            WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         } else if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         }
     }
 
     // Inmate - Kyc Confirmation
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-inmate:confirmationscreen") !== -1) {
         if (typeof prod !== "undefined" && prod !== "" && txn_status === "approved") {
-            var txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
+            txn_id = WUAnalytics.getAnalyticsObjectValue("sc_transaction_id", "");
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
             WUAnalytics.setProduct(xdm, prod, txn_fee);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id);
         } else if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         }
     }
 
@@ -325,9 +590,9 @@ function buildWUPageViewXDM() {
         (pagenametmp.indexOf("send-money:declineoptions") !== -1 || pagenametmp.indexOf("send-money:bank-decline-lightbox") !== -1)
     ) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -336,9 +601,9 @@ function buildWUPageViewXDM() {
     // SM - Kyc choose Options
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-money:kycconfirmidentity") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -347,9 +612,9 @@ function buildWUPageViewXDM() {
     // SM - Receipt on hold
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-money:receipt:on-hold") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -358,9 +623,9 @@ function buildWUPageViewXDM() {
     // SM - Receipt under review
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-money:receipt:under-review") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -369,9 +634,9 @@ function buildWUPageViewXDM() {
     // Pay-bills - Kyc choose Options
     else if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:kycconfirmidentity") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -380,9 +645,9 @@ function buildWUPageViewXDM() {
     // Pay-bills - bank decline
     else if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:bank-decline-lightbox") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -391,9 +656,9 @@ function buildWUPageViewXDM() {
     // Pay-bills - decline options
     else if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:declineoptions") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -402,9 +667,9 @@ function buildWUPageViewXDM() {
     // Inmate - Kyc options
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-inmate:kycconfirmidentity") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -413,9 +678,9 @@ function buildWUPageViewXDM() {
     // Inmate - bank decline light box
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-inmate:bank-decline-lightbox") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -424,9 +689,9 @@ function buildWUPageViewXDM() {
     // Inmate - wu-pay -and -cash decline light box
     else if (pagenametmp !== "" && pagenametmp.indexOf("send-inmate:declineoptions") !== -1) {
         if (typeof prod !== "undefined" && prod !== "") {
+            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
-            WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
         } else {
             WUAnalytics.addEvent(xdm, 56);
         }
@@ -455,12 +720,11 @@ function buildWUPageViewXDM() {
 
     // Special case for Spanish doctransfer page
     else if (country == "es" && pagenametmp !== "" && pagenametmp.indexOf("send-money:doctransfer") !== -1) {
-        var lastPageUrl = document.referrer;
         if (lastPageUrl != "undefined" && lastPageUrl !== "" && lastPageUrl.indexOf("review.html") !== -1 && txn_status === "c2001") {
             if (typeof prod !== "undefined" && prod !== "") {
+                WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
                 WUAnalytics.addEvent(xdm, 56);
                 WUAnalytics.addEvent(xdm, 34);
-                WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             } else {
                 WUAnalytics.addEvent(xdm, 56);
             }
@@ -487,7 +751,7 @@ function buildWUPageViewXDM() {
                     }
                 }
 
-                var loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
+                loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
                 if (loginStatus === "loggedin") {
                     WUAnalytics.addEvent(xdm, 5);
                     WUAnalytics.addEvent(xdm, 11);
@@ -519,7 +783,7 @@ function buildWUPageViewXDM() {
                 }
 
                 if (analyticsObject.sc_quicksend_id) {
-                    var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                    campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
                 } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -532,7 +796,7 @@ function buildWUPageViewXDM() {
                 WUAnalytics.addEvent(xdm, 13);
 
                 if (analyticsObject.sc_quicksend_id) {
-                    var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                    campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
                 } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -545,7 +809,7 @@ function buildWUPageViewXDM() {
                 WUAnalytics.addEvent(xdm, 14);
 
                 if (analyticsObject.sc_quicksend_id) {
-                    var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                    campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
                 } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                     xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -556,7 +820,7 @@ function buildWUPageViewXDM() {
         // SM - Confirm Identity
         if (pagenametmp !== "" && pagenametmp.indexOf("send-money:confirmidentity") !== -1) {
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                ampId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -566,7 +830,7 @@ function buildWUPageViewXDM() {
         // SM - Global Collect ID
         if (pagenametmp !== "" && pagenametmp.indexOf("send-money:globalcollectid") !== -1) {
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -593,7 +857,7 @@ function buildWUPageViewXDM() {
         // PB - Start
         if (pagenametmp !== "" && pagenametmp.indexOf("bill-pay:start") !== -1) {
             _satellite.cookie.remove("BillPay_Start_Cookie");
-            var loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
+            loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
             if (loginStatus === "loggedin") {
                 WUAnalytics.addEvent(xdm, 121);
                 WUAnalytics.addEvent(xdm, 126);
@@ -632,7 +896,7 @@ function buildWUPageViewXDM() {
         // Inmate - Start
         if (pagenametmp !== "" && pagenametmp.indexOf("send-inmate:start") !== -1) {
             _satellite.cookie.remove("SendInmate_Start_Cookie");
-            var loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
+            loginStatus = WUAnalytics.getAnalyticsObjectValue("sc_login_state", "");
             if (loginStatus === "loggedin") {
                 WUAnalytics.addEvent(xdm, 18);
                 WUAnalytics.addEvent(xdm, 23);
@@ -828,7 +1092,7 @@ function buildWUPageViewXDM() {
             WUAnalytics.addEvent(xdm, 11);
 
             if (analyticsObject.sc_quicksend_id) {
-                var campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
+                campId = String(analyticsObject.sc_quicksend_id).toLowerCase();
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = campId;
             } else if (WUAnalytics.getDataElement("WUInternalCampaignJSObject", "") !== "") {
                 xdm._experience.analytics.customDimensions.eVars.eVar47 = WUAnalytics.getDataElement("WUInternalCampaignJSObject", "");
@@ -966,13 +1230,14 @@ function buildWUPageViewXDM() {
 
         // Send money receipt staged
         if (pagenametmp !== "" && pagenametmp.indexOf("send-money:receipt-staged") !== -1) {
+            let tempmtcn = "";
             if (
                 typeof analyticsObject.sc_transaction_id !== "undefined" &&
                 analyticsObject.sc_transaction_id !== "" &&
                 analyticsObject.sc_transaction_id !== null
             ) {
                 var tid = analyticsObject.sc_transaction_id.toLowerCase();
-                var tempmtcn = tid.slice(6).trim();
+                tempmtcn = tid.slice(6).trim();
             }
 
             xdm._experience.analytics.customDimensions.eVars.eVar20 = tempmtcn;
@@ -1041,7 +1306,6 @@ function buildWUPageViewXDM() {
                     }
                 }
             } else if (pagenametmp !== "" && pagenametmp.indexOf("verification") !== -1) {
-                var lastPageUrl = document.referrer;
                 if (lastPageUrl !== "undefined" && lastPageUrl !== "" && lastPageUrl.indexOf("register") !== -1) {
                     xdm._experience.analytics.customDimensions.eVars.eVar42 = "register";
 
@@ -1271,18 +1535,6 @@ function buildWUPageViewXDM() {
             if (custDetails1 && custDetails1.registrationDate) {
                 sessionStorage.setItem("registrationDate1", custDetails1.registrationDate);
             }
-        }
-    }
-
-    if (
-        (pagenametmp.indexOf("send-money:receipt") !== -1 ||
-            pagenametmp.indexOf("send-money:sendmoneywupayreceipt") !== -1 ||
-            pagenametmp.indexOf("send-money:sendmoneycashreceipt") !== -1 ||
-            pagenametmp.indexOf("bill-pay:receipt") !== -1) &&
-        typeof countryConfig !== "undefined"
-    ) {
-        if (WUAnalytics.getDataElement("nca2.0", false)) {
-            WUAnalytics.addEvent(xdm, 282);
         }
     }
 
