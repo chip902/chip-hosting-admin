@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import LogTime from "./LogTime";
+import CopyPreviousWeekButton from "./CopyPreviousWeekButton";
 
 interface ITimeToolBar {
 	filters: {
@@ -69,13 +70,21 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 		<header className="sticky top-0 bg-slate-50/80 backdrop-blur-sm dark:bg-gray-900/80 border-b border-slate-200 dark:border-gray-700 px-6 py-4 z-20">
 			<div className="flex w-full items-center justify-between">
 				{/* Left side - Log Time Button */}
-				<div className="flex items-center">
-					<Button onClick={() => setIsLogTimeOpen(true)} className={cn("flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white")}>
+				<div className="flex items-center gap-2">
+					{filters.startDate && (
+						<CopyPreviousWeekButton 
+							currentStartDate={filters.startDate} 
+							onSuccess={() => window.location.reload()}
+						/>
+					)}
+					<Button 
+						onClick={() => setIsLogTimeOpen(true)} 
+						className={cn("flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white")}
+					>
 						<Clock className="h-4 w-4" />
 						<span className="font-medium">Log Time</span>
 					</Button>
 
-					{/* Add the LogTime component */}
 					{isLogTimeOpen && (
 						<LogTime
 							onClose={() => setIsLogTimeOpen(false)}

@@ -6,6 +6,9 @@
  * Now uses the WUAnalytics utility for consistent XDM handling
  */
 
+
+window.attemptPageViewTracking = window.attemptPageViewTracking || null;
+
 function attemptPageViewTracking(attempts) {
     // If tracking already happened, exit immediately
     if (typeof WUAnalytics !== "undefined" && WUAnalytics.getPageViewFlag()) {
@@ -118,6 +121,9 @@ function attemptPageViewTracking(attempts) {
         }
     }
 }
+
+window.attemptPageViewTracking = attemptPageViewTracking;
+
 
 // Make sure the page view tracking initiates when the page is ready
 document.addEventListener('DOMContentLoaded', function () {
@@ -429,7 +435,7 @@ function buildWUPageViewXDM() {
     var country = WUAnalytics.getDataElement("WUCountryJSObject", "");
     var txn_status = WUAnalytics.getDataElement("WUTxnStatusJSObject", "");
     var mtcn = WUAnalytics.getDataElement("WUMtcnJSObject", "");
-    var txn_fee = WUAnalytics.getDataElement("WUTransactionFeeJSObject", "");
+    var txn_fee = WUAnalytics.getDataElement("WUTransactionFeeAEPObject", "");
     var refundAmnt = WUAnalytics.getDataElement("WURefundAmntJSObject", "");
     var verification_failed = WUAnalytics.getAnalyticsObjectValue("sc_id_verification_failed", "");
     var verification_blocked = WUAnalytics.getAnalyticsObjectValue("sc_online_verify", "");
@@ -500,7 +506,7 @@ function buildWUPageViewXDM() {
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         }
     }
 
@@ -512,7 +518,7 @@ function buildWUPageViewXDM() {
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.addEvent(xdm, 71, WUAnalytics.getDataElement("WUDiscountAmountJSObject", 0));
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         }
     }
 
@@ -525,7 +531,7 @@ function buildWUPageViewXDM() {
             // Pass txn_id as serialization parameter
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
             WUAnalytics.setProduct(xdm, prod, txn_fee);
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.addEvent(xdm, 56);
             WUAnalytics.addEvent(xdm, 34);
@@ -542,7 +548,7 @@ function buildWUPageViewXDM() {
             // Pass txn_id as serialization parameter
             WUAnalytics.setProduct(xdm, prod, txn_fee);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
@@ -561,7 +567,7 @@ function buildWUPageViewXDM() {
 
             WUAnalytics.setProduct(xdm, prod, txn_fee);
             WUAnalytics.addEvent(xdm, 133, WUAnalytics.getDataElement("WUPrincipalJSObject", 0));
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);
@@ -576,7 +582,7 @@ function buildWUPageViewXDM() {
             xdm._experience.analytics.customDimensions.eVars.purchaseID = txn_id;
 
             WUAnalytics.setProduct(xdm, prod, txn_fee);
-            WUAnalytics.addPurchaseEvent(xdm, txn_id);
+            WUAnalytics.addPurchaseEvent(xdm, txn_id, txn_fee);
         } else if (typeof prod !== "undefined" && prod !== "") {
             WUAnalytics.setProduct(xdm, prod, null, { event34: txn_fee });
             WUAnalytics.addEvent(xdm, 56);

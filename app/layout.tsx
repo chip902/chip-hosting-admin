@@ -1,8 +1,6 @@
 // app/layout.tsx
 
 import "./globals.css";
-//import "@radix-ui/themes/styles.css";
-
 import { Providers } from "./providers";
 import MainLayout from "./MainLayout";
 import { Metadata } from "next";

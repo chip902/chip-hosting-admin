@@ -1,23 +1,86 @@
 // Western Union Analytics Middleware Utilities
 // Author: Andrew Chepurny for Western Union
-// Version: 2025.05.03
+// Version: 2025.05.06
 
 (function () {
-
-
-    // Create global namespace if it doesn't exist
-    window.WUAnalytics = window.WUAnalytics || {};
-    window.WUAnalytics.pvFired = false;
-    window.WUAnalytics.pageViewSent = false;
-
-    // Private variables
-    var _debugMode = true; // Set to true for development
+    // === 1. DEFINE PRIVATE VARIABLES & UTILITY FUNCTIONS ===
+    var _debugMode = true; // Set to true for development to make Dynamic later
     var _retryLimit = 3;
     var _retryDelay = 100;
     var _eventTypeMap = {
         pageView: "web.webpagedetails.pageViews",
         linkClick: "web.webInteraction.linkClicks"
     };
+
+    var _timePartingValue = "";
+
+    // DST schedule for Time Parting
+    var _dstSchedule = {
+        2012: "3/11,11/4", 2013: "3/10,11/3", 2014: "3/9,11/2",
+        2015: "3/8,11/1", 2016: "3/13,11/6", 2017: "3/12,11/5",
+        2018: "3/11,11/4", 2019: "3/10,11/3", 2020: "3/8,11/1",
+        2021: "3/14,11/7", 2022: "3/13,11/6", 2023: "3/12,11/5",
+        2024: "3/10,11/3", 2025: "3/9,11/2"
+    };
+
+    // Time parting function - moved from data element to utils.js
+    function calculateTimeParting(timezone) {
+        // Default to Eastern Time if not specified
+        timezone = timezone || -5;
+
+        const now = new Date();
+        const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        let adjustedTimezone = timezone;
+
+        // Check for DST
+        const currentYear = now.getFullYear();
+        if (_dstSchedule[currentYear]) {
+            const [dstStartStr, dstEndStr] = _dstSchedule[currentYear].split(',');
+            const dstStart = new Date(`${dstStartStr}/${currentYear}`);
+            const dstEnd = new Date(`${dstEndStr}/${currentYear}`);
+
+            // Apply DST adjustment if applicable for Northern Hemisphere
+            if (now > dstStart && now < dstEnd) {
+                adjustedTimezone += 1;
+            }
+        }
+
+        // Calculate time with timezone adjustment
+        const utcTime = now.getTime() + (now.getTimezoneOffset() * 60000);
+        const adjustedTime = new Date(utcTime + (3600000 * adjustedTimezone));
+
+        // Format the time
+        let hour = adjustedTime.getHours();
+        const minute = adjustedTime.getMinutes().toString().padStart(2, '0');
+        const day = days[adjustedTime.getDay()];
+
+        // Convert to AM/PM format
+        const period = hour >= 12 ? 'PM' : 'AM';
+        hour = hour % 12;
+        hour = hour ? hour : 12;
+
+        const formattedTime = `${hour}:${minute} ${period}`;
+
+        return `${formattedTime}|${day}`;
+    }
+
+    // Calculate time parting right away during initialization
+    _timePartingValue = calculateTimeParting(-5);
+
+    // Initialize tracking state variables
+    window.WUAnalytics = window.WUAnalytics || {};
+    window.WUAnalytics.pvFired = false;
+    window.WUAnalytics.pageViewSent = false;
+    window.WUAnalytics.lastLinkTime = 0;
+    window.WUAnalytics.pendingEvents = {};
+    window.WUAnalytics.lastTrackedUrl = '';
+
+    // SPA tracking variables
+    var lastPageName = "";
+    var lastPageViewTime = 0;
+    var minPageViewInterval = 1000;
+    var lastNavigationTime = 0;
+    var minNavigationInterval = 500;
 
     // Helper Functions
     function log(level, message, data) {
@@ -67,7 +130,7 @@
         }
     }
 
-    // XDM Structure Functions
+    // === 2. XDM STRUCTURE FUNCTIONS ===
     function initializeXDM() {
         return {
             _experience: {
@@ -106,6 +169,25 @@
         });
 
         return hasValidIdentities ? validMap : null;
+    }
+
+    function validateAndSetIdentity(xdm, namespace, id, isPrimary) {
+        if (!id || typeof id !== 'string' || id.trim() === '') {
+            log("warn", `Skipping empty identity for namespace: ${namespace}`);
+            return xdm;
+        }
+
+        xdm.identityMap = xdm.identityMap || {};
+        xdm.identityMap[namespace] = xdm.identityMap[namespace] || [];
+
+        const identityObj = {
+            id: id.trim(),
+            primary: !!isPrimary,
+            authenticatedState: "ambiguous"
+        };
+
+        xdm.identityMap[namespace].push(identityObj);
+        return xdm;
     }
 
     function ensureXDMStructure(xdm) {
@@ -164,7 +246,7 @@
         return deepMerge(mergedXDM, xdm);
     }
 
-    // Event Functions
+    // === 3. EVENT FUNCTIONS ===
     function addEvent(xdm, eventNum, value, serialId) {
         // Ensure XDM has proper structure
         xdm = ensureXDMStructure(xdm);
@@ -205,7 +287,7 @@
         return xdm;
     }
 
-    function addPurchaseEvent(xdm, serialId) {
+    function addPurchaseEvent(xdm, serialId, transactionFee) {
         xdm = ensureXDMStructure(xdm);
 
         // Check for products - log warning if missing
@@ -223,13 +305,28 @@
         xdm.commerce.purchases = xdm.commerce.purchases || {};
         xdm.commerce.purchases.value = 1;
 
+        // Ensure purchase events are counted as page views too
+        xdm.web = xdm.web || {};
+        xdm.web.webPageDetails = xdm.web.webPageDetails || {};
+        xdm.web.webPageDetails.pageViews = { value: 1 };
+
         // Add serialization ID if provided
         if (serialId) {
+            xdm.commerce.purchase.id = serialId;
             xdm.commerce.purchases.id = serialId;
 
             // Also set order ID in commerce object
             xdm.commerce.order = xdm.commerce.order || {};
             xdm.commerce.order.purchaseID = serialId;
+        }
+
+        // CRITICAL: Add revenue field - ONLY the transaction fee
+        if (transactionFee && !isNaN(parseFloat(transactionFee))) {
+            // Set the transaction fee as the revenue
+            xdm.commerce.order = xdm.commerce.order || {};
+            xdm.commerce.order.priceTotal = parseFloat(transactionFee);
+
+            log("info", `Setting transaction fee as revenue: ${transactionFee}`);
         }
 
         // For backward compatibility with analytics events
@@ -261,7 +358,7 @@
         return xdm;
     }
 
-    // XDM Type Functions
+    // === 4. XDM TYPE FUNCTIONS ===
     function ensurePageView(xdm) {
         // First ensure structure is preserved and Deep Clone to prevent Race Conditions
         xdm = deepCloneXDM(ensureXDMStructure(xdm));
@@ -280,7 +377,7 @@
         }
 
         // Always set proper eventType for page views - CRITICAL FIX
-        xdm.eventType = "web.webpagedetails.pageViews";
+        xdm.eventType = _eventTypeMap.pageView;
 
         // Remove linkClicks property but preserve webInteraction name if set
         if (xdm.web.webInteraction && xdm.web.webInteraction.linkClicks) {
@@ -317,7 +414,7 @@
         xdm.web.webInteraction.linkClicks = { value: 1 };
 
         // Set proper event type
-        xdm.eventType = "web.webInteraction.linkClicks";
+        xdm.eventType = _eventTypeMap.linkClick;
 
         // Log for debugging
         log("info", "Link click structure ensured with name: " + xdm.web.webInteraction.name);
@@ -325,7 +422,7 @@
         return xdm;
     }
 
-    // Product Functions
+    // === 5. PRODUCT FUNCTIONS ===
     function setProduct(xdm, productName, price, eventData) {
         if (!productName) {
             log("warn", "Cannot set product with empty name");
@@ -351,133 +448,181 @@
         return xdm;
     }
 
-    // XDM Sending Functions
+    // === 6. XDM SENDING FUNCTIONS ===
+
     function sendXDM(xdm) {
         try {
             if (!xdm) {
-                log("error", "Cannot send empty XDM object");
+                log("error", "Cannot send empty XDM object!!!");
                 return Promise.reject(new Error("Cannot send empty XDM object"));
             }
 
-            // Store the original eventType to ensure it doesn't get lost
+            // Store necessary values to reduce repeated lookups
             const originalEventType = xdm.eventType;
+            const eventType = xdm.eventType;
+            const satellite = _satellite;
+            // Ensure WUAnalytics is properly initialized
+            window.WUAnalytics = window.WUAnalytics || {};
+            window.WUAnalytics.pendingEvents = window.WUAnalytics.pendingEvents || {};
 
-            // Deep clone the XDM object to prevent reference issues
-            const clonedXDM = JSON.parse(JSON.stringify(xdm));
 
-            // Restore the eventType (just in case it was lost in serialization)
-            clonedXDM.eventType = originalEventType;
+            // Function expression using const and arrow function
+            const deepClone = (obj) => {
+                let clone;
 
-            // Merge with template before sending
-            const mergedXDM = mergeXDMWithTemplate(clonedXDM);
+                if (obj === null || typeof obj !== 'object') {
+                    return obj;
+                }
 
-            // Make sure the eventType is preserved after merging
-            mergedXDM.eventType = originalEventType;
+                if (Array.isArray(obj)) {
+                    clone = [];
+                    for (const item of obj) {
+                        clone.push(deepClone(item));
+                    }
+                    return clone;
+                }
 
-            // Store for reference/debugging
-            _satellite.setVar('XDM westernunion Merged Object', mergedXDM);
-
-            // Log the event type for debugging
-            log("info", "Sending XDM with eventType: " + mergedXDM.eventType);
-
-            // Handle identity map to prevent empty values
-            if (mergedXDM.identityMap) {
-                // Filter out any identity entries with empty values
-                Object.keys(mergedXDM.identityMap).forEach(namespace => {
-                    if (Array.isArray(mergedXDM.identityMap[namespace])) {
-                        // Filter out entries with empty id values
-                        mergedXDM.identityMap[namespace] = mergedXDM.identityMap[namespace].filter(
-                            id => id && id.id && typeof id.id === 'string' && id.id.trim() !== ''
-                        );
-
-                        // If namespace has no valid IDs left, remove it
-                        if (mergedXDM.identityMap[namespace].length === 0) {
-                            delete mergedXDM.identityMap[namespace];
+                if (Object.prototype.toString.call(obj) === '[object Object]') {
+                    clone = {};
+                    for (const key in obj) {
+                        if (obj.hasOwnProperty(key)) {
+                            clone[key] = deepClone(obj[key]);
                         }
                     }
-                });
-
-                // If identityMap is empty, remove it to avoid errors
-                if (Object.keys(mergedXDM.identityMap).length === 0) {
-                    delete mergedXDM.identityMap;
+                    return clone;
                 }
+
+                // Handle other data types like Date, Set, Map, etc., as needed
+                const cloned = new obj.constructor();
+                for (const key of Object.getOwnPropertyNames(obj)) {
+                    cloned[key] = deepClone(obj[key]);
+                }
+                return cloned;
+            };
+
+            // Create a deep clone using the optimized function instead of JSON methods
+            const clonedXDM = deepClone(xdm);
+            clonedXDM.eventType = eventType;  // Restore eventType in case of issues
+
+            const mergedXDM = mergeXDMWithTemplate(clonedXDM);
+            mergedXDM.eventType = originalEventType;
+
+            // Log the event type for debugging (moved to a variable for efficiency)
+            const logDebugInfo = () => {
+                log("info", "Sending XDM with eventType: " + mergedXDM.eventType);
+            };
+
+            logDebugInfo();
+
+            if (mergedXDM.identityMap) {
+                processIdentityMap(mergedXDM);  // Move identity processing to a helper function
             }
 
-            if (_debugMode) {
+            // Add debug info if needed, using the global reference for efficiency
+            if (satellite.debugEnabled && _debugMode) {
                 mergedXDM._debug = {
                     timestamp: new Date().toISOString(),
-                    eventType: mergedXDM.eventType  // Add to debug for easy inspection
+                    eventType: mergedXDM.eventType
                 };
             }
 
             log("info", "Sending XDM object", JSON.stringify(mergedXDM));
 
-            // Create a key to track events that have been sent to prevent collisions
-            const eventKey = mergedXDM.eventType + '_' + new Date().getTime();
+            // Create event key for tracking
+            const eventKey = `pending_${originalEventType}_${Date.now()}`;
 
-            // Track current events being processed
-            window.WUAnalytics = window.WUAnalytics || {};
-            window.WUAnalytics.pendingEvents = window.WUAnalytics.pendingEvents || {};
-
-            // For page views in SPAs, clear previous page view attempts
-            if (mergedXDM.eventType === "web.webpagedetails.pageViews") {
-                // Store this as the current page view
-                window.WUAnalytics.currentPageView = eventKey;
-
-                // Create a tracking property to avoid duplicate page views
-                window.WUAnalytics.pageViewTimestamp = new Date().getTime();
-
-                // Set global flag for page view
-                window.WUAnalytics.pageViewSent = true;
-            }
-
-            // For link clicks, check if we need to wait for a recent page view
-            let delay = 0;
-            if (mergedXDM.eventType === "web.webInteraction.linkClicks") {
-                const pageViewTimestamp = window.WUAnalytics.pageViewTimestamp || 0;
-                const timeSincePageView = new Date().getTime() - pageViewTimestamp;
-
-                // If a page view happened in the last 500ms, wait for it to complete
-                if (timeSincePageView < 500) {
-                    delay = Math.max(200, 500 - timeSincePageView);
-                }
-            }
-
-            // Register this event as pending
+            // Register the event as pending
             window.WUAnalytics.pendingEvents[eventKey] = true;
 
-            return new Promise((resolve, reject) => {
-                setTimeout(() => {
-                    // Only send if this event is still valid (not superseded by another)
-                    if (window.WUAnalytics.pendingEvents[eventKey]) {
-                        // IMPORTANT: Log the eventType just before sending
-                        log("info", "Sending event with type: " + mergedXDM.eventType);
+            // Handle link click delay if needed
+            let delay = 0;
+            if (mergedXDM.eventType === 'web.webInteraction.linkClicks') {
+                checkAndSetDelay(window.WUAnalytics, eventKey, 500);
+            }
 
-                        window.alloy("sendEvent", {
-                            "xdm": mergedXDM
-                        }).then((result) => {
-                            // Clean up
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    try {
+                        if (window.WUAnalytics.pendingEvents[eventKey]) {
                             delete window.WUAnalytics.pendingEvents[eventKey];
-                            log("info", "Successfully sent event with type: " + mergedXDM.eventType);
-                            resolve(result);
-                        }).catch((error) => {
-                            delete window.WUAnalytics.pendingEvents[eventKey];
-                            log("error", "Error in alloy.sendEvent for type " + mergedXDM.eventType, error);
-                            reject(error);
-                        });
-                    } else {
-                        // This event was superseded, resolve without sending
-                        resolve({ superseded: true });
+                            alloy_SEND(mergedXDM, resolve);
+                        } else {
+                            resolve({ superseded: true });
+                        }
+                    } catch (e) {
+                        log("error", "Error in sendXDM timeout handler", e);
+                        resolve({ error: e.message });
                     }
                 }, delay);
             });
+
         } catch (e) {
-            log("error", "Error sending XDM", e);
+            log("error", "Error in sendXDM", e);
             return Promise.reject(e);
         }
     }
 
-    // Retry Functions
+    // Helper function to process identityMap more efficiently
+    function processIdentityMap(xdm) {
+        const identityMap = xdm.identityMap;
+
+        if (identityMap) {
+            Object.keys(identityMap).forEach(namespace => {
+                const entries = identityMap[namespace];
+
+                // Ensure it's an array and filter out invalid IDs
+                let processedEntries;
+                if (Array.isArray(entries)) {
+                    processedEntries = entries.filter(id => id?.toString());
+                } else {
+                    processedEntries = [];
+                }
+
+                xdm.identityMap[namespace] = processedEntries;
+
+                if (!xdm.identityMap[namespace].length) {
+                    delete xdm.identityMap[namespace];  // Remove empty namespace
+                }
+            });
+
+            Object.keys(identityMap).forEach(ns => {
+                if (!identityMap[ns]) {
+                    delete identityMap[ns];
+                }
+            });
+        }
+
+        return xdm;
+    }
+
+    // Helper function to handle event delays more efficiently
+    function checkAndSetDelay(analytics, eventKey, maxTimeDiff = 500) {
+        if (!analytics) {
+            return 0; // Return 0 delay if analytics is not available
+        }
+
+        const pageViewTimestamp = analytics.pageViewData?.timestamp || 0;
+        const timeSincePageView = Date.now() - pageViewTimestamp;
+
+        return Math.max(200, timeSincePageView < maxTimeDiff ? maxTimeDiff - timeSincePageView : 0);
+    }
+
+    // Wrapper function for alloy sendEvent to handle errors and logging
+    function alloy_SEND(xdmData, resolve) {
+        window.alloy("sendEvent", { "xdm": xdmData })
+            .then((result) => {
+                log("info", "Successfully sent event with type: " + xdmData.eventType);
+                resolve(result);
+            })
+            .catch((error) => {
+                log("error", `Error in alloy.sendEvent for type ${xdmData.eventType}`, error);
+                // Rejecting the promise here; since it's not chained, perhaps adjust handling if needed
+                throw error;
+            });
+    }
+
+
+    // === 7. RETRY FUNCTIONS ===
     function withRetry(fn, maxRetries, delay) {
         maxRetries = maxRetries || _retryLimit;
         delay = delay || _retryDelay;
@@ -518,7 +663,7 @@
         };
     }
 
-    // Base XDM Building
+    // === 8. BASE XDM BUILDING ===
     function buildBaseXDM() {
         const xdm = initializeXDM();
 
@@ -555,6 +700,14 @@
                 identity: {}
             };
 
+            // Set Globals
+            xdm._experience = xdm._experience || {};
+            xdm._experience.analytics = xdm._experience.analytics || {};
+            xdm._experience.analytics.customDimensions = xdm._experience.analytics.customDimensions || {};
+            xdm._experience.analytics.customDimensions.eVars = xdm._experience.analytics.customDimensions.eVars || {};
+            xdm._experience.analytics.customDimensions.eVars.eVar43 = _timePartingValue;
+
+
             // Only add accountID to identity map if it exists
             if (accountID && accountID !== '') {
                 validateAndSetIdentity(xdm, "customerKey", accountID, false);
@@ -578,7 +731,7 @@
             }
 
             // Store key values in the XDM object for common reference
-            xdm._wu = {
+            xdm._westernunion = {
                 pageName: pageNameTmp,
                 country: country,
                 txnStatus: txnStatus,
@@ -603,6 +756,7 @@
         return xdm;
     }
 
+    // === 9. SPA DETECTION FUNCTIONS ===
     function detectSPAPageName() {
         const url = window.location.href;
         let pageName = "";
@@ -649,26 +803,88 @@
         return null;
     }
 
-    function validateAndSetIdentity(xdm, namespace, id, isPrimary) {
-        if (!id || typeof id !== 'string' || id.trim() === '') {
-            log("warn", `Skipping empty identity for namespace: ${namespace}`);
-            return xdm;
+    // Helper function for SPA navigation
+    function handleNavigation(source) {
+        var now = new Date().getTime();
+
+        // Skip if another navigation was processed too recently
+        if (now - lastNavigationTime < minNavigationInterval) {
+            log("info", "Skipping duplicate SPA navigation from " + source +
+                " (" + (now - lastNavigationTime) + "ms since last event)");
+            return;
         }
 
-        xdm.identityMap = xdm.identityMap || {};
-        xdm.identityMap[namespace] = xdm.identityMap[namespace] || [];
+        // Update the timestamp
+        lastNavigationTime = now;
 
-        const identityObj = {
-            id: id.trim(),
-            primary: !!isPrimary,
-            authenticatedState: "ambiguous"
-        };
+        // Log the navigation
+        log("info", "SPA navigation detected (" + source + "): " + window.location.href);
 
-        xdm.identityMap[namespace].push(identityObj);
-        return xdm;
+        // Reset tracking flags
+        window.WUAnalytics.pvFired = false;
+        window.WUAnalytics.pageViewSent = false;
+
+        // Attempt to track the page view after a small delay
+        setTimeout(function () {
+            if (typeof attemptPageViewTracking === 'function') {
+                attemptPageViewTracking();
+            } else {
+                log("info", "attemptPageViewTracking not available yet, will try to track via rule");
+                // Try to trigger via rule
+                if (typeof _satellite !== "undefined" && _satellite.track) {
+                    _satellite.track("spa-page-view");
+                }
+            }
+        }, 150);
     }
 
-    // Expose public methods to window.WUAnalytics
+    // Function to check for page name changes
+    function checkPageNameChange() {
+        // Skip if page view tracking isn't available yet
+        if (typeof attemptPageViewTracking !== 'function') {
+            return;
+        }
+
+        // Check if analyticsObject exists
+        if (typeof window.analyticsObject === "undefined" ||
+            typeof window.analyticsObject.sc_page_name === "undefined") {
+            return;
+        }
+
+        var currentPageName = window.analyticsObject.sc_page_name;
+        var now = new Date().getTime();
+
+        // If page name has changed and it's not empty
+        if (currentPageName &&
+            currentPageName !== "" &&
+            currentPageName !== lastPageName &&
+            (now - lastPageViewTime) > minPageViewInterval) {
+
+            // Update tracking variables
+            lastPageName = currentPageName;
+            lastPageViewTime = now;
+
+            // Log the change
+            log("info", "Page name changed to: " + currentPageName);
+
+            // Update Data Element directly (critical)
+            _satellite.setVar("WUPageNameJSObject", currentPageName);
+
+            // Reset page view flags
+            window.WUAnalytics.pvFired = false;
+            window.WUAnalytics.pageViewSent = false;
+
+            // Trigger page view tracking directly
+            log("info", "Triggering page view tracking for: " + currentPageName);
+
+            // Small delay to ensure data elements are updated
+            setTimeout(function () {
+                attemptPageViewTracking();
+            }, 50);
+        }
+    }
+
+    // === 10. DEFINE PUBLIC WUAnalytics OBJECT ===
     window.WUAnalytics = {
         // Core functions
         setDebugMode: function (isDebug) {
@@ -789,59 +1005,35 @@
             }
 
             return xdm;
+        },
+
+        // Link click duplicate prevention
+        preventDuplicateClicks: function (linkName) {
+            var now = new Date().getTime();
+            var lastTime = window.WUAnalytics.lastLinkTime || 0;
+
+            // Prevent clicks less than 500ms apart
+            if ((now - lastTime) < 500) {
+                log("info", "Preventing duplicate click: " + linkName);
+                return false;
+            }
+
+            // Update timestamp
+            window.WUAnalytics.lastLinkTime = now;
+            return true;
         }
     };
 
-    // Initialize debug mode
+    // === 11. INITIALIZE THE UTILITY ===
     window.WUAnalytics.setDebugMode(true);
-
-    // Log initialization
     log("info", "WUAnalytics utility initialized at page top");
     window.WUAnalytics.isInitialized = true;
 
-    // ===== RUN SPA DETECTION CODE FIRST =====
+    // === 12. SET UP SPA DETECTION ===
+
+    // 12.1. HISTORY API AND URL MONITORING
     (function () {
-        // Add time-based tracking protection
-        var lastNavigationTime = 0;
-        var minNavigationInterval = 500; // milliseconds
-
-        // Helper function to handle navigation events with time check
-        function handleNavigation(source) {
-            var now = new Date().getTime();
-
-            // Skip if another navigation was processed too recently
-            if (now - lastNavigationTime < minNavigationInterval) {
-                _satellite.logger.info("Skipping duplicate SPA navigation from " + source +
-                    " (" + (now - lastNavigationTime) + "ms since last event)");
-                return;
-            }
-
-            // Update the timestamp
-            lastNavigationTime = now;
-
-            // Log the navigation
-            _satellite.logger.info("SPA navigation detected (" + source + "): " + window.location.href);
-
-            // Reset tracking flags
-            window.WUAnalytics = window.WUAnalytics || {};
-            window.WUAnalytics.pvFired = false;
-            window.WUAnalytics.pageViewSent = false;
-
-            // Attempt to track the page view after a small delay
-            setTimeout(function () {
-                if (typeof attemptPageViewTracking === 'function') {
-                    attemptPageViewTracking();
-                } else {
-                    _satellite.logger.info("attemptPageViewTracking not available yet, will try to track via rule");
-                    // Try to trigger via rule
-                    if (typeof _satellite !== "undefined" && _satellite.track) {
-                        _satellite.track("spa-page-view");
-                    }
-                }
-            }, 150);
-        }
-
-        // Store original history methods to detect SPA navigation
+        // Store original history methods
         var originalPushState = window.history.pushState;
         var originalReplaceState = window.history.replaceState;
 
@@ -850,7 +1042,7 @@
             // Call the original function
             originalPushState.apply(this, arguments);
 
-            // Handle navigation with safety check
+            // Handle navigation
             handleNavigation("pushState");
         };
 
@@ -859,13 +1051,12 @@
             // Call the original function
             originalReplaceState.apply(this, arguments);
 
-            // Handle navigation with safety check
+            // Handle navigation
             handleNavigation("replaceState");
         };
 
         // Add hash change listener
         window.addEventListener('hashchange', function () {
-            // Handle navigation with safety check
             handleNavigation("hashchange");
         });
 
@@ -875,15 +1066,27 @@
             var currentUrl = window.location.href;
             if (currentUrl !== lastUrl) {
                 lastUrl = currentUrl;
-
-                // Handle navigation with safety check
                 handleNavigation("URL polling");
             }
         }, 500); // Check every 500ms
+
+        log("info", "History API and URL monitoring initialized");
     })();
-    // ===== RUN ANGULAR OBSERVER DETECTION CODE SECOND =====
+
+    // 12.2. PAGE NAME CHANGE MONITORING
     (function () {
-        // Create observer to detect Angular view changes
+        // Set up interval for checking page name changes
+        setInterval(checkPageNameChange, 250);
+
+        // Also check immediately
+        setTimeout(checkPageNameChange, 500);
+
+        log("info", "Page name monitor initialized");
+    })();
+
+    // 12.3. ANGULAR DOM MUTATION OBSERVER
+    (function () {
+        // Function to set up the observer
         function setupAngularViewObserver() {
             // Target element that contains Angular views - adjust selector as needed
             const viewContainer = document.querySelector('#OptimusApp') || document.body;
@@ -914,10 +1117,9 @@
                 }
 
                 if (viewChanged) {
-                    _satellite.logger.info("Angular view change detected via DOM mutation");
+                    log("info", "Angular view change detected via DOM mutation");
 
                     // Reset page view tracking
-                    window.WUAnalytics = window.WUAnalytics || {};
                     window.WUAnalytics.pvFired = false;
                     window.WUAnalytics.pageViewSent = false;
 
@@ -941,7 +1143,7 @@
                 characterData: false
             });
 
-            _satellite.logger.info("Angular view observer initialized");
+            log("info", "Angular view observer initialized");
         }
 
         // Wait for DOM to be ready
@@ -951,5 +1153,5 @@
             setupAngularViewObserver();
         }
     })();
-})();
 
+})();

@@ -1185,9 +1185,11 @@ function handleLinkClick() {
         // Reset flag the old way as fallback
         _satellite.setVar("Common_Events_Based_Event_Firing_Rule", false);
         return false;
-    } else {
-        // Reset flag using utility
-        WUAnalytics.setPageViewFlag(false);
+    }
+
+    // Use duplicate prevention utility
+    if (!WUAnalytics.preventDuplicateClicks(linkName)) {
+        return false;
     }
 
     try {

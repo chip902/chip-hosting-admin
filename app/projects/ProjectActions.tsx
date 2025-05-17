@@ -20,7 +20,7 @@ const ProjectActions = ({ project, onArchive }: ProjectActionsProps) => {
 	return (
 		<div className="flex items-center gap-2 justify-end">
 			<EditDocument project={project} />
-			<Button variant="ghost" size="sm" onClick={() => onArchive(project)} className="text-gray-600 hover:text-gray-900">
+			<Button variant="ghost" size="sm" onClick={() => onArchive(project)} className="text-red-600 hover:text-red-900">
 				Archive
 			</Button>
 		</div>
