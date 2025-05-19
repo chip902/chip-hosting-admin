@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import "./timeEntries.css";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
 import TimeToolBar from "./TimeToolBar";

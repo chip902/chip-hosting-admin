@@ -26,6 +26,296 @@ export interface TimeGridProps {
 	) => void;
 }
 
+// Helper function to throttle high-frequency events
+const throttle = (fn: Function, wait: number) => {
+	let timeout: ReturnType<typeof setTimeout> | null = null;
+	return (args: any) => {
+		if (!timeout) {
+			fn(args);
+			timeout = setTimeout(() => {
+				timeout = null;
+			}, wait);
+		}
+	};
+};
+
+// Helper function to safely parse ISO dates while handling timezone issues
+const parseISOWithOffset = (dateStr: string): Date => {
+	if (!dateStr) return new Date();
+
+	try {
+		// Parse the ISO string
+		// We'll explicitly create a date that maintains the hours as specified in the ISO
+		// rather than converting to local time
+		const matches = dateStr.match(/T(\d{2}):(\d{2})/);
+		if (!matches) return new Date(dateStr);
+
+		const hour = parseInt(matches[1], 10);
+		const minute = parseInt(matches[2], 10);
+		const datePart = dateStr.split("T")[0];
+		const dateAtMidnight = new Date(`${datePart}T00:00:00`);
+		dateAtMidnight.setHours(hour, minute, 0, 0);
+		return dateAtMidnight;
+	} catch (error) {
+		console.error("Error parsing ISO date:", error);
+		return new Date();
+	}
+};
+
+// Transform raw entry data to ProcessedTimeEntry format
+const transformToTimeEntry = (entry: any): ProcessedTimeEntry => {
+	const startDate = parseISOWithOffset(entry.startTime);
+	let endDate: Date;
+
+	if (entry.endTime) {
+		endDate = parseISOWithOffset(entry.endTime);
+	} else if (entry.duration) {
+		const durationMs = entry.duration * 60 * 1000;
+		endDate = new Date(startDate.getTime() + durationMs);
+	} else {
+		endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
+	}
+
+	return {
+		id: entry.id,
+		userId: entry.userId || (entry.user?.id ?? 1),
+		date: entry.date,
+		startTime: entry.startTime,
+		endTime: entry.endTime || endDate.toISOString(),
+		customer: entry.customer || {},
+		project: entry.project || {},
+		task: entry.task || {},
+		isInvoiced: entry.isInvoiced ?? false,
+		isBillable: entry.isBillable ?? true,
+		color: entry.color || "#4893FF",
+		name: entry.name || entry.task?.name || "Task",
+		customerName: entry.customerName || entry.customer?.name || "Unknown Client",
+		projectName: entry.projectName || entry.project?.name || "Unknown Project",
+		taskName: entry.taskName || entry.task?.name || "Unknown Task",
+		width: entry.width || calculateWidth(entry),
+		left: entry.left || calculateLeftPosition(entry),
+		startSlot: 0,
+		endSlot: 0,
+		duration: entry.duration || 60,
+		description: entry.description || "",
+	};
+};
+
+const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): ProcessedTimeEntry[] => {
+	// Filter entries for this specific day
+	const dailyEntries = entries.filter((entry) => {
+		const entryDate = new Date(entry.date);
+		const entryDay = startOfDay(entryDate);
+		const currentDay = startOfDay(day);
+		return entryDay.toDateString() === currentDay.toDateString();
+	});
+
+	if (dailyEntries.length === 0) return [];
+
+	// Convert entries to minutes since midnight
+	const entriesWithSlots = dailyEntries.map((entry, index) => {
+		const entryStart = parseISOWithOffset(entry.startTime);
+		const entryEnd = entry.endTime ? parseISOWithOffset(entry.endTime) : new Date(entryStart.getTime() + (entry.duration || 60) * 60 * 1000);
+
+		const startMinutes = entryStart.getHours() * 60 + entryStart.getMinutes();
+		const endMinutes = Math.min(entryEnd.getHours() * 60 + entryEnd.getMinutes(), 24 * 60);
+		const durationMinutes = endMinutes - startMinutes;
+
+		return {
+			...entry,
+			startMinutes,
+			endMinutes,
+			durationMinutes,
+			originalStart: entryStart,
+			left: 0,
+			width: 1,
+			overlapping: false,
+			zIndex: 10,
+			column: 0,
+			originalIndex: index,
+		};
+	});
+
+	// Sort entries by start time, then by end time
+	entriesWithSlots.sort((a, b) => {
+		const startDiff = a.startMinutes - b.startMinutes;
+		if (startDiff !== 0) return startDiff;
+		return a.endMinutes - b.endMinutes;
+	});
+
+	// First pass: detect overlaps
+	for (let i = 0; i < entriesWithSlots.length; i++) {
+		const entryA = entriesWithSlots[i];
+		const overlappingEntries = [];
+
+		for (let j = 0; j < entriesWithSlots.length; j++) {
+			if (i === j) continue;
+
+			const entryB = entriesWithSlots[j];
+			const identicalTimes = entryA.startMinutes === entryB.startMinutes && entryA.endMinutes === entryB.endMinutes;
+			const timeOverlap = entryA.startMinutes < entryB.endMinutes && entryA.endMinutes > entryB.startMinutes;
+
+			if (identicalTimes || timeOverlap) {
+				entryA.overlapping = true;
+				entryB.overlapping = true;
+				overlappingEntries.push(entryB);
+			}
+		}
+
+		// Assign columns for overlapping entries
+		if (entryA.overlapping) {
+			const occupiedColumns = new Set<number>();
+			for (const overlapEntry of overlappingEntries) {
+				if (overlapEntry.column !== undefined) {
+					occupiedColumns.add(overlapEntry.column);
+				}
+			}
+
+			let column = 0;
+			while (occupiedColumns.has(column)) {
+				column++;
+			}
+			entryA.column = column;
+		}
+	}
+
+	// Group overlapping entries
+	const overlapGroups: any[] = [];
+	for (const entry of entriesWithSlots) {
+		if (!entry.overlapping) continue;
+
+		let found = false;
+		for (const group of overlapGroups) {
+			if (entry.startMinutes < group.endTime && entry.endMinutes > group.startTime) {
+				group.entries.push(entry);
+				group.startTime = Math.min(group.startTime, entry.startMinutes);
+				group.endTime = Math.max(group.endTime, entry.endMinutes);
+				found = true;
+				break;
+			}
+		}
+
+		if (!found) {
+			overlapGroups.push({
+				startTime: entry.startMinutes,
+				endTime: entry.endMinutes,
+				entries: [entry],
+			});
+		}
+	}
+
+	// Merge overlapping groups
+	const mergedGroups = [...overlapGroups];
+	let didMerge = true;
+
+	while (didMerge) {
+		didMerge = false;
+		for (let i = 0; i < mergedGroups.length; i++) {
+			for (let j = i + 1; j < mergedGroups.length; j++) {
+				const groupA = mergedGroups[i];
+				const groupB = mergedGroups[j];
+
+				if (groupA.startTime < groupB.endTime && groupA.endTime > groupB.startTime) {
+					groupA.startTime = Math.min(groupA.startTime, groupB.startTime);
+					groupA.endTime = Math.max(groupA.endTime, groupB.endTime);
+
+					for (const entry of groupB.entries) {
+						if (!groupA.entries.includes(entry)) {
+							groupA.entries.push(entry);
+						}
+					}
+
+					mergedGroups.splice(j, 1);
+					didMerge = true;
+					break;
+				}
+			}
+			if (didMerge) break;
+		}
+	}
+
+	// Calculate column counts for each group
+	for (const group of mergedGroups) {
+		let maxColumn = 0;
+		for (const entry of group.entries) {
+			maxColumn = Math.max(maxColumn, entry.column || 0);
+		}
+		const columnCount = maxColumn + 1;
+		group.columnCount = columnCount;
+
+		for (const entry of group.entries) {
+			(entry as any).columnCount = columnCount;
+		}
+	}
+
+	// Create a map to assign explicit offsets to entries with identical times
+	const timeSlotMap = new Map();
+	for (const entry of entriesWithSlots) {
+		const timeKey = `${entry.startMinutes}-${entry.endMinutes}`;
+		if (!timeSlotMap.has(timeKey)) {
+			timeSlotMap.set(timeKey, {
+				count: 1,
+			});
+		} else {
+			timeSlotMap.get(timeKey).count++;
+		}
+	}
+
+	// Convert to the expected output format
+	return entriesWithSlots.map((entry) => {
+		const durationMinutes = entry.duration || entry.durationMinutes || 60;
+		const isShort = durationMinutes < 240;
+		const timeKey = `${entry.startMinutes}-${entry.endMinutes}`;
+		const sameTimeSlot = timeSlotMap.get(timeKey);
+
+		let width = 1;
+		let left = 0;
+		let zIndex = 10;
+
+		if (entry.overlapping) {
+			const columnCount = (entry as any).columnCount || 1;
+			const column = entry.column || 0;
+
+			if (sameTimeSlot && sameTimeSlot.count > 1) {
+				// Multiple entries with identical times - position them side by side
+				const gap = 0.02;
+				const availableWidth = 1 - gap * (sameTimeSlot.count - 1);
+				width = availableWidth / sameTimeSlot.count;
+				left = column * (width + gap);
+			} else if (columnCount > 1) {
+				// Overlapping entries with different times
+				const gap = 0.02;
+				const availableWidth = 1 - gap * (columnCount - 1);
+				width = availableWidth / columnCount;
+				left = column * (width + gap);
+			}
+
+			// Shorter durations get higher z-index
+			const durationFactor = Math.max(0, 10 - Math.floor(durationMinutes / 60));
+			zIndex += durationFactor;
+		}
+
+		// Ensure minimum width for visibility
+		const finalWidth = Math.max(width, 0.1);
+		const finalLeft = Math.min(left, 1 - finalWidth);
+
+		if (isShort) {
+			zIndex = 20;
+		}
+
+		return {
+			...entry,
+			width: finalWidth,
+			left: finalLeft,
+			startSlot: entry.startMinutes,
+			endSlot: entry.endMinutes,
+			date: entry.originalStart,
+			zIndex,
+			className: `${isShort ? "short " : ""}${entry.overlapping ? "overlapping" : ""}`,
+		};
+	});
+};
+
 const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
 	const { startDate, endDate, customerId } = filters;
@@ -34,7 +324,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 	const [dragEnd, setDragEnd] = useState({ dayIndex: -1, minutes: -1 });
 
 	const { data, error, isLoading } = useGetTimeEntries({
-		pageSize: 100, // Increased to ensure we get all entries
+		pageSize: 100,
 		page: 1,
 		startDate: startDate ? new Date(startDate) : undefined,
 		endDate: endDate ? new Date(endDate) : undefined,
@@ -57,7 +347,6 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 	}, [isLoading]);
 
 	const handleTimeSlotSelect = (timeSlot: any) => {
-		// Only open LogTime dialog if timeSlot has actual data
 		if (timeSlot && Object.keys(timeSlot).length > 0) {
 			onTimeSlotSelect(timeSlot);
 		}
@@ -67,12 +356,10 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 		if (isDialogOpen) return;
 		event.stopPropagation();
 
-		// Simplified check for time entry interaction
 		if (event.target instanceof HTMLElement && (event.target.closest(".time-entry") || event.target.closest('[role="dialog"]'))) {
 			return;
 		}
 
-		// Only start drag if we clicked directly on the grid cell
 		const target = event.target as HTMLElement;
 		if (!target.classList.contains("grid-cell")) {
 			return;
@@ -210,19 +497,26 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 								{isDragging && dragStart?.dayIndex === dayIndex && <DragSelection />}
 
 								{/* Render time entries */}
-								{processedEntries.map((entry) => (
-									<TimeEntryComponent
-										key={entry.id}
-										entry={entry as unknown as TimeEntry}
-										startSlot={entry.startSlot}
-										endSlot={entry.endSlot}
-										color={entry.color || "#4893FF"}
-										width={entry.width}
-										left={entry.left}
-										onTimeSlotSelect={handleTimeSlotSelect}
-										isDialogOpen={isDialogOpen}
-									/>
-								))}
+								{processedEntries.map((entry) => {
+									// Skip entries with invalid time slots
+									if (entry.startSlot === null || entry.endSlot === null) {
+										return null;
+									}
+
+									return (
+										<TimeEntryComponent
+											key={entry.id}
+											entry={entry as unknown as TimeEntry}
+											startSlot={entry.startSlot}
+											endSlot={entry.endSlot}
+											color={entry.color}
+											width={entry.width}
+											left={entry.left}
+											onTimeSlotSelect={handleTimeSlotSelect}
+											isDialogOpen={!!isDialogOpen}
+										/>
+									);
+								})}
 							</div>
 						);
 					})}
@@ -230,155 +524,6 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 			</div>
 		</div>
 	);
-};
-
-// Helper function to safely parse ISO dates while handling timezone issues
-const parseISOWithOffset = (dateStr: string): Date => {
-	if (!dateStr) return new Date();
-
-	try {
-		// Parse the ISO string
-		// We'll explicitly create a date that maintains the hours as specified in the ISO
-		// rather than converting to local time
-
-		// For dates like: "2025-03-14T09:00:00Z"
-		// We want to make sure we use 09:00 as the hour, not have it shifted by timezone
-
-		// Parse the hour and minute directly from the string
-		const matches = dateStr.match(/T(\d{2}):(\d{2})/);
-		if (!matches) return new Date(dateStr);
-
-		const hour = parseInt(matches[1], 10);
-		const minute = parseInt(matches[2], 10);
-
-		// Get the date part and create a new date at midnight local time
-		const datePart = dateStr.split("T")[0];
-		const dateAtMidnight = new Date(`${datePart}T00:00:00`);
-
-		// Then set the specific hour and minute that was in the ISO string
-		dateAtMidnight.setHours(hour, minute, 0, 0);
-
-		return dateAtMidnight;
-	} catch (error) {
-		console.error("Error parsing ISO date:", error);
-		return new Date();
-	}
-};
-
-// Helper function to throttle high-frequency events
-const throttle = (fn: Function, wait: number) => {
-	let timeout: ReturnType<typeof setTimeout> | null = null;
-	return (args: any) => {
-		if (!timeout) {
-			fn(args);
-			timeout = setTimeout(() => {
-				timeout = null;
-			}, wait);
-		}
-	};
-};
-
-const transformToTimeEntry = (entry: any): ProcessedTimeEntry => {
-	// Parse date and time correctly, preserving the original hours from ISO
-	const startDate = parseISOWithOffset(entry.startTime);
-	let endDate: Date;
-
-	if (entry.endTime) {
-		endDate = parseISOWithOffset(entry.endTime);
-	} else if (entry.duration) {
-		// If no end time but duration exists, calculate end time
-		const durationMs = entry.duration * 60 * 1000;
-		endDate = new Date(startDate.getTime() + durationMs);
-	} else {
-		// Default to 1 hour if neither is available
-		endDate = new Date(startDate.getTime() + 60 * 60 * 1000);
-	}
-
-	return {
-		id: entry.id,
-		userId: entry.userId || (entry.user?.id ?? 1),
-		date: entry.date,
-		startTime: entry.startTime,
-		endTime: entry.endTime || endDate.toISOString(),
-		customer: entry.customer || {},
-		project: entry.project || {},
-		task: entry.task || {},
-		isInvoiced: entry.isInvoiced ?? false,
-		isBillable: entry.isBillable ?? true,
-		color: entry.color || "#4893FF",
-		name: entry.name || entry.task?.name || "Task",
-		customerName: entry.customerName || entry.customer?.name || "Unknown Client",
-		projectName: entry.projectName || entry.project?.name || "Unknown Project",
-		taskName: entry.taskName || entry.task?.name || "Unknown Task",
-		width: entry.width || calculateWidth(entry),
-		left: entry.left || calculateLeftPosition(entry),
-		startSlot: 0, // Will be calculated in processOverlappingEntries
-		endSlot: 0, // Will be calculated in processOverlappingEntries
-		duration: entry.duration || 60, // Default to 1 hour if missing
-		description: entry.description || "",
-	};
-};
-
-interface OverlappingEntry extends ProcessedTimeEntry {
-	width: number;
-	left: number;
-	startSlot: number;
-	endSlot: number;
-	date: Date;
-}
-
-const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): OverlappingEntry[] => {
-	const dayStart = startOfDay(day);
-	const dayEnd = endOfDay(day);
-
-	// Filter entries for this specific day
-	const dailyEntries = entries.filter((entry) => {
-		const entryDate = new Date(entry.date);
-		const entryDay = startOfDay(entryDate);
-		const currentDay = startOfDay(day);
-		return entryDay.toDateString() === currentDay.toDateString();
-	});
-
-	if (dailyEntries.length === 0) return [];
-
-	// Sort entries by duration (longest first) and then by start time
-	const sortedEntries = [...dailyEntries].sort((a, b) => {
-		// Sort by duration first (longest first)
-		const durationDiff = (b.duration || 0) - (a.duration || 0);
-		if (durationDiff !== 0) return durationDiff;
-
-		// If durations are equal, sort by start time
-		const aStart = parseISOWithOffset(a.startTime).getTime();
-		const bStart = parseISOWithOffset(b.startTime).getTime();
-		return aStart - bStart;
-	});
-
-	// Process entries
-	const result: OverlappingEntry[] = [];
-
-	sortedEntries.forEach((entry, index) => {
-		const entryStart = parseISOWithOffset(entry.startTime);
-		const entryEnd = entry.endTime ? parseISOWithOffset(entry.endTime) : new Date(entryStart.getTime() + entry.duration * 60 * 1000);
-
-		// Calculate duration in minutes
-		const durationMinutes = entry.duration || 60;
-		// Consider an entry "short" if it's less than 4 hours
-		const isShort = durationMinutes < 240;
-
-		result.push({
-			...entry,
-			width: 0.95, // Full width minus margins
-			left: 0.025, // Center in column
-			startSlot: entryStart.getHours() * 60 + entryStart.getMinutes(),
-			endSlot: entryEnd.getHours() * 60 + entryEnd.getMinutes(),
-			date: entryStart,
-			// Add these properties to the entry
-			zIndex: isShort ? 15 : 10, // Short entries appear above longer ones
-			className: isShort ? "short" : "", // Add class for short entries
-		});
-	});
-
-	return result;
 };
 
 export default TimeGrid;

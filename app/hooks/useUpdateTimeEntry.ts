@@ -7,37 +7,57 @@ const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<Axi
 	try {
 		console.log(`Updating time entry ${id} with data:`, data);
 
-		// Create a URL with query parameters instead of sending a request body
-		const url = new URL(`/api/timelog/position/${id}`, window.location.origin);
+		// Use the correct API endpoint structure with the ID in the path
+		const url = `/api/timelog/${id}`;
 
-		// Add each property as a query parameter
-		for (const key in data) {
-			if (Object.prototype.hasOwnProperty.call(data, key)) {
-				const value = data[key as keyof typeof data];
+		// Create a clean object for Prisma fields only
+		const prismaData: Record<string, any> = {};
 
-				// Handle date conversion specifically
-				if (key === "date" && value && typeof value === "object") {
-					try {
-						// Check if the object has a toISOString method
-						if ("toISOString" in value && typeof value.toISOString === "function") {
-							url.searchParams.append(key, value.toISOString());
-						} else {
-							// If it's an object but not a Date, convert to string
-							url.searchParams.append(key, JSON.stringify(value));
-						}
-					} catch (e) {
-						// If toISOString fails, convert to string
-						url.searchParams.append(key, String(value));
-					}
-				} else if (value !== undefined && value !== null) {
-					// For non-date fields, convert to string
-					url.searchParams.append(key, String(value));
-				}
+		// Copy only the fields that exist in the Prisma schema
+		// This avoids sending fields like startTime/endTime that don't exist in Prisma
+		if (data.duration !== undefined) prismaData.duration = data.duration;
+		if (data.description !== undefined) prismaData.description = data.description;
+		
+		// Handle date field - ensure it's a Date object for Prisma
+		if (data.date) {
+			prismaData.date = data.date instanceof Date ? data.date : new Date(data.date);
+		}
+		
+		// If the frontend sent startTime/endTime, map them appropriately
+		// They'll be handled differently based on your schema
+		if (data.endTime) {
+			// If endTime exists, use it for the endDate field in Prisma
+			try {
+				prismaData.endDate = new Date(data.endTime);
+			} catch (e) {
+				console.error('Failed to parse endTime', e);
 			}
 		}
 
-		// Use GET request instead of POST
-		const response = await axios.get(url.toString());
+		// If there's relevant data from your TimeEntry related fields,
+		// extract just what Prisma needs
+		const dataAny = data as any; // Cast to any to bypass TypeScript restrictions
+
+		// Map related field IDs if they exist in the data
+		if (dataAny.customer?.id) prismaData.customerId = dataAny.customer.id;
+		if (dataAny.project?.id) prismaData.projectId = dataAny.project.id;
+		if (dataAny.task?.id) prismaData.taskId = dataAny.task.id;
+		if (dataAny.user?.id) prismaData.userId = dataAny.user.id;
+
+		// Map any direct ID fields that might have been sent
+		if (dataAny.customerId) prismaData.customerId = dataAny.customerId;
+		if (dataAny.projectId) prismaData.projectId = dataAny.projectId;
+		if (dataAny.taskId) prismaData.taskId = dataAny.taskId;
+		if (dataAny.userId) prismaData.userId = dataAny.userId;
+
+		// Map boolean fields
+		if (dataAny.isClientInvoiced !== undefined) prismaData.isInvoiced = dataAny.isClientInvoiced;
+		if (dataAny.isBillable !== undefined) prismaData.isBillable = dataAny.isBillable;
+
+		console.log('Sending to Prisma:', prismaData);
+
+		// Send a PATCH request with the properly formatted data for Prisma
+		const response = await axios.patch(url, prismaData);
 
 		if (response.status !== 200) {
 			console.error(`Received non-200 response: ${response.status}`, response.data);

@@ -417,7 +417,7 @@ export interface TimeEntryData {
 	start: string | Date;
 	end: string;
 	id: number;
-	date: string;
+	date: string | Date;
 	startTime: string;
 	endTime: string;
 	customerName: string;

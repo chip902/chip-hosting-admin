@@ -1,0 +1,108 @@
+/* Base time entry styles */
+.time-entry {
+  position: absolute !important;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  transition: all 0.15s ease-out;
+  overflow: hidden;
+  z-index: 1;
+  will-change: transform, width, left, top, height;
+  backface-visibility: hidden;
+  transform: translateZ(0);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border-left: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+/* Overlapping entries */
+.time-entry.overlapping {
+  z-index: 2;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  border-left: 2px solid rgba(255, 255, 255, 0.7);
+}
+
+/* Short entries */
+.time-entry.short {
+  min-height: 40px;
+  z-index: 3;
+}
+
+/* Dragging state */
+.time-entry.dragging {
+  z-index: 100 !important;
+  opacity: 0.9;
+  transform: scale(1.01);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: none;
+}
+
+/* Hover state */
+.time-entry:hover {
+  z-index: 50 !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+}
+
+/* Ensure proper stacking for overlapping short entries */
+.time-entry.overlapping.short {
+  z-index: 4;
+}
+
+/* Entry content container */
+.time-entry > div {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  min-width: 0;
+  padding: 4px 6px;
+  box-sizing: border-box;
+}
+
+/* Text handling */
+.time-entry span,
+.time-entry div {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.2;
+}
+
+/* Resize handle */
+.resize-handle {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 6px;
+  cursor: ns-resize;
+  background-color: transparent;
+  z-index: 2;
+}
+
+.resize-handle:hover,
+.resize-handle:active {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Ensure proper spacing between side-by-side entries */
+.time-entry + .time-entry {
+  margin-left: 2px;
+}
+
+/* Improve text contrast and readability */
+.time-entry {
+  color: white;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.3);
+}
+
+/* Animation for entry updates */
+@keyframes highlight-update {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.02); }
+  100% { transform: scale(1); }
+}
+
+.time-entry.updated {
+  animation: highlight-update 0.3s ease-out;
+}

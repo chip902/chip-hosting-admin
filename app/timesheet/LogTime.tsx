@@ -33,6 +33,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	const [submitting, setSubmitting] = useState(false);
 	const [error, setError] = useState("");
 	const [customers, setCustomers] = useState<Customer[]>([]);
+	const [allProjects, setAllProjects] = useState<Project[]>([]);
 	const [projects, setProjects] = useState<Project[]>([]);
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
@@ -66,7 +67,8 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			try {
 				const response = await axios.get("/api/data");
 				setCustomers(response.data.customers);
-				setProjects(response.data.projects);
+				setAllProjects(response.data.projects);
+				setProjects([]); // Start with no projects until a customer is selected
 				setTasks(response.data.tasks);
 				setUsers(response.data.users);
 			} catch (error) {
@@ -78,6 +80,23 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 
 	const startTime = form.watch("startTime");
 	const endTime = form.watch("endTime");
+	const selectedCustomerId = form.watch("customerId");
+
+	// Update projects when selected customer changes
+	useEffect(() => {
+		if (selectedCustomerId) {
+			const filteredProjects = allProjects.filter((project) => project.customerId === selectedCustomerId);
+			setProjects(filteredProjects);
+			// Clear project selection if it's not in the filtered list
+			const currentProjectId = form.getValues("projectId");
+			if (currentProjectId && !filteredProjects.some((p) => p.id === currentProjectId)) {
+				form.setValue("projectId", undefined as any);
+			}
+		} else {
+			setProjects([]);
+			form.setValue("projectId", undefined as any);
+		}
+	}, [selectedCustomerId, allProjects, form]);
 
 	useEffect(() => {
 		if (startTime && endTime) {
@@ -204,7 +223,10 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Customer</FormLabel>
-											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+											<Select
+												onValueChange={(val) => field.onChange(parseInt(val, 10))}
+												value={field.value?.toString()}
+												disabled={!customers.length}>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Select a Customer" />
@@ -229,7 +251,10 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 									render={({ field }) => (
 										<FormItem>
 											<FormLabel>Project</FormLabel>
-											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+											<Select
+												onValueChange={(val) => field.onChange(parseInt(val, 10))}
+												value={field.value?.toString()}
+												disabled={!selectedCustomerId || !projects.length}>
 												<FormControl>
 													<SelectTrigger>
 														<SelectValue placeholder="Select a Project" />
@@ -241,6 +266,9 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 															{project.name}
 														</SelectItem>
 													))}
+													{projects.length === 0 && selectedCustomerId && (
+														<div className="px-3 py-2 text-sm text-muted-foreground">No projects found for this customer</div>
+													)}
 												</SelectContent>
 											</Select>
 											<FormMessage />

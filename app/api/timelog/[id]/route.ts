@@ -2,87 +2,54 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/prisma/client";
 
-export async function POST(req: Request) {
-	const { searchParams } = new URL(req.url);
-	const paramValue = searchParams.get("param");
-	let id: number | null;
+export async function PATCH(req: Request) {
+	const url = new URL(req.url);
+	const { pathname } = url;
+	let id: number | null = null;
 
-	if (paramValue) {
-		id = parseInt(paramValue, 10);
-		if (isNaN(id)) {
-			throw new Error("Invalid ID provided.");
-		}
+	// Extract ID from path segment
+	const pathSegments = pathname.split("/");
+	const idFromPath = pathSegments[pathSegments.length - 1]; // Get the last segment
+
+	if (idFromPath && !isNaN(Number(idFromPath))) {
+		// If the last segment is a valid number, use it as the ID
+		id = parseInt(idFromPath, 10);
 	} else {
-		// Handle the case where 'param' is not present
-		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+		return NextResponse.json({ error: "Invalid or missing ID" }, { status: 400 });
 	}
-	try {
-		if (isNaN(id)) {
-			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
-		}
 
+	try {
 		// Parse the request body
 		const data = await req.json();
-		console.log("Update via POST received for time entry ID:", id, "with data:", data);
+		console.log("Update request received for time entry ID:", id, "with data:", data);
 
-		// If date is provided, ensure it's properly formatted
+		// Create a clean object for updating
+		let updateData: any = { ...data };
+
+		// Validate and process date field
 		if (data.date) {
 			try {
 				const isoDate = new Date(data.date);
 				if (isNaN(isoDate.getTime())) {
 					return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
 				}
-				data.date = isoDate;
-			} catch (error) {
-				console.error("Error parsing date:", error);
+				updateData.date = isoDate;
+			} catch (e) {
 				return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
 			}
 		}
 
-		// Update the time entry
-		const updatedEntry = await prisma.timeEntry.update({
-			where: { id },
-			data,
-		});
-
-		return NextResponse.json(updatedEntry, { status: 200 });
-	} catch (error) {
-		console.error("Error updating time entry via POST:", error);
-		return NextResponse.json({ error: "Error updating time entry" }, { status: 500 });
-	}
-}
-export async function PATCH(req: Request) {
-	const { searchParams } = new URL(req.url);
-	const paramValue = searchParams.get("param");
-	let id: number | null;
-
-	if (paramValue) {
-		id = parseInt(paramValue, 10);
-		if (isNaN(id)) {
-			throw new Error("Invalid ID provided.");
-		}
-	} else {
-		// Handle the case where 'param' is not present
-		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
-	}
-	try {
-		if (isNaN(id)) {
-			return NextResponse.json({ error: "Invalid ID format" }, { status: 400 });
-		}
-
-		// Parse the request body
-		const data = await req.json();
-		console.log("Update request received for time entry ID:", id, "with data:", data);
-
-		// If date is provided, ensure it's properly formatted
-		let updateData: any = { ...data };
-
-		if (data.date) {
-			const isoDate = new Date(data.date);
-			if (isNaN(isoDate.getTime())) {
-				return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
+		// Validate and process endDate field if present
+		if (data.endDate) {
+			try {
+				const endDate = new Date(data.endDate);
+				if (isNaN(endDate.getTime())) {
+					return NextResponse.json({ error: "Invalid endDate format" }, { status: 400 });
+				}
+				updateData.endDate = endDate;
+			} catch (e) {
+				return NextResponse.json({ error: "Invalid endDate format" }, { status: 400 });
 			}
-			updateData.date = isoDate;
 		}
 
 		// Update the time entry
@@ -100,24 +67,21 @@ export async function PATCH(req: Request) {
 
 // Delete a time entry
 export async function DELETE(req: Request) {
-	const { searchParams } = new URL(req.url);
-	const paramValue = searchParams.get("param");
-	let id: number | null;
+	const { pathname } = new URL(req.url);
+	let id: number | null = null;
 
-	if (paramValue) {
-		id = parseInt(paramValue, 10);
-		if (isNaN(id)) {
-			throw new Error("Invalid ID provided.");
-		}
+	// Extract ID from path segment
+	const pathSegments = pathname.split("/");
+	const idFromPath = pathSegments[pathSegments.length - 1]; // Get the last segment
+
+	if (idFromPath && !isNaN(Number(idFromPath))) {
+		// If the last segment is a valid number, use it as the ID
+		id = parseInt(idFromPath, 10);
 	} else {
-		// Handle the case where 'param' is not present
-		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+		return NextResponse.json({ error: "Invalid or missing ID" }, { status: 400 });
 	}
-	try {
-		if (isNaN(id)) {
-			return NextResponse.json({ error: "Invalid ID" }, { status: 400 });
-		}
 
+	try {
 		// Check if the time entry exists before attempting deletion
 		const existingEntry = await prisma.timeEntry.findUnique({
 			where: { id },
@@ -135,51 +99,43 @@ export async function DELETE(req: Request) {
 		return new NextResponse(null, { status: 204 });
 	} catch (error) {
 		console.error("Error deleting time entry:", error);
-		return NextResponse.json({ error: "Error deleting time entry" }, { status: 500 });
+		return NextResponse.json({ error: error instanceof Error ? error.message : "Error deleting time entry" }, { status: 500 });
 	}
 }
 
-// GET route to fetch a specific time entry or filter time entries
+// GET route to fetch a specific time entry
 export async function GET(req: Request) {
-	const { searchParams } = new URL(req.url);
-	const paramValue = searchParams.get("param");
-	let id: number | null;
+	const { pathname } = new URL(req.url);
+	let id: number | null = null;
 
-	if (paramValue) {
-		id = parseInt(paramValue, 10);
-		if (isNaN(id)) {
-			throw new Error("Invalid ID provided.");
-		}
+	// Extract ID from path segment
+	const pathSegments = pathname.split("/");
+	const idFromPath = pathSegments[pathSegments.length - 1]; // Get the last segment
+
+	if (idFromPath && !isNaN(Number(idFromPath))) {
+		// If the last segment is a valid number, use it as the ID
+		id = parseInt(idFromPath, 10);
 	} else {
-		// Handle the case where 'param' is not present
-		return NextResponse.json({ error: "Missing parameter" }, { status: 400 });
+		return NextResponse.json({ error: "Invalid or missing ID" }, { status: 400 });
 	}
 
 	try {
-		if (!isNaN(id)) {
-			// If valid ID is provided, fetch that specific time entry
-			const timeEntry = await prisma.timeEntry.findUnique({
-				where: { id },
-				include: {
-					customer: true,
-					project: true,
-					task: true,
-					user: true,
-				},
-			});
+		// Fetch the specific time entry
+		const timeEntry = await prisma.timeEntry.findUnique({
+			where: { id },
+			include: {
+				customer: true,
+				project: true,
+				task: true,
+				user: true,
+			},
+		});
 
-			if (!timeEntry) {
-				return NextResponse.json({ error: "Time entry not found" }, { status: 404 });
-			}
-
-			return NextResponse.json(timeEntry, { status: 200 });
-		} else {
-			// Handle filters as an alternative
-			const { searchParams } = new URL(req.url);
-			// Add filtering logic here if needed
-
-			return NextResponse.json({ error: "Invalid ID provided" }, { status: 400 });
+		if (!timeEntry) {
+			return NextResponse.json({ error: "Time entry not found" }, { status: 404 });
 		}
+
+		return NextResponse.json(timeEntry, { status: 200 });
 	} catch (error) {
 		console.error("Error fetching time entry:", error);
 		return NextResponse.json({ error: "Error fetching time entry" }, { status: 500 });

@@ -2,42 +2,12 @@
 
 import { Button } from "@/components/ui/button";
 import { Copy, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { subWeeks, endOfWeek } from "date-fns";
 import axios from "axios";
 import { toast } from "sonner";
 import { TimeEntry, Customer, Project, Task, User } from "@/prisma/app/generated/prisma/client";
-
-// Define a type for the API response that includes the related entities
-type TimeEntryWithRelations = TimeEntry & {
-	customer?: Customer | null;
-	project?: Project | null;
-	task?: Task | null;
-	user?: User | null;
-	startTime?: string | null;
-	endTime?: string | null;
-	customerId: number;
-	projectId: number;
-	taskId: number;
-	userId: number;
-	isInvoiced?: boolean;
-	invoiceStatus?: string | null;
-	isBillable?: boolean;
-	color?: string | null;
-	startSlot?: number | null;
-	endSlot?: number | null;
-	totalHours?: number | null;
-	width?: number | null;
-	left?: number | null;
-};
-
-// Type for creating a new time entry
-type CreateTimeEntryInput = Omit<TimeEntry, "id" | "customer" | "project" | "task" | "user" | "invoiceItem" | "invoice"> & {
-	customerId: number;
-	projectId: number;
-	taskId: number;
-	userId: number;
-};
+import { TimeLogSchema } from "./LogTime";
 
 interface CopyPreviousWeekButtonProps {
 	currentStartDate: Date;
@@ -46,6 +16,27 @@ interface CopyPreviousWeekButtonProps {
 
 export default function CopyPreviousWeekButton({ currentStartDate, onSuccess }: CopyPreviousWeekButtonProps) {
 	const [isLoading, setIsLoading] = useState(false);
+	const [customer, setCustomer] = useState<Customer[]>([]);
+	const [project, setProject] = useState<Project[]>([]);
+	const [task, setTask] = useState<Task[]>([]);
+	const [user, setUser] = useState<User[]>([]);
+
+	// Fetch data on component mount
+	useEffect(() => {
+		const fetchData = async () => {
+			try {
+				const response = await axios.get("/api/data");
+				setCustomer(response.data.customers || []);
+				setProject(response.data.projects || []);
+				setTask(response.data.tasks || []);
+				setUser(response.data.users || []);
+			} catch (error) {
+				console.error("Error fetching data:", error);
+			}
+		};
+
+		fetchData();
+	}, []);
 
 	const copyPreviousWeek = async () => {
 		if (!confirm("This will copy all time entries from last week to this week. Continue?")) {
@@ -58,28 +49,53 @@ export default function CopyPreviousWeekButton({ currentStartDate, onSuccess }: 
 			const previousWeekStart = subWeeks(currentStartDate, 1);
 			const previousWeekEnd = endOfWeek(previousWeekStart, { weekStartsOn: 0 });
 
-			// Get entries from previous week
-			const response = await axios.get("/api/timelog", {
-				params: {
-					startDate: previousWeekStart.toISOString(),
-					endDate: previousWeekEnd.toISOString(),
-				},
-			});
+			let allEntries: any[] = [];
+			let page = 1;
+			const pageSize = 100; // Adjust based on your API's max limit
+			let hasMore = true;
 
-			const entries = response.data.entries || [];
+			// Fetch all pages of entries
+			while (hasMore) {
+				const response = await axios.get("/api/timelog", {
+					params: {
+						startDate: previousWeekStart.toISOString(),
+						endDate: previousWeekEnd.toISOString(),
+						page,
+						pageSize,
+					},
+				});
 
-			// Debug: Log the first entry to see its structure
-			if (entries.length > 0) {
-				console.log("First entry from API:", JSON.stringify(entries[0], null, 2));
+				const { entries = [], totalEntries = 0 } = response.data;
+
+				if (entries.length > 0) {
+					allEntries = [...allEntries, ...entries];
+				}
+
+				// Check if we've fetched all entries
+				if (allEntries.length >= totalEntries || entries.length < pageSize) {
+					hasMore = false;
+				} else {
+					page++;
+				}
+
+				// Prevent infinite loops
+				if (page > 100) {
+					// Safety check
+					console.warn("Reached maximum page limit");
+					break;
+				}
 			}
 
-			if (entries.length === 0) {
+			// Debug: Log the number of entries found
+			console.log(`Found ${allEntries.length} entries from the previous week`);
+
+			if (allEntries.length === 0) {
 				toast.info("No time entries were found for the previous week.");
 				return;
 			}
 
 			// Prepare new entries for current week
-			const newEntries = (entries as any[]).reduce<CreateTimeEntryInput[]>((acc, entry) => {
+			const newEntries = allEntries.reduce<TimeLogSchema[]>((acc, entry) => {
 				try {
 					const originalDate = new Date(entry.date);
 					const dayOfWeek = originalDate.getDay(); // 0 (Sunday) to 6 (Saturday)
@@ -90,55 +106,43 @@ export default function CopyPreviousWeekButton({ currentStartDate, onSuccess }: 
 					const newDate = new Date(currentWeekStart);
 					newDate.setDate(currentWeekStart.getDate() + daysToAdd);
 
-					// Copy the time from the original entry
-					const startTime = new Date(entry.startTime);
-					newDate.setHours(startTime.getHours(), startTime.getMinutes(), 0, 0);
+					// Extract time components from the original entry's startTime
+					const originalStartTime = new Date(entry.startTime);
+					const originalEndTime = new Date(entry.endTime);
 
-					// Helper function to safely extract numeric IDs from various possible locations
-					const extractId = (entry: any, paths: string[]): number | null => {
-						for (const path of paths) {
-							const value = path.split(".").reduce((obj, key) => obj?.[key], entry);
-							if (value !== undefined && value !== null) {
-								const num = Number(value);
-								if (!isNaN(num)) return num;
-							}
-						}
-						return null;
+					// Format the date as YYYY-MM-DD
+					const formattedDate = newDate.toISOString().split("T")[0];
+
+					// Format the time as HH:MM
+					const formatTime = (date: Date) => {
+						return `${String(date.getUTCHours()).padStart(2, "0")}:${String(date.getUTCMinutes()).padStart(2, "0")}`;
 					};
 
-					// Extract IDs from various possible locations in the response
-					const customerId = extractId(entry, ["customerId", "customer.id"]);
-					const projectId = extractId(entry, ["projectId", "project.id"]);
-					const taskId = extractId(entry, ["taskId", "task.id"]);
-					const userId = extractId(entry, ["userId"]) || 1; // Default to user ID 1 if not specified
+					const startTime = formatTime(originalStartTime);
+					const endTime = formatTime(originalEndTime);
+
+					const customerId = entry.customer.id;
+					const projectId = entry.project.id;
+					const taskId = entry.task.id;
+					const userId = entry.userId;
 
 					// Only include entries with all required IDs
-					if (!customerId || !projectId || !taskId) {
+					if (!customerId || !projectId || !taskId || !userId) {
 						console.warn("Skipping entry due to missing required IDs:", { customerId, projectId, taskId, userId });
 						return acc;
 					}
 
 					// Create a new time entry for the current week
-					const newEntry: CreateTimeEntryInput = {
-						date: newDate,
+					const newEntry: TimeLogSchema = {
+						date: formattedDate,
 						description: entry.description || "",
-						duration: entry.duration || 60, // Default to 60 minutes if not specified
-						isBillable: entry.isBillable !== false, // Default to true if not specified
+						duration: entry.duration || 60,
 						customerId: customerId,
 						projectId: projectId,
 						taskId: taskId,
 						userId: userId,
-						endDate: null,
-						invoiceItemId: null,
-						invoiceId: null,
-						isInvoiced: false,
-						invoiceStatus: "draft",
-						color: entry.color || "#000000",
-						startSlot: 0,
-						endSlot: 1,
-						totalHours: 1,
-						width: 100,
-						left: 0,
+						startTime: startTime,
+						endTime: endTime,
 					};
 					acc.push(newEntry);
 				} catch (error) {
