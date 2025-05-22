@@ -7,7 +7,7 @@ import TimeToolBar from "./TimeToolBar";
 import TimeGrid from "./TimeGrid";
 import LogTime from "./LogTime";
 import React from "react";
-import { Dialog, DialogContent, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -84,9 +84,22 @@ const Page: React.FC = () => {
 							</DialogTrigger>
 						</TimeToolBar>
 						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />
-						<DialogContent className="min-w-[600px]">
-							<DialogTitle>Log Time</DialogTitle>
-							<LogTime onClose={() => setLogTimeOpen(false)} initialValues={selectedTimeSlot || undefined} />
+						<DialogContent 
+							className="min-w-[600px]"
+							onInteractOutside={(e) => {
+								// Prevent dialog from closing when clicking on time entries
+								if ((e.target as HTMLElement).closest('.time-entry')) {
+									e.preventDefault();
+								}
+							}}
+						>
+							<DialogHeader>
+								<DialogTitle>Log Time</DialogTitle>
+							</DialogHeader>
+							<LogTime 
+								onClose={() => setLogTimeOpen(false)} 
+								initialValues={selectedTimeSlot || undefined} 
+							/>
 						</DialogContent>
 					</>
 				)}

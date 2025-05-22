@@ -104,6 +104,7 @@ const transformToTimeEntry = (entry: any): ProcessedTimeEntry => {
 const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): ProcessedTimeEntry[] => {
 	// Filter entries for this specific day
 	const dailyEntries = entries.filter((entry) => {
+		if (!entry.date) return false;
 		const entryDate = new Date(entry.date);
 		const entryDay = startOfDay(entryDate);
 		const currentDay = startOfDay(day);
@@ -112,19 +113,21 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 
 	if (dailyEntries.length === 0) return [];
 
-	// Convert entries to minutes since midnight
-	const entriesWithSlots = dailyEntries.map((entry, index) => {
-		const entryStart = parseISOWithOffset(entry.startTime);
+	// Process each entry to calculate time slots and initial metadata
+	const processedEntries = dailyEntries.map((entry, index) => {
+		const entryStart = entry.startTime ? parseISOWithOffset(entry.startTime) : new Date();
 		const entryEnd = entry.endTime ? parseISOWithOffset(entry.endTime) : new Date(entryStart.getTime() + (entry.duration || 60) * 60 * 1000);
 
 		const startMinutes = entryStart.getHours() * 60 + entryStart.getMinutes();
 		const endMinutes = Math.min(entryEnd.getHours() * 60 + entryEnd.getMinutes(), 24 * 60);
-		const durationMinutes = endMinutes - startMinutes;
+		const durationMinutes = Math.max(0, Math.min(endMinutes - startMinutes, 24 * 60 - startMinutes));
 
 		return {
 			...entry,
 			startMinutes,
 			endMinutes,
+			startSlot: startMinutes,
+			endSlot: endMinutes,
 			durationMinutes,
 			originalStart: entryStart,
 			left: 0,
@@ -132,188 +135,80 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 			overlapping: false,
 			zIndex: 10,
 			column: 0,
+			columns: 1,
 			originalIndex: index,
 		};
 	});
 
-	// Sort entries by start time, then by end time
-	entriesWithSlots.sort((a, b) => {
+	// Sort entries by start time, then by duration (shorter first)
+	processedEntries.sort((a, b) => {
 		const startDiff = a.startMinutes - b.startMinutes;
 		if (startDiff !== 0) return startDiff;
-		return a.endMinutes - b.endMinutes;
+		return a.endMinutes - a.startMinutes - (b.endMinutes - b.startMinutes);
 	});
 
-	// First pass: detect overlaps
-	for (let i = 0; i < entriesWithSlots.length; i++) {
-		const entryA = entriesWithSlots[i];
-		const overlappingEntries = [];
+	// Initialize columns for overlapping detection
+	const columns: Array<{ end: number }> = [];
 
-		for (let j = 0; j < entriesWithSlots.length; j++) {
-			if (i === j) continue;
+	// Assign columns to each entry to handle overlapping
+	for (const entry of processedEntries) {
+		let columnIndex = 0;
 
-			const entryB = entriesWithSlots[j];
-			const identicalTimes = entryA.startMinutes === entryB.startMinutes && entryA.endMinutes === entryB.endMinutes;
-			const timeOverlap = entryA.startMinutes < entryB.endMinutes && entryA.endMinutes > entryB.startMinutes;
-
-			if (identicalTimes || timeOverlap) {
-				entryA.overlapping = true;
-				entryB.overlapping = true;
-				overlappingEntries.push(entryB);
-			}
-		}
-
-		// Assign columns for overlapping entries
-		if (entryA.overlapping) {
-			const occupiedColumns = new Set<number>();
-			for (const overlapEntry of overlappingEntries) {
-				if (overlapEntry.column !== undefined) {
-					occupiedColumns.add(overlapEntry.column);
-				}
-			}
-
-			let column = 0;
-			while (occupiedColumns.has(column)) {
-				column++;
-			}
-			entryA.column = column;
-		}
-	}
-
-	// Group overlapping entries
-	const overlapGroups: any[] = [];
-	for (const entry of entriesWithSlots) {
-		if (!entry.overlapping) continue;
-
-		let found = false;
-		for (const group of overlapGroups) {
-			if (entry.startMinutes < group.endTime && entry.endMinutes > group.startTime) {
-				group.entries.push(entry);
-				group.startTime = Math.min(group.startTime, entry.startMinutes);
-				group.endTime = Math.max(group.endTime, entry.endMinutes);
-				found = true;
+		// Find the first column that's available (where the entry doesn't overlap with existing entries in that column)
+		while (columnIndex < columns.length) {
+			if (columns[columnIndex].end <= entry.startMinutes) {
+				// This column is available
 				break;
 			}
+			columnIndex++;
 		}
 
-		if (!found) {
-			overlapGroups.push({
-				startTime: entry.startMinutes,
-				endTime: entry.endMinutes,
-				entries: [entry],
-			});
+		// If no available column was found, add a new one
+		if (columnIndex === columns.length) {
+			columns.push({ end: 0 });
 		}
+
+		// Update the column's end time
+		columns[columnIndex].end = entry.endMinutes;
+
+		// Update entry properties
+		entry.column = columnIndex;
+		entry.columns = columns.length;
+		entry.overlapping = columns.length > 1;
 	}
 
-	// Merge overlapping groups
-	const mergedGroups = [...overlapGroups];
-	let didMerge = true;
+	// Sort back to original order
+	const result = [...processedEntries].sort((a, b) => a.originalIndex - b.originalIndex);
 
-	while (didMerge) {
-		didMerge = false;
-		for (let i = 0; i < mergedGroups.length; i++) {
-			for (let j = i + 1; j < mergedGroups.length; j++) {
-				const groupA = mergedGroups[i];
-				const groupB = mergedGroups[j];
+	// Calculate final positions and dimensions
+	for (const entry of result) {
+		if (entry.overlapping && entry.columns && entry.columns > 1) {
+			// Adjust width and position for overlapping entries
+			entry.width = 1 / entry.columns;
+			entry.left = (entry.column || 0) * entry.width;
 
-				if (groupA.startTime < groupB.endTime && groupA.endTime > groupB.startTime) {
-					groupA.startTime = Math.min(groupA.startTime, groupB.startTime);
-					groupA.endTime = Math.max(groupA.endTime, groupB.endTime);
+			// Add a small gap between entries
+			const gap = 0.01; // 1% gap between entries
+			entry.width -= gap * (1 - 1 / entry.columns);
 
-					for (const entry of groupB.entries) {
-						if (!groupA.entries.includes(entry)) {
-							groupA.entries.push(entry);
-						}
-					}
-
-					mergedGroups.splice(j, 1);
-					didMerge = true;
-					break;
-				}
+			// Ensure the last entry in the row doesn't overflow
+			if (entry.column === entry.columns - 1) {
+				entry.width = 1 - entry.left;
 			}
-			if (didMerge) break;
-		}
-	}
-
-	// Calculate column counts for each group
-	for (const group of mergedGroups) {
-		let maxColumn = 0;
-		for (const entry of group.entries) {
-			maxColumn = Math.max(maxColumn, entry.column || 0);
-		}
-		const columnCount = maxColumn + 1;
-		group.columnCount = columnCount;
-
-		for (const entry of group.entries) {
-			(entry as any).columnCount = columnCount;
-		}
-	}
-
-	// Create a map to assign explicit offsets to entries with identical times
-	const timeSlotMap = new Map();
-	for (const entry of entriesWithSlots) {
-		const timeKey = `${entry.startMinutes}-${entry.endMinutes}`;
-		if (!timeSlotMap.has(timeKey)) {
-			timeSlotMap.set(timeKey, {
-				count: 1,
-			});
 		} else {
-			timeSlotMap.get(timeKey).count++;
+			// Full width for non-overlapping entries
+			entry.width = 1;
+			entry.left = 0;
+			entry.column = 0;
+			entry.columns = 1;
 		}
+
+		// Ensure values are within bounds
+		entry.width = Math.max(0.1, Math.min(1, entry.width));
+		entry.left = Math.max(0, Math.min(1 - entry.width, entry.left));
 	}
 
-	// Convert to the expected output format
-	return entriesWithSlots.map((entry) => {
-		const durationMinutes = entry.duration || entry.durationMinutes || 60;
-		const isShort = durationMinutes < 240;
-		const timeKey = `${entry.startMinutes}-${entry.endMinutes}`;
-		const sameTimeSlot = timeSlotMap.get(timeKey);
-
-		let width = 1;
-		let left = 0;
-		let zIndex = 10;
-
-		if (entry.overlapping) {
-			const columnCount = (entry as any).columnCount || 1;
-			const column = entry.column || 0;
-
-			if (sameTimeSlot && sameTimeSlot.count > 1) {
-				// Multiple entries with identical times - position them side by side
-				const gap = 0.02;
-				const availableWidth = 1 - gap * (sameTimeSlot.count - 1);
-				width = availableWidth / sameTimeSlot.count;
-				left = column * (width + gap);
-			} else if (columnCount > 1) {
-				// Overlapping entries with different times
-				const gap = 0.02;
-				const availableWidth = 1 - gap * (columnCount - 1);
-				width = availableWidth / columnCount;
-				left = column * (width + gap);
-			}
-
-			// Shorter durations get higher z-index
-			const durationFactor = Math.max(0, 10 - Math.floor(durationMinutes / 60));
-			zIndex += durationFactor;
-		}
-
-		// Ensure minimum width for visibility
-		const finalWidth = Math.max(width, 0.1);
-		const finalLeft = Math.min(left, 1 - finalWidth);
-
-		if (isShort) {
-			zIndex = 20;
-		}
-
-		return {
-			...entry,
-			width: finalWidth,
-			left: finalLeft,
-			startSlot: entry.startMinutes,
-			endSlot: entry.endMinutes,
-			date: entry.originalStart,
-			zIndex,
-			className: `${isShort ? "short " : ""}${entry.overlapping ? "overlapping" : ""}`,
-		};
-	});
+	return result;
 };
 
 const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) => {
@@ -347,9 +242,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 	}, [isLoading]);
 
 	const handleTimeSlotSelect = (timeSlot: any) => {
-		if (timeSlot && Object.keys(timeSlot).length > 0) {
-			onTimeSlotSelect(timeSlot);
-		}
+		onTimeSlotSelect?.(timeSlot);
 	};
 
 	const handleGridMouseDown = (dayIndex: number, event: React.MouseEvent<HTMLDivElement>) => {

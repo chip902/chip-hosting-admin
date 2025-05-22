@@ -4,7 +4,6 @@ import useDeleteTimeEntry from "../hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "../hooks/useUpdateTimeEntry";
 import { TimeEntryProps } from "@/types";
 import { addMinutes, format, startOfDay } from "date-fns";
-import axios from "axios";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Spinner } from "@/components/ui/spinner";
 import { Typography } from "@/components/ui/typography";
@@ -14,17 +13,13 @@ import { toast } from "sonner";
 // Helper function to safely parse time from ISO string
 const parseISOForDisplay = (dateStr: string): string => {
 	if (!dateStr) return "";
-
 	try {
-		// Extract time directly from the ISO string
 		const matches = dateStr.match(/T(\d{2}):(\d{2})/);
 		if (!matches) return new Date(dateStr).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 		const hour = parseInt(matches[1], 10);
 		const minute = matches[2];
-
-		// Format for AM/PM display
-		const hourDisplay = hour % 12 || 12; // Convert 0 to 12 for 12-hour format
+		const hourDisplay = hour % 12 || 12;
 		const ampm = hour >= 12 ? "PM" : "AM";
 
 		return `${hourDisplay}:${minute} ${ampm}`;
@@ -34,187 +29,167 @@ const parseISOForDisplay = (dateStr: string): string => {
 	}
 };
 
-/**
- * Direct position update function that bypasses the problematic PATCH method
- * by using a dedicated position-update endpoint
- */
-const updateEntryPosition = async (
-	id: number,
-	data: {
-		date?: string | Date;
-		startTime?: string;
-		endTime?: string;
-		duration?: number;
-	}
-) => {
-	try {
-		const updateData: any = {};
-
-		if (data.date) updateData.date = data.date;
-		if (data.duration) updateData.duration = data.duration;
-
-		if (data.startTime && !data.date) {
-			updateData.date = data.startTime;
-		}
-
-		if (data.endTime) {
-			updateData.endDate = data.endTime;
-		}
-
-		const params = new URLSearchParams();
-
-		if (updateData.date) params.append("date", updateData.date);
-		if (updateData.endDate) params.append("endDate", updateData.endDate);
-		if (updateData.duration) params.append("duration", updateData.duration.toString());
-
-		const response = await axios.get(`/api/timelog/position/${id}?${params.toString()}`);
-		return response.data;
-	} catch (error) {
-		console.error("Failed to update position:", error);
-		throw error;
-	}
-};
-
-const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left = 0, width = 1, onTimeSlotSelect, isDialogOpen }: TimeEntryProps) => {
+const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left = 0, width = 1, onTimeSlotSelect, isDialogOpen = false }: TimeEntryProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const entryRef = useRef<HTMLDivElement>(null);
-	const [mouseDownTime, setMouseDownTime] = useState<number>(0);
-	const moveCount = useRef(0);
-
-	// Track if the entry was actually moved during drag
 	const wasMoved = useRef(false);
+	const mouseDownTime = useRef(0);
+	const moveCount = useRef(0);
+	const dragStartY = useRef(0);
+	const dragStartTop = useRef(0);
 
 	// Set initial form state
 	const [formState, setFormState] = useState({
-		duration: entry.duration?.toString() || "",
+		duration: entry.duration?.toString() || "60",
 		description: entry.description || "",
 		entryDate: new Date(entry.date).toISOString().split("T")[0],
 		startTime: entry.startTime?.match(/T(\d{2}:\d{2})/) ? entry.startTime.match(/T(\d{2}:\d{2})/)![1] : "09:00",
 	});
 
-	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
+	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 
 	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
 	const calculatePosition = () => {
-		const top = (startSlot / 1440) * 100; // Convert to percentage
-		const height = ((endSlot - startSlot) / 1440) * 100; // Height as percentage
-
-		return {
-			top: `${top}%`,
-			height: `${Math.max(height, 2)}%`, // Ensure at least 2% height for visibility
-		};
+		const top = (startSlot / 1440) * 100;
+		const height = ((endSlot - startSlot) / 1440) * 100;
+		return { top: `${top}%`, height: `${Math.max(height, 2)}%` };
 	};
 
 	const { top, height } = calculatePosition();
-
-	// Format start time for display
 	const startTimeFormatted = parseISOForDisplay(entry.startTime);
+	const duration = entry.duration || 60;
+	const hours = Math.floor(duration / 60);
+	const mins = duration % 60;
+	const durationFormatted = `${hours}:${mins.toString().padStart(2, "0")}`;
 
-	const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+	// Extract data from the entry
+	const projectName = entry.project?.name || "";
+	const taskName = entry.task?.name || "";
+	const customerName = entry.customer?.name || "";
+
+	// Handle mouse down on the time entry
+	const handleMouseDown = (e: React.MouseEvent) => {
 		if (isDialogOpen) return;
 		e.stopPropagation();
 		e.preventDefault();
 
-		// Don't handle if clicking resize handle or buttons
-		if ((e.target as HTMLElement).classList.contains("resize-handle") || (e.target as HTMLElement).tagName === "BUTTON") {
+		// Only start dragging on left mouse button
+		if (e.button !== 0) return;
+
+		// Don't start dragging if clicking on a button, input, or the resize handle
+		const target = e.target as HTMLElement;
+		if (target.closest("button") || target.closest("input") || target.closest("textarea") || target.closest(".resize-handle")) {
 			return;
 		}
 
-		setMouseDownTime(Date.now());
-		moveCount.current = 0;
-
-		// Setup drag handling
-		document.addEventListener("mousemove", handleMouseMove);
-		document.addEventListener("mouseup", handleMouseUp);
+		setIsDragging(true);
+		dragStartY.current = e.clientY;
+		dragStartTop.current = parseInt(entryRef.current?.style.top || "0", 10);
+		document.body.style.userSelect = "none";
 	};
 
-	const handleMouseMove = (e: MouseEvent) => {
-		moveCount.current += 1;
+	// Handle mouse move for dragging
+	const handleMouseMove = async (e: MouseEvent) => {
+		if (!isDragging || !entryRef.current) return;
 
-		if (moveCount.current > 3 && !isDragging) {
-			setIsDragging(true);
-			wasMoved.current = true;
-		}
+		e.preventDefault();
 
-		if (isDragging && entryRef.current) {
+		try {
 			const gridElement = entryRef.current.closest(".col-span-1");
 			if (!gridElement) return;
 
 			const gridRect = gridElement.getBoundingClientRect();
-			const entryRect = entryRef.current.getBoundingClientRect();
+			const deltaY = e.clientY - dragStartY.current;
+			const newTop = dragStartTop.current + deltaY;
 
-			// Calculate new position
-			let newY = e.clientY - gridRect.top - entryRect.height / 2;
-			newY = Math.max(0, Math.min(newY, gridRect.height - entryRect.height));
+			// Calculate new position in minutes
+			const totalMinutes = 24 * 60;
+			const newMinutes = Math.round(((newTop / gridRect.height) * totalMinutes) / 15) * 15;
 
-			entryRef.current.style.position = "absolute";
-			entryRef.current.style.top = `${newY}px`;
-			entryRef.current.style.zIndex = "100";
-		}
-	};
+			// Constrain to grid bounds
+			const constrainedMinutes = Math.max(0, Math.min(totalMinutes - entry.duration, newMinutes));
 
-	const handleMouseUp = async (e: MouseEvent) => {
-		const mouseUpTime = Date.now();
-		const isClick = mouseUpTime - mouseDownTime < 200 && moveCount.current < 3;
+			// Update position
+			if (entryRef.current) {
+				entryRef.current.style.position = "relative";
+				entryRef.current.style.top = `${(constrainedMinutes / totalMinutes) * 100}%`;
+				entryRef.current.style.zIndex = "100";
+			}
 
-		document.removeEventListener("mousemove", handleMouseMove);
-		document.removeEventListener("mouseup", handleMouseUp);
-
-		if (isClick) {
-			setIsOpen(true);
+			wasMoved.current = true;
+		} catch (error) {
+			console.error("Error during drag move:", error);
+			// Clean up and reset on error
+			setIsDragging(false);
 			if (entryRef.current) {
 				entryRef.current.style.position = "";
 				entryRef.current.style.top = "";
 				entryRef.current.style.zIndex = "";
 			}
-			setIsDragging(false);
-			return;
 		}
+	};
 
-		if (isDragging && entryRef.current) {
+	// Handle mouse up to end dragging
+	const handleMouseUp = async (e: MouseEvent) => {
+		if (!isDragging) return;
+
+		e.preventDefault();
+
+		// Reset dragging state immediately
+		setIsDragging(false);
+		wasMoved.current = false;
+		document.body.style.userSelect = "";
+
+		// Only process if the entry was actually moved
+		if (entryRef.current) {
 			const gridElement = entryRef.current.closest(".col-span-1");
 			if (!gridElement) return;
 
-			const gridRect = gridElement.getBoundingClientRect();
-			const entryRect = entryRef.current.getBoundingClientRect();
-			const relativeY = entryRect.top - gridRect.top;
-			const totalMinutes = 24 * 60;
-			const minutesFromTop = Math.round(((relativeY / gridRect.height) * totalMinutes) / 15) * 15;
-			const constrainedMinutes = Math.max(0, Math.min(minutesFromTop, 1440));
-
 			try {
-				// Keep visual position during update
-				await updateEntryPosition(entry.id, {
-					date: entry.date,
-					startTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes), "yyyy-MM-dd'T'HH:mm:ss"),
-					endTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes + entry.duration), "yyyy-MM-dd'T'HH:mm:ss"),
-					duration: entry.duration,
-				});
+				const gridRect = gridElement.getBoundingClientRect();
+				const entryRect = entryRef.current.getBoundingClientRect();
 
-				// Only reset after successful update
-				if (onTimeSlotSelect) {
-					onTimeSlotSelect({});
+				// Calculate new position in minutes
+				const totalMinutes = 24 * 60;
+				const relativeTop = entryRect.top - gridRect.top;
+				const minutes = Math.round(((relativeTop / gridRect.height) * totalMinutes) / 15) * 15;
+
+				// Ensure we don't go out of bounds
+				const constrainedMinutes = Math.max(0, Math.min(totalMinutes - entry.duration, minutes));
+
+				// Only update if position actually changed
+				const originalMinutes = (parseInt(entryRef.current.style.top || "0", 10) / 100) * totalMinutes;
+				if (Math.abs(constrainedMinutes - originalMinutes) >= 1) {
+					// Update the entry
+					await updateTimeEntry({
+						id: entry.id,
+						data: {
+							startTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes), "yyyy-MM-dd'T'HH:mm:ss"),
+							endTime: format(addMinutes(startOfDay(new Date(entry.date)), constrainedMinutes + entry.duration), "yyyy-MM-dd'T'HH:mm:ss"),
+							duration: entry.duration,
+						},
+					});
+
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
 				}
 			} catch (error) {
 				console.error("Failed to update position:", error);
 				if (onTimeSlotSelect) {
 					onTimeSlotSelect({});
 				}
-			}
-
-			// Reset drag state
-			setIsDragging(false);
-			wasMoved.current = false;
-
-			// Reset styles
-			if (entryRef.current) {
-				entryRef.current.style.position = "";
-				entryRef.current.style.top = "";
-				entryRef.current.style.zIndex = "";
+			} finally {
+				// Always reset the styles
+				if (entryRef.current) {
+					entryRef.current.style.position = "";
+					entryRef.current.style.top = "";
+					entryRef.current.style.zIndex = "";
+				}
 			}
 		}
 	};
@@ -317,141 +292,117 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left = 0, width 
 
 	const handleResizeMove = (e: MouseEvent) => {
 		if (!isResizing || !entryRef.current) return;
-
 		const gridElement = entryRef.current.closest(".col-span-1");
 		if (!gridElement) return;
 
 		const gridRect = gridElement.getBoundingClientRect();
 		const entryRect = entryRef.current.getBoundingClientRect();
 		const startY = entryRect.top - gridRect.top;
-		const newHeight = Math.max(40, e.clientY - gridRect.top - startY); // Minimum 40px height
-
-		// Calculate new duration based on height
+		const newHeight = Math.max(40, e.clientY - gridRect.top - startY);
 		const totalMinutes = 24 * 60;
 		const minutesHeight = (newHeight / gridRect.height) * totalMinutes;
-		const roundedMinutes = Math.round(minutesHeight / 15) * 15; // Round to nearest 15 minutes
+		const roundedMinutes = Math.round(minutesHeight / 15) * 15;
 
-		// Update visual height
 		entryRef.current.style.height = `${(roundedMinutes / totalMinutes) * 100}%`;
 		entryRef.current.style.zIndex = "100";
 	};
 
 	const handleResizeEnd = async (e: MouseEvent) => {
 		if (!isResizing || !entryRef.current) return;
-
 		document.removeEventListener("mousemove", handleResizeMove);
 		document.removeEventListener("mouseup", handleResizeEnd);
-
-		const gridElement = entryRef.current.closest(".col-span-1");
-		if (!gridElement) return;
-
-		const gridRect = gridElement.getBoundingClientRect();
-		const entryRect = entryRef.current.getBoundingClientRect();
-		const startY = entryRect.top - gridRect.top;
-		const totalMinutes = 24 * 60;
-		const startMinutes = Math.round(((startY / gridRect.height) * totalMinutes) / 15) * 15;
-		const heightMinutes = Math.round(((entryRect.height / gridRect.height) * totalMinutes) / 15) * 15;
-
-		try {
-			await updateEntryPosition(entry.id, {
-				date: entry.date,
-				startTime: format(addMinutes(startOfDay(new Date(entry.date)), startMinutes), "yyyy-MM-dd'T'HH:mm:ss"),
-				endTime: format(addMinutes(startOfDay(new Date(entry.date)), startMinutes + heightMinutes), "yyyy-MM-dd'T'HH:mm:ss"),
-				duration: heightMinutes,
-			});
-
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
-			}
-		} catch (error) {
-			console.error("Failed to update resize:", error);
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
-			}
-		}
-
 		setIsResizing(false);
-
-		// Reset styles
 		entryRef.current.style.height = "";
 		entryRef.current.style.zIndex = "";
 	};
 
-	// Format duration
-	const hours = Math.floor(entry.duration / 60);
-	const mins = entry.duration % 60;
-	const durationFormatted = `${hours}:${mins.toString().padStart(2, "0")}`;
-
-	// Extract data from the entry
-	const projectName = entry.project?.name || "";
-	const taskName = entry.task?.name || "";
-	const customerName = entry.customer?.name || "";
-
-	// Cleanup event listeners on unmount
+	// Add and cleanup event listeners
 	useEffect(() => {
+		// Only add event listeners if we're not in a dialog
+		if (isDialogOpen) return;
+
+		// Wrap the handlers to ensure they have the correct type
+		const wrappedHandleMouseMove = (e: MouseEvent) => handleMouseMove(e);
+		const wrappedHandleMouseUp = (e: MouseEvent) => handleMouseUp(e);
+		const wrappedHandleResizeMove = (e: MouseEvent) => handleResizeMove(e);
+		const wrappedHandleResizeEnd = (e: MouseEvent) => handleResizeEnd(e);
+
+		// Add event listeners
+		document.addEventListener("mousemove", wrappedHandleMouseMove);
+		document.addEventListener("mouseup", wrappedHandleMouseUp);
+		document.addEventListener("mousemove", wrappedHandleResizeMove);
+		document.addEventListener("mouseup", wrappedHandleResizeEnd);
+
 		return () => {
-			document.removeEventListener("mousemove", handleResizeMove);
-			document.removeEventListener("mouseup", handleResizeEnd);
+			// Remove all event listeners on cleanup
+			document.removeEventListener("mousemove", wrappedHandleMouseMove);
+			document.removeEventListener("mouseup", wrappedHandleMouseUp);
+			document.removeEventListener("mousemove", wrappedHandleResizeMove);
+			document.removeEventListener("mouseup", wrappedHandleResizeEnd);
 		};
-	}, []);
+	}, [isDialogOpen, handleResizeMove, handleResizeEnd, handleMouseMove, handleMouseUp]);
 
 	return (
-		<Popover
-			open={isOpen}
-			onOpenChange={(open) => {
-				// Don't open popover during drag or resize
-				if (!isDragging && !isResizing) {
-					setIsOpen(open);
-				}
-			}}>
+		<Popover open={isOpen} onOpenChange={setIsOpen}>
 			<PopoverTrigger asChild>
 				<div
 					ref={entryRef}
 					className={`
-						time-entry
-						absolute
-						bg-opacity-100
-						text-white
-						p-1
-						rounded-lg
-						shadow-md
-						overflow-hidden
-						transition-all duration-150
-						${entry.className || ""}
-						${isDragging || isResizing ? "dragging" : ""}
-					`}
+            time-entry
+            absolute
+            text-white
+            p-1.5
+            rounded-md
+            shadow-sm
+            overflow-hidden
+            transition-all duration-100
+            hover:shadow-md
+            border-l-2 border-white/20
+            ${isDragging || isResizing ? "dragging" : ""}
+          `}
 					style={{
-						position: "absolute" /* Absolute positioning */,
 						top,
 						height,
-						left: `${left * 100}%` /* Left position based on calculated value */,
-						width: `${width * 100}%` /* Width based on calculated value */,
-						backgroundColor: color || "#4893FF",
+						left: `${left * 98}%`,
+						width: `${width * 96}%`,
+						marginLeft: `${left * 1}%`,
+						backgroundColor: color,
 						zIndex: isDragging || isResizing ? 100 : entry.zIndex || 10,
 						transform: "translateZ(0)",
 						boxSizing: "border-box",
 						pointerEvents: "auto",
-						minWidth: "30px" /* Ensure entries have a minimum width for visibility */,
+						minWidth: "30px",
 						display: "flex",
 						flexDirection: "column",
+						borderRadius: "0.375rem",
+						transformOrigin: "center",
+						transition: "all 0.1s ease-out",
+						willChange: "transform, width, left, top, height",
+						backfaceVisibility: "hidden",
+						boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
 					}}
 					onMouseDown={handleMouseDown}>
 					<div className="flex flex-col h-full justify-between text-left max-w-full">
 						<div className="w-full overflow-hidden">
-							<Typography className="text-xs font-bold text-white truncate block">{startTimeFormatted}</Typography>
-							{customerName && <Typography className="text-sm text-white truncate block">{customerName}</Typography>}
-							{projectName && <Typography className="text-sm text-white truncate block">{projectName}</Typography>}
-							{taskName && <Typography className="text-sm text-white truncate block">{taskName}</Typography>}
+							<Typography className="text-xs font-bold text-white/90 truncate block">{startTimeFormatted}</Typography>
+							{customerName && <Typography className="text-xs text-white/90 truncate block">{customerName}</Typography>}
+							{projectName && <Typography className="text-xs text-white/90 truncate block">{projectName}</Typography>}
+							{taskName && <Typography className="text-xs text-white/90 truncate block">{taskName}</Typography>}
 						</div>
-						{entry.duration >= 60 && (
-							<Typography className="text-sm font-semibold text-white truncate block mt-auto">{durationFormatted} Hours</Typography>
+						{duration >= 60 && (
+							<Typography className="text-xs font-semibold text-white/90 truncate block mt-auto">{durationFormatted} Hours</Typography>
 						)}
 					</div>
 					<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />
 				</div>
 			</PopoverTrigger>
-			<PopoverContent className="p-6 bg-gray-900 rounded-lg shadow-lg z-50 w-80">
-				<form className="flex flex-col space-y-4" onSubmit={(e) => e.preventDefault()}>
+			<PopoverContent className="p-6 bg-gray-900 rounded-lg shadow-lg z-[100] w-80">
+				<form
+					className="flex flex-col space-y-4"
+					onSubmit={(e) => {
+						e.preventDefault();
+						handleUpdate();
+					}}>
 					<div className="flex justify-between items-center mb-2">
 						<h3 className="text-md font-bold text-gray-100">{customerName || "Unknown Client"}</h3>
 						<span className="text-sm text-gray-300">{durationFormatted}</span>
@@ -506,20 +457,18 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color, left = 0, width 
 						/>
 					</label>
 
-					<div className="flex space-x-2">
+					<div className="flex justify-end space-x-2 pt-2">
 						<button
 							type="button"
-							onClick={handleUpdate}
-							disabled={isLoading}
-							className="flex-1 px-4 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50">
-							{isLoading ? <Spinner /> : "Update"}
+							onClick={() => setIsOpen(false)}
+							className="px-4 py-2 text-sm font-medium text-gray-300 bg-gray-700 rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+							Cancel
 						</button>
 						<button
-							type="button"
-							onClick={handleDelete}
-							disabled={isLoading}
-							className="px-4 py-2 text-white bg-red-600 hover:bg-red-700 rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50">
-							Delete
+							type="submit"
+							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+							disabled={isLoading}>
+							{isLoading ? <Spinner /> : "Save Changes"}
 						</button>
 					</div>
 				</form>
