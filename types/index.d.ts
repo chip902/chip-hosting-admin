@@ -458,6 +458,10 @@ export interface TimeEntryProps {
 	width: number;
 	isDialogOpen?: boolean;
 	onTimeSlotSelect: (slot: { date?: Date; startTime?: string; endTime?: string; duration?: number }) => void;
+	isMainEntry?: boolean;
+	isStackedEntry?: boolean;
+	stackIndex?: number;
+	totalStacked?: number;
 }
 
 export interface RawTimeEntry {
@@ -503,6 +507,12 @@ export interface ProcessedTimeEntry {
 	name: string;
 	zIndex?: number;
 	className?: string;
+	isMainEntry?: boolean;
+	isStackedEntry?: boolean;
+	stackIndex?: number;
+	column?: number;
+	columns?: number;
+	overlapping?: boolean;
 }
 
 export interface GridItem {

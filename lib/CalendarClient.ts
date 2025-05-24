@@ -307,7 +307,20 @@ export class CalendarClient {
 		} catch (error: any) {
 			console.error("Error getting sync configuration:", error.response?.data || error.message);
 			// Return a default configuration when there's an error
-			return { sources: [], destination: null, agents: [], globalSettings: {} };
+			return {
+				sources: [],
+				destination: {
+					id: "",
+					name: "",
+					providerType: "",
+					connectionInfo: { provider: "", calendarId: "" },
+					calendarId: "",
+					conflictResolution: "manual",
+					categories: {},
+				},
+				agents: [],
+				globalSettings: {},
+			};
 		}
 	}
 

@@ -212,7 +212,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	return (
 		<Dialog open onOpenChange={onClose}>
 			<DialogOverlay className="bg-black/80" />
-			<DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-950 border">
+			<DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-950 border z-[100]">
 				<div className="flex gap-3">
 					<Form {...form}>
 						<form className="flex flex-col space-y-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>

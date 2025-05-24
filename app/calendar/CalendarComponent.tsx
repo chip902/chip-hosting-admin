@@ -23,6 +23,21 @@ const CalendarToolbar = ({
   onNavigate,
   currentView,
 }: CalendarToolbarProps) => {
+  // Map FullCalendar view names to our tab values
+  const viewToTabMap: Record<string, string> = {
+    'dayGridMonth': 'dayGridMonth',
+    'timeGridWeek': 'timeGridWeek',
+    'timeGridDay': 'timeGridDay'
+  };
+
+  // Convert FullCalendar view name to tab value
+  const getTabValue = (view: string) => {
+    return viewToTabMap[view] || 'dayGridMonth';
+  };
+
+  const handleTabChange = (value: string) => {
+    onViewChange(value);
+  };
   return (
     <div className="flex flex-col sm:flex-row items-center justify-between mb-4 gap-4">
       <div className="flex items-center gap-2">
@@ -56,8 +71,8 @@ const CalendarToolbar = ({
       </div>
       
       <Tabs
-        value={currentView}
-        onValueChange={onViewChange}
+        value={getTabValue(currentView)}
+        onValueChange={handleTabChange}
         className="w-full sm:w-auto"
       >
         <TabsList className="grid w-full grid-cols-3">
@@ -97,6 +112,15 @@ export default function CalendarComponent({
   const [currentView, setCurrentView] = useState(initialView);
   const [title, setTitle] = useState('');
   const calendarRef = useRef<any>(null);
+  
+  // Update the calendar view when currentView changes
+  useEffect(() => {
+    if (calendarRef.current) {
+      const calendarApi = calendarRef.current.getApi();
+      calendarApi.changeView(currentView);
+      updateTitle();
+    }
+  }, [currentView]);
 
   useEffect(() => {
     updateTitle();

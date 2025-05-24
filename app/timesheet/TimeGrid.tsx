@@ -180,20 +180,39 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 	// Sort back to original order
 	const result = [...processedEntries].sort((a, b) => a.originalIndex - b.originalIndex);
 
-	// Calculate final positions and dimensions
+	// Calculate final positions and dimensions with smart overlap handling
 	for (const entry of result) {
 		if (entry.overlapping && entry.columns && entry.columns > 1) {
-			// Adjust width and position for overlapping entries
-			entry.width = 1 / entry.columns;
-			entry.left = (entry.column || 0) * entry.width;
+			// Smart layout for multiple overlapping entries
+			if (entry.columns <= 2) {
+				// 2 entries: side by side (50% each)
+				entry.width = 0.5;
+				entry.left = (entry.column || 0) * 0.5;
+			} else if (entry.columns <= 3) {
+				// 3 entries: use 33% width but with smart positioning
+				entry.width = 0.33;
+				entry.left = (entry.column || 0) * 0.33;
+			} else {
+				// 4+ entries: use layered/stacked approach
+				// Main entry takes 70% width, others stack with offset
+				if (entry.column === 0) {
+					// Primary entry (usually longest or first)
+					entry.width = 0.7;
+					entry.left = 0;
+					entry.isMainEntry = true;
+				} else {
+					// Secondary entries: smaller width with right-side stacking
+					entry.width = 0.4;
+					entry.left = 0.6 + ((entry.column - 1) * 0.05); // Slight offset for each
+					entry.isStackedEntry = true;
+					entry.stackIndex = entry.column - 1;
+				}
+			}
 
-			// Add a small gap between entries
-			const gap = 0.01; // 1% gap between entries
-			entry.width -= gap * (1 - 1 / entry.columns);
-
-			// Ensure the last entry in the row doesn't overflow
-			if (entry.column === entry.columns - 1) {
-				entry.width = 1 - entry.left;
+			// Add small gaps for visual separation
+			const gap = 0.02;
+			if (entry.column! < entry.columns - 1) {
+				entry.width -= gap;
 			}
 		} else {
 			// Full width for non-overlapping entries
@@ -201,11 +220,12 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 			entry.left = 0;
 			entry.column = 0;
 			entry.columns = 1;
+			entry.isMainEntry = true;
 		}
 
 		// Ensure values are within bounds
-		entry.width = Math.max(0.1, Math.min(1, entry.width));
-		entry.left = Math.max(0, Math.min(1 - entry.width, entry.left));
+		entry.width = Math.max(0.2, Math.min(1, entry.width));
+		entry.left = Math.max(0, Math.min(0.95 - entry.width, entry.left));
 	}
 
 	return result;
@@ -407,6 +427,10 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 											left={entry.left}
 											onTimeSlotSelect={handleTimeSlotSelect}
 											isDialogOpen={!!isDialogOpen}
+											isMainEntry={entry.isMainEntry}
+											isStackedEntry={entry.isStackedEntry}
+											stackIndex={entry.stackIndex}
+											totalStacked={entry.columns}
 										/>
 									);
 								})}

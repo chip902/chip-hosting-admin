@@ -68,8 +68,6 @@ html {
 	transition: all 0.2s ease-in-out;
 	cursor: grab; /* Default cursor */
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	width: 95% !important;
-	left: 2.5% !important;
 	transform-origin: center center;
 	perspective: 1000px;
 	backface-visibility: hidden;
