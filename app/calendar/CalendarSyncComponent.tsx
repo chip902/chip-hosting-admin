@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { CalendarClient, CalendarProvider, CalendarEvent, CalendarInfo, SyncSource, SyncDestination, SyncConfiguration } from "../../lib/CalendarClient";
+import { CalendarProvider, CalendarEvent, CalendarInfo, SyncSource, SyncDestination, SyncConfiguration } from "@/types/calendar";
+import { CalendarClient } from "@/lib/CalendarClient";
 
 // Initial setup with environment variables
 const API_URL = process.env.NEXT_PUBLIC_CALENDAR_API_URL || "http://localhost:8008";
@@ -482,7 +483,8 @@ const CalendarSyncComponent: React.FC<CalendarSyncProps> = ({ onEventsLoaded, on
 							<select id="destination-calendar">
 								<option value="">-- Select Calendar --</option>
 								{/* Dynamically populate based on selected provider */}
-								{typeof document !== 'undefined' && document.getElementById("destination-provider") && 
+								{typeof document !== "undefined" &&
+									document.getElementById("destination-provider") &&
 									calendars[(document.getElementById("destination-provider") as HTMLSelectElement).value]?.map((calendar) => (
 										<option key={calendar.id} value={calendar.id}>
 											{calendar.summary || calendar.name || calendar.id}
@@ -492,7 +494,7 @@ const CalendarSyncComponent: React.FC<CalendarSyncProps> = ({ onEventsLoaded, on
 
 							<button
 								onClick={() => {
-									if (typeof document !== 'undefined') {
+									if (typeof document !== "undefined") {
 										const providerEl = document.getElementById("destination-provider") as HTMLSelectElement;
 										const calendarEl = document.getElementById("destination-calendar") as HTMLSelectElement;
 										if (providerEl && calendarEl) {

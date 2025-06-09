@@ -29,13 +29,25 @@ const parseISOForDisplay = (dateStr: string): string => {
 	}
 };
 
-const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left = 0, width = 1, onTimeSlotSelect, isDialogOpen = false, isMainEntry = true, isStackedEntry = false, stackIndex = 0, totalStacked = 1 }: TimeEntryProps) => {
+const TimeEntryComponent = ({
+	entry,
+	startSlot,
+	endSlot,
+	color = "#4893FF",
+	left = 0,
+	width = 1,
+	onTimeSlotSelect,
+	isDialogOpen = false,
+	isMainEntry = true,
+	isStackedEntry = false,
+	stackIndex = 0,
+	totalStacked = 1,
+}: TimeEntryProps) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const [isResizingTop, setIsResizingTop] = useState(false);
-	const [isHovering, setIsHovering] = useState(false);
 	const [dragStartPosition, setDragStartPosition] = useState<{ x: number; y: number } | null>(null);
 	const entryRef = useRef<HTMLDivElement>(null);
 	const wasMoved = useRef(false);
@@ -76,18 +88,34 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 
 	// Handle mouse down on the time entry
 	const handleMouseDown = (e: React.MouseEvent) => {
-		if (isDialogOpen) return;
-		e.stopPropagation();
-		e.preventDefault();
+		// Completely disable drag functionality when any dialog is open
+		if (isDialogOpen) {
+			return;
+		}
 
 		// Only start dragging on left mouse button
 		if (e.button !== 0) return;
 
-		// Don't start dragging if clicking on a button, input, or the resize handles
 		const target = e.target as HTMLElement;
-		if (target.closest("button") || target.closest("input") || target.closest("textarea") || target.closest(".resize-handle") || target.closest(".top-resize-handle")) {
+
+		// Don't start dragging if clicking on interactive elements
+		if (
+			target.closest("button") ||
+			target.closest("input") ||
+			target.closest("textarea") ||
+			target.closest("select") ||
+			target.closest("[role='combobox']") ||
+			target.closest("[role='option']") ||
+			target.closest(".resize-handle") ||
+			target.closest(".top-resize-handle") ||
+			target.closest("[role='dialog']") ||
+			target.closest("[data-radix-popper-content-wrapper]")
+		) {
 			return;
 		}
+
+		e.stopPropagation();
+		e.preventDefault();
 
 		// Record the initial position for drag threshold
 		setDragStartPosition({ x: e.clientX, y: e.clientY });
@@ -95,8 +123,17 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 
 		// Set up drag tracking but don't activate dragging immediately
 		dragStartY.current = e.clientY;
-		dragStartTop.current = parseInt(entryRef.current?.style.top || "0", 10);
-		
+		// Get the current position from the element's actual position
+		if (entryRef.current) {
+			const rect = entryRef.current.getBoundingClientRect();
+			const parentRect = entryRef.current.closest(".col-span-1")?.getBoundingClientRect();
+			if (parentRect) {
+				dragStartTop.current = rect.top - parentRect.top;
+			} else {
+				dragStartTop.current = 0;
+			}
+		}
+
 		// Add temporary listeners to detect actual drag intent
 		document.addEventListener("mousemove", handleInitialMouseMove);
 		document.addEventListener("mouseup", handleInitialMouseUp);
@@ -114,10 +151,15 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 		if (deltaX > threshold || deltaY > threshold) {
 			document.removeEventListener("mousemove", handleInitialMouseMove);
 			document.removeEventListener("mouseup", handleInitialMouseUp);
-			
+
 			setIsDragging(true);
 			document.body.style.userSelect = "none";
+			document.body.style.cursor = "grabbing";
 			setDragStartPosition(null);
+
+			// Add drag event listeners immediately
+			document.addEventListener("mousemove", handleMouseMove);
+			document.addEventListener("mouseup", handleMouseUp);
 		}
 	};
 
@@ -126,7 +168,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 		document.removeEventListener("mousemove", handleInitialMouseMove);
 		document.removeEventListener("mouseup", handleInitialMouseUp);
 		setDragStartPosition(null);
-		
+
 		// This was just a click, not a drag - could open popover
 		const clickDuration = Date.now() - mouseDownTime.current;
 		if (clickDuration < 200) {
@@ -142,7 +184,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 
 		try {
 			// Find all day columns for cross-day dragging
-			const dayColumns = document.querySelectorAll('.col-span-1:not(:first-child)');
+			const dayColumns = document.querySelectorAll(".col-span-1:not(:first-child)");
 			let targetColumn = null;
 			let targetDayIndex = -1;
 
@@ -178,20 +220,49 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 				entryRef.current.style.position = "relative";
 				entryRef.current.style.top = `${(constrainedMinutes / totalMinutes) * 100}%`;
 				entryRef.current.style.zIndex = "100";
-				entryRef.current.setAttribute('data-target-day', targetDayIndex.toString());
+				entryRef.current.setAttribute("data-target-day", targetDayIndex.toString());
+
+				// Add visual feedback for cross-day dragging
+				if (targetDayIndex !== -1) {
+					entryRef.current.style.opacity = "0.8";
+					entryRef.current.style.transform = "translateZ(0) scale(1.05)";
+					entryRef.current.style.boxShadow = "0 8px 25px rgba(0, 0, 0, 0.3)";
+				}
 			}
+
+			// Highlight target day column
+			document.querySelectorAll(".col-span-1:not(:first-child)").forEach((col, index) => {
+				if (index === targetDayIndex) {
+					(col as HTMLElement).style.backgroundColor = "rgba(59, 130, 246, 0.1)";
+					(col as HTMLElement).style.borderColor = "rgba(59, 130, 246, 0.3)";
+				} else {
+					(col as HTMLElement).style.backgroundColor = "";
+					(col as HTMLElement).style.borderColor = "";
+				}
+			});
 
 			wasMoved.current = true;
 		} catch (error) {
 			console.error("Error during drag move:", error);
 			// Clean up and reset on error
 			setIsDragging(false);
+			document.body.style.cursor = "";
+			document.body.style.userSelect = "";
 			if (entryRef.current) {
 				entryRef.current.style.position = "";
 				entryRef.current.style.top = "";
 				entryRef.current.style.zIndex = "";
-				entryRef.current.removeAttribute('data-target-day');
+				entryRef.current.style.opacity = "";
+				entryRef.current.style.transform = "";
+				entryRef.current.style.boxShadow = "";
+				entryRef.current.removeAttribute("data-target-day");
 			}
+
+			// Clear day column highlighting
+			document.querySelectorAll(".col-span-1:not(:first-child)").forEach((col) => {
+				(col as HTMLElement).style.backgroundColor = "";
+				(col as HTMLElement).style.borderColor = "";
+			});
 		}
 	};
 
@@ -201,24 +272,29 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 
 		e.preventDefault();
 
+		// Remove drag event listeners
+		document.removeEventListener("mousemove", handleMouseMove);
+		document.removeEventListener("mouseup", handleMouseUp);
+
 		// Reset dragging state immediately
 		setIsDragging(false);
 		wasMoved.current = false;
 		document.body.style.userSelect = "";
+		document.body.style.cursor = "";
 
 		// Only process if the entry was actually moved
 		if (entryRef.current) {
 			try {
-				const targetDayIndex = entryRef.current.getAttribute('data-target-day');
-				const dayColumns = document.querySelectorAll('.col-span-1:not(:first-child)');
-				
+				const targetDayIndex = entryRef.current.getAttribute("data-target-day");
+				const dayColumns = document.querySelectorAll(".col-span-1:not(:first-child)");
+
 				let gridElement: HTMLElement;
 				let newDate = new Date(entry.date);
 
 				// If dropped on a different day, calculate the new date
-				if (targetDayIndex && targetDayIndex !== '-1' && parseInt(targetDayIndex) < dayColumns.length) {
+				if (targetDayIndex && targetDayIndex !== "-1" && parseInt(targetDayIndex) < dayColumns.length) {
 					gridElement = dayColumns[parseInt(targetDayIndex)] as HTMLElement;
-					
+
 					// Calculate the new date based on the target day index
 					const currentEntryDate = new Date(entry.date);
 					const startOfWeek = startOfDay(currentEntryDate);
@@ -260,7 +336,6 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 				if (onTimeSlotSelect) {
 					onTimeSlotSelect({});
 				}
-
 			} catch (error) {
 				console.error("Failed to update position:", error);
 				if (onTimeSlotSelect) {
@@ -272,8 +347,17 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 					entryRef.current.style.position = "";
 					entryRef.current.style.top = "";
 					entryRef.current.style.zIndex = "";
-					entryRef.current.removeAttribute('data-target-day');
+					entryRef.current.style.opacity = "";
+					entryRef.current.style.transform = "";
+					entryRef.current.style.boxShadow = "";
+					entryRef.current.removeAttribute("data-target-day");
 				}
+
+				// Clear day column highlighting
+				document.querySelectorAll(".col-span-1:not(:first-child)").forEach((col) => {
+					(col as HTMLElement).style.backgroundColor = "";
+					(col as HTMLElement).style.borderColor = "";
+				});
 			}
 		}
 	};
@@ -406,9 +490,52 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 		if (!isResizing || !entryRef.current) return;
 		document.removeEventListener("mousemove", handleResizeMove);
 		document.removeEventListener("mouseup", handleResizeEnd);
+
+		const gridElement = entryRef.current.closest(".col-span-1");
+		if (!gridElement) {
+			setIsResizing(false);
+			return;
+		}
+
+		try {
+			const gridRect = gridElement.getBoundingClientRect();
+			const entryRect = entryRef.current.getBoundingClientRect();
+			const totalMinutes = 24 * 60;
+
+			const startY = entryRect.top - gridRect.top;
+			const height = entryRect.height;
+
+			const startMinutes = Math.round(((startY / gridRect.height) * totalMinutes) / 15) * 15;
+			const durationMinutes = Math.round(((height / gridRect.height) * totalMinutes) / 15) * 15;
+
+			const constrainedStartMinutes = Math.max(0, startMinutes);
+			const constrainedDuration = Math.max(15, Math.min(durationMinutes, totalMinutes - constrainedStartMinutes));
+
+			const newStartTime = addMinutes(startOfDay(new Date(entry.date)), constrainedStartMinutes);
+			const newEndTime = addMinutes(newStartTime, constrainedDuration);
+
+			await updateTimeEntry({
+				id: entry.id,
+				data: {
+					startTime: format(newStartTime, "yyyy-MM-dd'T'HH:mm:ss"),
+					endTime: format(newEndTime, "yyyy-MM-dd'T'HH:mm:ss"),
+					duration: constrainedDuration,
+				},
+			});
+
+			if (onTimeSlotSelect) {
+				onTimeSlotSelect({});
+			}
+		} catch (error) {
+			console.error("Failed to resize entry:", error);
+		}
+
 		setIsResizing(false);
-		entryRef.current.style.height = "";
-		entryRef.current.style.zIndex = "";
+		// Reset only temporary resize styles, let component re-render with new data
+		if (entryRef.current) {
+			entryRef.current.style.height = "";
+			entryRef.current.style.zIndex = "";
+		}
 	};
 
 	const handleTopResizeMove = (e: MouseEvent) => {
@@ -435,7 +562,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 		if (!isResizingTop || !entryRef.current) return;
 		document.removeEventListener("mousemove", handleTopResizeMove);
 		document.removeEventListener("mouseup", handleTopResizeEnd);
-		
+
 		const gridElement = entryRef.current.closest(".col-span-1");
 		if (!gridElement) {
 			setIsResizingTop(false);
@@ -446,16 +573,16 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 			const gridRect = gridElement.getBoundingClientRect();
 			const entryRect = entryRef.current.getBoundingClientRect();
 			const totalMinutes = 24 * 60;
-			
+
 			const startY = entryRect.top - gridRect.top;
 			const height = entryRect.height;
-			
+
 			const startMinutes = Math.round(((startY / gridRect.height) * totalMinutes) / 15) * 15;
 			const durationMinutes = Math.round(((height / gridRect.height) * totalMinutes) / 15) * 15;
-			
+
 			const constrainedStartMinutes = Math.max(0, startMinutes);
 			const constrainedDuration = Math.max(15, Math.min(durationMinutes, totalMinutes - constrainedStartMinutes));
-			
+
 			const newStartTime = addMinutes(startOfDay(new Date(entry.date)), constrainedStartMinutes);
 			const newEndTime = addMinutes(newStartTime, constrainedDuration);
 
@@ -476,36 +603,13 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 		}
 
 		setIsResizingTop(false);
-		entryRef.current.style.top = "";
-		entryRef.current.style.height = "";
-		entryRef.current.style.zIndex = "";
+		// Reset only temporary resize styles, let component re-render with new data
+		if (entryRef.current) {
+			entryRef.current.style.top = "";
+			entryRef.current.style.height = "";
+			entryRef.current.style.zIndex = "";
+		}
 	};
-
-	// Add and cleanup event listeners
-	useEffect(() => {
-		// Only add event listeners if we're not in a dialog
-		if (isDialogOpen) return;
-
-		// Wrap the handlers to ensure they have the correct type
-		const wrappedHandleMouseMove = (e: MouseEvent) => handleMouseMove(e);
-		const wrappedHandleMouseUp = (e: MouseEvent) => handleMouseUp(e);
-		const wrappedHandleResizeMove = (e: MouseEvent) => handleResizeMove(e);
-		const wrappedHandleResizeEnd = (e: MouseEvent) => handleResizeEnd(e);
-
-		// Add event listeners
-		document.addEventListener("mousemove", wrappedHandleMouseMove);
-		document.addEventListener("mouseup", wrappedHandleMouseUp);
-		document.addEventListener("mousemove", wrappedHandleResizeMove);
-		document.addEventListener("mouseup", wrappedHandleResizeEnd);
-
-		return () => {
-			// Remove all event listeners on cleanup
-			document.removeEventListener("mousemove", wrappedHandleMouseMove);
-			document.removeEventListener("mouseup", wrappedHandleMouseUp);
-			document.removeEventListener("mousemove", wrappedHandleResizeMove);
-			document.removeEventListener("mouseup", wrappedHandleResizeEnd);
-		};
-	}, [isDialogOpen, handleResizeMove, handleResizeEnd, handleMouseMove, handleMouseUp]);
 
 	return (
 		<Popover open={isOpen} onOpenChange={setIsOpen}>
@@ -519,12 +623,11 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
             rounded-md
             shadow-sm
             overflow-hidden
-            transition-all duration-100
-            hover:shadow-md
+            hover:shadow-lg
             border-l-2 border-white/20
             ${isDragging || isResizing || isResizingTop ? "dragging" : ""}
             ${width < 1 ? "overlapping" : ""}
-            ${(endSlot - startSlot) < 60 ? "short" : ""}
+            ${endSlot - startSlot < 60 ? "short" : ""}
             ${isMainEntry ? "main-entry" : ""}
             ${isStackedEntry ? "stacked-entry" : ""}
             ${totalStacked > 3 ? "dense-stacked" : ""}
@@ -535,10 +638,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 						left: `${left * 100}%`,
 						width: `${width * 100}%`,
 						backgroundColor: color,
-						zIndex: isDragging || isResizing || isResizingTop ? 90 : 
-							isMainEntry ? Math.max(10, 40 - (endSlot - startSlot) / 30) : 
-							isStackedEntry ? Math.max(8, 30 - (endSlot - startSlot) / 30) + stackIndex : 
-							Math.max(5, 20 - (endSlot - startSlot) / 30),
+						zIndex: isDragging || isResizing || isResizingTop ? 90 : isMainEntry ? 15 : isStackedEntry ? 12 + stackIndex : 10,
 						transform: "translateZ(0)",
 						boxSizing: "border-box",
 						pointerEvents: "auto",
@@ -547,24 +647,22 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 						flexDirection: "column",
 						borderRadius: "0.375rem",
 						transformOrigin: "center",
-						transition: "all 0.1s ease-out",
-						willChange: "transform, width, left, top, height",
+						transition: "box-shadow 0.15s ease-out",
 						backfaceVisibility: "hidden",
 						boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
+						cursor: isDragging ? "grabbing" : "grab",
 					}}
-					onMouseDown={handleMouseDown}
-					onMouseEnter={() => setIsHovering(true)}
-					onMouseLeave={() => setIsHovering(false)}>
+					onMouseDown={handleMouseDown}>
 					<div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize top-resize-handle" onMouseDown={handleTopResizeStart} />
-					<div className={`flex flex-col h-full justify-between text-left max-w-full ${isStackedEntry ? 'p-1' : 'p-1.5'}`}>
+					<div className={`flex flex-col h-full justify-between text-left max-w-full ${isStackedEntry ? "p-1" : "p-1.5"}`}>
 						<div className="w-full overflow-hidden">
-							<Typography className={`text-xs font-bold text-white/90 truncate block ${isStackedEntry ? 'text-[10px]' : ''}`}>
+							<Typography className={`text-xs font-bold text-white/90 truncate block ${isStackedEntry ? "text-[10px]" : ""}`}>
 								{isStackedEntry ? `${startTimeFormatted}` : startTimeFormatted}
 							</Typography>
 							{customerName && !isStackedEntry && <Typography className="text-xs text-white/90 truncate block">{customerName}</Typography>}
 							{projectName && (
-								<Typography className={`text-xs text-white/90 truncate block ${isStackedEntry ? 'text-[9px]' : ''}`}>
-									{isStackedEntry ? projectName.substring(0, 8) + (projectName.length > 8 ? '...' : '') : projectName}
+								<Typography className={`text-xs text-white/90 truncate block ${isStackedEntry ? "text-[9px]" : ""}`}>
+									{isStackedEntry ? projectName.substring(0, 8) + (projectName.length > 8 ? "..." : "") : projectName}
 								</Typography>
 							)}
 							{taskName && !isStackedEntry && <Typography className="text-xs text-white/90 truncate block">{taskName}</Typography>}
@@ -576,7 +674,7 @@ const TimeEntryComponent = ({ entry, startSlot, endSlot, color = "#4893FF", left
 							<Typography className="text-xs font-semibold text-white/90 truncate block mt-auto">{durationFormatted} Hours</Typography>
 						)}
 						{isStackedEntry && (
-							<Typography className="text-[8px] font-semibold text-white/80 truncate block mt-auto">{Math.round(duration/60)}h</Typography>
+							<Typography className="text-[8px] font-semibold text-white/80 truncate block mt-auto">{Math.round(duration / 60)}h</Typography>
 						)}
 					</div>
 					<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />

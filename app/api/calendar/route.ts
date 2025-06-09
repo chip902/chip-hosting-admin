@@ -7,19 +7,19 @@ export async function GET() {
 		status: "operational",
 		endpoints: [
 			{
-				path: "/api/calendar/health",
+				path: "/calendar/health",
 				description: "Health check endpoint",
 			},
 			{
-				path: "/api/calendar/sync/*",
+				path: "/calendar/sync/*",
 				description: "Calendar sync endpoints",
 			},
 			{
-				path: "/api/calendar/auth/*",
+				path: "/calendar/auth/*",
 				description: "Authentication endpoints",
 			},
 			{
-				path: "/api/calendar/events",
+				path: "/calendar/events",
 				description: "Calendar events endpoints",
 			},
 		],
@@ -31,7 +31,7 @@ export async function POST() {
 	return NextResponse.json(
 		{
 			error: "Method Not Allowed",
-			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /api/calendar/sync?",
+			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /calendar/sync?",
 		},
 		{ status: 405 }
 	);
@@ -41,7 +41,7 @@ export async function PUT() {
 	return NextResponse.json(
 		{
 			error: "Method Not Allowed",
-			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /api/calendar/sync?",
+			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /calendar/sync?",
 		},
 		{ status: 405 }
 	);
@@ -51,7 +51,7 @@ export async function DELETE() {
 	return NextResponse.json(
 		{
 			error: "Method Not Allowed",
-			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /api/calendar/sync?",
+			message: "This endpoint only supports GET requests. Did you mean to use a specific endpoint like /calendar/sync?",
 		},
 		{ status: 405 }
 	);

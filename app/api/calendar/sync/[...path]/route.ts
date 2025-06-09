@@ -85,10 +85,11 @@ async function proxyRequest(request: NextRequest, path: string) {
 // Helper function to handle all methods
 async function handleRequest(
   request: NextRequest,
-  { params }: { params: { path: string[] } }
+  { params }: { params: Promise<{ path: string[] }> }
 ) {
   try {
-    const path = params.path ? params.path.join("/") : "";
+    const resolvedParams = await params;
+    const path = resolvedParams.path ? resolvedParams.path.join("/") : "";
     const method = request.method;
     
     console.log(`[${method}] ${request.nextUrl.pathname} -> ${path}`);

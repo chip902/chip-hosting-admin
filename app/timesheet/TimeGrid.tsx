@@ -1,8 +1,23 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import TimeEntryComponent from "./TimeEntry";
 import TimeGridHeader from "./TimeGridHeader";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
+
+// Helper function to debounce function calls
+const debounce = <F extends (...args: any[]) => any>(
+  fn: F,
+  delay: number
+) => {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null;
+  
+  return function(this: any, ...args: Parameters<F>) {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    timeoutId = setTimeout(() => fn.apply(this, args), delay);
+  };
+};
 import { startOfDay, endOfDay, format, addMinutes, differenceInMinutes } from "date-fns";
 import { ProcessedTimeEntry, TimeEntry } from "@/types";
 import { calculateLeftPosition, calculateWidth } from "@/lib/utils";
@@ -233,8 +248,10 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 
 const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) => {
 	const container = useRef<HTMLDivElement>(null);
+	const dragTimerRef = useRef<NodeJS.Timeout | null>(null);
 	const { startDate, endDate, customerId } = filters;
 	const [isDragging, setIsDragging] = useState(false);
+	const [isMouseDown, setIsMouseDown] = useState(false);
 	const [dragStart, setDragStart] = useState<{ dayIndex: number; minutes: number } | null>(null);
 	const [dragEnd, setDragEnd] = useState({ dayIndex: -1, minutes: -1 });
 
@@ -298,49 +315,106 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 		const relativeY = event.clientY - rect.top;
 		let minutes = Math.floor((relativeY / rect.height) * 24 * 60);
 		minutes = Math.round(minutes / 15) * 15; // Round to nearest 15 minutes
+
+		const throttledSetDragEnd = debounce(setDragEnd, 50);
 		throttledSetDragEnd({ dayIndex, minutes });
 	};
-
-	const handleGridMouseUp = () => {
-		if (!isDragging || !dragStart) return;
-
-		const startDay = days[dragStart.dayIndex];
-		const endDay = days[dragEnd.dayIndex];
-
-		// If drag ends on the same day it started
-		if (dragStart.dayIndex === dragEnd.dayIndex) {
-			const startDateTime = addMinutes(startOfDay(startDay), dragStart.minutes);
-			const endDateTime = addMinutes(startOfDay(startDay), dragEnd.minutes);
-
-			// Make sure start time is before end time
-			const [finalStartTime, finalEndTime] = startDateTime > endDateTime ? [endDateTime, startDateTime] : [startDateTime, endDateTime];
-
-			onTimeSlotSelect({
-				date: finalStartTime,
-				startTime: format(finalStartTime, "HH:mm"),
-				endTime: format(finalEndTime, "HH:mm"),
-				duration: differenceInMinutes(finalEndTime, finalStartTime),
-			});
+	const handleGridMouseUp = (event: React.MouseEvent<HTMLDivElement>, dayIndex: number) => {
+		// Check if the click was on a time entry or its children
+		const target = event.target as HTMLElement;
+		if (target.closest('.time-entry') || target.closest('.time-entry-actions')) {
+			setIsMouseDown(false);
+			setIsDragging(false);
+			setDragStart(null);
+			setDragEnd({ dayIndex: -1, minutes: -1 });
+			return;
 		}
 
+		// Clear any pending drag start
+		if (dragTimerRef.current) {
+			clearTimeout(dragTimerRef.current);
+			dragTimerRef.current = null;
+		}
+
+		if (!isDragging || !dragStart) {
+			setIsMouseDown(false);
+			setIsDragging(false);
+			setDragStart(null);
+			setDragEnd({ dayIndex: -1, minutes: -1 });
+			return;
+		}
+
+		event.stopPropagation();
+		event.preventDefault();
+		setIsMouseDown(false);
 		setIsDragging(false);
+
+		// Only proceed if we have a valid drag
+		if (dragEnd.dayIndex !== -1 && dragEnd.minutes !== -1) {
+			const startMinutes = Math.min(dragStart.minutes, dragEnd.minutes);
+			const endMinutes = Math.max(dragStart.minutes, dragEnd.minutes);
+
+			// Require at least a 15-minute selection
+			if (endMinutes - startMinutes < 15) {
+				setDragStart(null);
+				setDragEnd({ dayIndex: -1, minutes: -1 });
+				return;
+			}
+
+			// Calculate the date for the selected day
+			if (!startDate) {
+				setDragStart(null);
+				setDragEnd({ dayIndex: -1, minutes: -1 });
+				return;
+			}
+
+			const selectedDate = new Date(startDate);
+			selectedDate.setDate(selectedDate.getDate() + dayIndex);
+
+			// Only proceed if we actually dragged a meaningful distance
+			const dragDistance = Math.abs(dragEnd.minutes - dragStart.minutes);
+			if (dragDistance > 5) { // Minimum 5 minutes drag to count as a selection
+				// Format the time slot
+				const timeSlot = {
+					date: selectedDate,
+					startTime: `${Math.floor(startMinutes / 60)
+						.toString()
+						.padStart(2, '0')}:${(startMinutes % 60).toString().padStart(2, '0')}`,
+					endTime: `${Math.floor(endMinutes / 60)
+						.toString()
+						.padStart(2, '0')}:${(endMinutes % 60).toString().padStart(2, '0')}`,
+					duration: endMinutes - startMinutes,
+				};
+
+				onTimeSlotSelect?.(timeSlot);
+			}
+		}
+
 		setDragStart(null);
+		setDragEnd({ dayIndex: -1, minutes: -1 });
 	};
+
+	// Clean up timeouts on unmount
+	useEffect(() => {
+		return () => {
+			if (dragTimerRef.current) {
+				clearTimeout(dragTimerRef.current);
+			}
+		};
+	}, []);
 
 	if (error) {
 		return (
-			<AlertDialog defaultOpen={true}>
-				<div className="w-[450px]">
-					<AlertDialogContent>
-						<AlertDialogTitle>Database Error</AlertDialogTitle>
-						<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
-						<div className="flex gap-3 mt-4 justify-end">
-							<AlertDialogCancel>
-								<Button color="red">Dismiss</Button>
-							</AlertDialogCancel>
-						</div>
-					</AlertDialogContent>
-				</div>
+			<AlertDialog open={!!error}>
+				<AlertDialogContent>
+					<AlertDialogTitle>Database Error</AlertDialogTitle>
+					<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
+					<div className="flex gap-3 mt-4 justify-end">
+						<AlertDialogCancel>
+							<Button color="red">Dismiss</Button>
+						</AlertDialogCancel>
+					</div>
+				</AlertDialogContent>
 			</AlertDialog>
 		);
 	}
@@ -399,8 +473,8 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 								className="col-span-1 relative border-l border-gray-200 dark:border-gray-700"
 								onMouseDown={(e) => handleGridMouseDown(dayIndex, e)}
 								onMouseMove={(e) => handleGridMouseMove(dayIndex, e)}
-								onMouseUp={handleGridMouseUp}
-								onMouseLeave={handleGridMouseUp}>
+								onMouseUp={(e) => handleGridMouseUp(e, dayIndex)}
+								onMouseLeave={(e) => handleGridMouseUp(e, dayIndex)}>
 								{/* Hour grid cells */}
 								{[...Array(24)].map((_, hour) => (
 									<div key={hour} className="h-16 border-t border-gray-200 dark:border-gray-700 grid-cell" data-hour={hour} />

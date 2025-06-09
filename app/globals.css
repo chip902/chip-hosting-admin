@@ -60,24 +60,11 @@ html {
 
 .time-entry {
 	position: absolute;
-	overflow: hidden;
 	background-color: var(--primary-color);
 	color: var(--text-color);
 	padding: 10px;
 	border-radius: 0.5rem;
 	transition: all 0.2s ease-in-out;
-	cursor: grab; /* Default cursor */
-	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-	transform-origin: center center;
-	perspective: 1000px;
-	backface-visibility: hidden;
-	will-change: transform, box-shadow; /* Optimize performance */
-}
-
-/* Make shorter entries appear on top with more shadow */
-.time-entry.short {
-	z-index: 15;
-	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.12);
 }
 
 /* Enhanced hover effect for all entries */
@@ -121,7 +108,8 @@ html {
 	grid-template-rows: repeat(24, 80px);
 	grid-template-columns: repeat(8, 1fr);
 	position: relative;
-	overflow-y: visible;
+	overflow: visible;
+	min-height: 1920px; /* 24 * 80px */
 }
 
 /* Dark mode styles for time entries */
@@ -562,6 +550,98 @@ html {
 	.sidebar-label {
 		@apply text-16 font-semibold text-black-2 max-xl:hidden dark:text-gray-300;
 	}
+}
+
+/* Dialog and Dropdown z-index fixes */
+/* Reset dialog positioning */
+/* Dialog Portal - Wrapper for positioning the dialog in the DOM */
+[data-radix-dialog-portal] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1000 !important;
+  pointer-events: none;
+  display: flex !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+/* Dialog Overlay - The semi-transparent background */
+[data-radix-dialog-overlay] {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 1000 !important;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+
+/* Dialog Content - The actual dialog box */
+[data-radix-dialog-content] {
+  position: relative !important;
+  z-index: 1001 !important;
+  max-height: 90vh;
+  overflow-y: auto;
+  width: 100%;
+  max-width: 500px;
+  pointer-events: auto;
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  background-color: var(--background);
+  color: var(--foreground);
+  margin: 0 !important;
+  background: var(--background);
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  inset: auto !important;
+  bottom: auto !important;
+  right: auto !important;
+}
+
+/* Ensure dropdown portals appear above dialogs */
+[data-radix-popper-content-wrapper] {
+  z-index: 1100 !important;
+}
+
+/* Time grid and entries */
+.grid {
+  position: relative;
+  z-index: 1;
+}
+
+.time-entry {
+  z-index: 10;
+  position: relative;
+}
+
+.time-entry:hover,
+.time-entry.dragging {
+  z-index: 100 !important;
+}
+
+/* Fix for calendar dialogs */
+.calendar-wrapper [role="dialog"],
+.calendar-wrapper [data-radix-dialog-content] {
+  position: fixed !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  z-index: 1001 !important;
+  margin: 0 !important;
+  inset: auto !important;
 }
 
 /* Dark mode specific overrides */

@@ -1,10 +1,9 @@
 "use client";
 import { subWeeks, addWeeks, startOfWeek, endOfWeek } from "date-fns";
 import React, { ReactNode, useCallback, useState } from "react";
-import { ChevronLeft, ChevronRight, Calendar, Clock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import LogTime from "./LogTime";
 import CopyPreviousWeekButton from "./CopyPreviousWeekButton";
 
 interface ITimeToolBar {
@@ -24,7 +23,6 @@ interface ITimeToolBar {
 }
 
 const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
-	const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
 
 	const handlePreviousWeek = useCallback(() => {
 		if (!filters.startDate) return;
@@ -67,7 +65,7 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 	}, [filters.customerId, setFilters]);
 
 	return (
-		<header className="sticky top-0 bg-slate-50/80 backdrop-blur-sm dark:bg-gray-900/80 border-b border-slate-200 dark:border-gray-700 px-6 py-4 z-20">
+		<header className="sticky top-0 bg-slate-50/80 backdrop-blur-sm dark:bg-gray-900/80 border-b border-slate-200 dark:border-gray-700 px-6 py-4 z-10">
 			<div className="flex w-full items-center justify-between">
 				{/* Left side - Log Time Button */}
 				<div className="flex items-center gap-2">
@@ -77,24 +75,7 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 							onSuccess={() => window.location.reload()}
 						/>
 					)}
-					<Button 
-						onClick={() => setIsLogTimeOpen(true)} 
-						className={cn("flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white")}
-					>
-						<Clock className="h-4 w-4" />
-						<span className="font-medium">Log Time</span>
-					</Button>
-
-					{isLogTimeOpen && (
-						<LogTime
-							onClose={() => setIsLogTimeOpen(false)}
-							initialValues={{
-								date: new Date(),
-								startTime: "09:00",
-								endTime: "17:00",
-							}}
-						/>
-					)}
+					{children}
 				</div>
 
 				{/* Right side - Date Navigation */}

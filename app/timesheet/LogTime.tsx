@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { Dialog, DialogClose, DialogContent, DialogOverlay } from "@/components/ui/dialog";
+import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export type TimeLogSchema = z.infer<typeof timeLogSchema>;
@@ -22,10 +22,17 @@ export type TimeLogSchema = z.infer<typeof timeLogSchema>;
 interface LogTimeProps {
 	onClose: () => void;
 	initialValues?: {
+		// Core fields from timeLogSchema
+		customerId?: number;
+		projectId?: number;
+		taskId?: number;
+		userId?: number;
+		duration?: number;
 		date?: Date;
+		description?: string;
 		startTime?: string;
 		endTime?: string;
-		duration?: number;
+		repeatInterval?: number;
 	};
 }
 
@@ -210,235 +217,228 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	};
 
 	return (
-		<Dialog open onOpenChange={onClose}>
-			<DialogOverlay className="bg-black/80" />
-			<DialogContent className="sm:max-w-[600px] bg-white dark:bg-gray-950 border z-[100]">
-				<div className="flex gap-3">
-					<Form {...form}>
-						<form className="flex flex-col space-y-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>
-							<div className="grid grid-cols-2 gap-4">
-								<FormField
-									control={form.control}
-									name="customerId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Customer</FormLabel>
-											<Select
-												onValueChange={(val) => field.onChange(parseInt(val, 10))}
-												value={field.value?.toString()}
-												disabled={!customers.length}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select a Customer" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent className="bg-white dark:bg-gray-950">
-													{customers.map((customer) => (
-														<SelectItem key={customer.id} value={customer.id.toString()}>
-															{customer.name}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="projectId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Project</FormLabel>
-											<Select
-												onValueChange={(val) => field.onChange(parseInt(val, 10))}
-												value={field.value?.toString()}
-												disabled={!selectedCustomerId || !projects.length}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select a Project" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent className="bg-white dark:bg-gray-950">
-													{projects.map((project) => (
-														<SelectItem key={project.id} value={project.id.toString()}>
-															{project.name}
-														</SelectItem>
-													))}
-													{projects.length === 0 && selectedCustomerId && (
-														<div className="px-3 py-2 text-sm text-muted-foreground">No projects found for this customer</div>
-													)}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="taskId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Task</FormLabel>
-											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select a Task" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent className="bg-white dark:bg-gray-950">
-													{tasks.map((task) => (
-														<SelectItem key={task.id} value={task.id.toString()}>
-															{task.name}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="userId"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Employee</FormLabel>
-											<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
-												<FormControl>
-													<SelectTrigger>
-														<SelectValue placeholder="Select an Employee" />
-													</SelectTrigger>
-												</FormControl>
-												<SelectContent className="bg-white dark:bg-gray-950">
-													{users.map((user) => (
-														<SelectItem key={user.id} value={user.id.toString()}>
-															{user.firstName} {user.lastName}
-														</SelectItem>
-													))}
-												</SelectContent>
-											</Select>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="duration"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Duration</FormLabel>
-											<FormControl>
-												<Input type="number" placeholder="Time spent in minutes" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="date"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Date</FormLabel>
-											<FormControl>
-												<Input type="date" {...field} value={field.value as string} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="startTime"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>Start Time</FormLabel>
-											<FormControl>
-												<Input type="time" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-
-								<FormField
-									control={form.control}
-									name="endTime"
-									render={({ field }) => (
-										<FormItem>
-											<FormLabel>End Time</FormLabel>
-											<FormControl>
-												<Input type="time" {...field} />
-											</FormControl>
-											<FormMessage />
-										</FormItem>
-									)}
-								/>
-							</div>
-
-							<FormField
-								control={form.control}
-								name="description"
-								render={({ field }) => (
-									<FormItem>
-										<FormLabel>Description</FormLabel>
+		<div className="flex gap-3">
+			<Form {...form}>
+				<form className="flex flex-col space-y-4 w-full" onSubmit={form.handleSubmit(onSubmit)}>
+					<div className="grid grid-cols-2 gap-4">
+						<FormField
+							control={form.control}
+							name="customerId"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Customer</FormLabel>
+									<Select
+										onValueChange={(val) => field.onChange(parseInt(val, 10))}
+										value={field.value?.toString()}
+										disabled={!customers.length}>
 										<FormControl>
-											<Textarea placeholder="Description of work done..." {...field} value={field.value as string} />
+											<SelectTrigger>
+												<SelectValue placeholder="Select a Customer" />
+											</SelectTrigger>
 										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+										<SelectContent className="bg-white dark:bg-gray-950">
+											{customers.map((customer) => (
+												<SelectItem key={customer.id} value={customer.id.toString()}>
+													{customer.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-							<FormField
-								control={form.control}
-								name="repeatInterval"
-								render={({ field: { value, onChange, ...field } }) => (
-									<FormItem>
-										<FormLabel>Repeat for (days)</FormLabel>
+						<FormField
+							control={form.control}
+							name="projectId"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Project</FormLabel>
+									<Select
+										onValueChange={(val) => field.onChange(parseInt(val, 10))}
+										value={field.value?.toString()}
+										disabled={!selectedCustomerId || !projects.length}>
 										<FormControl>
-											<Input
-												type="number"
-												placeholder="Number of days"
-												value={value?.toString() || ""}
-												onChange={(e) => onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
-												{...field}
-											/>
+											<SelectTrigger>
+												<SelectValue placeholder="Select a Project" />
+											</SelectTrigger>
 										</FormControl>
-										<FormMessage />
-									</FormItem>
-								)}
-							/>
+										<SelectContent className="bg-white dark:bg-gray-950">
+											{projects.map((project) => (
+												<SelectItem key={project.id} value={project.id.toString()}>
+													{project.name}
+												</SelectItem>
+											))}
+											{projects.length === 0 && selectedCustomerId && (
+												<div className="px-3 py-2 text-sm text-muted-foreground">No projects found for this customer</div>
+											)}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 
-							<div className="flex justify-end gap-3 mt-4">
-								<DialogClose asChild>
-									<Button type="button" variant="destructive">
-										Cancel
-									</Button>
-								</DialogClose>
-								{/* Remove DialogClose from submit button */}
-								<Button type="submit" disabled={submitting}>
-									{submitting ? (
-										<>
-											<Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
-										</>
-									) : (
-										"Log"
-									)}
-								</Button>
-							</div>
-						</form>
-					</Form>
-				</div>
-			</DialogContent>
-		</Dialog>
+						<FormField
+							control={form.control}
+							name="taskId"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Task</FormLabel>
+									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select a Task" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent className="bg-white dark:bg-gray-950">
+											{tasks.map((task) => (
+												<SelectItem key={task.id} value={task.id.toString()}>
+													{task.name}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="userId"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Employee</FormLabel>
+									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select an Employee" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent className="bg-white dark:bg-gray-950">
+											{users.map((user) => (
+												<SelectItem key={user.id} value={user.id.toString()}>
+													{user.firstName} {user.lastName}
+												</SelectItem>
+											))}
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="duration"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Duration</FormLabel>
+									<FormControl>
+										<Input type="number" placeholder="Time spent in minutes" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="date"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Date</FormLabel>
+									<FormControl>
+										<Input type="date" {...field} value={field.value as string} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="startTime"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Start Time</FormLabel>
+									<FormControl>
+										<Input type="time" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+
+						<FormField
+							control={form.control}
+							name="endTime"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>End Time</FormLabel>
+									<FormControl>
+										<Input type="time" {...field} />
+									</FormControl>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
+					</div>
+
+					<FormField
+						control={form.control}
+						name="description"
+						render={({ field }) => (
+							<FormItem>
+								<FormLabel>Description</FormLabel>
+								<FormControl>
+									<Textarea placeholder="Description of work done..." {...field} value={field.value as string} />
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<FormField
+						control={form.control}
+						name="repeatInterval"
+						render={({ field: { value, onChange, ...field } }) => (
+							<FormItem>
+								<FormLabel>Repeat for (days)</FormLabel>
+								<FormControl>
+									<Input
+										type="number"
+										placeholder="Number of days"
+										value={value?.toString() || ""}
+										onChange={(e) => onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
+										{...field}
+									/>
+								</FormControl>
+								<FormMessage />
+							</FormItem>
+						)}
+					/>
+
+					<div className="flex justify-end gap-3 mt-4">
+						<Button type="button" variant="destructive" onClick={onClose}>
+							Cancel
+						</Button>
+						{/* Remove DialogClose from submit button */}
+						<Button type="submit" disabled={submitting}>
+							{submitting ? (
+								<>
+									<Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading
+								</>
+							) : (
+								"Log"
+							)}
+						</Button>
+					</div>
+				</form>
+			</Form>
+		</div>
 	);
 };
 

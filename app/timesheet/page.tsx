@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import "./timeEntries.css";
 import { endOfWeek, startOfWeek } from "date-fns";
 import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
@@ -8,6 +8,7 @@ import TimeGrid from "./TimeGrid";
 import LogTime from "./LogTime";
 import React from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Clock } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -32,6 +33,18 @@ const Page: React.FC = () => {
 		endTime?: string;
 		duration?: number;
 	} | null>(null);
+	const [isMounted, setIsMounted] = useState(false);
+	const dialogRef = useRef<HTMLDivElement>(null);
+
+	useEffect(() => {
+		setIsMounted(true);
+		return () => setIsMounted(false);
+	}, []);
+
+	// Debug effect to log dialog state changes
+	useEffect(() => {
+		console.log("Dialog state changed:", logTimeOpen);
+	}, [logTimeOpen]);
 
 	const { data, error, isLoading } = useGetTimeEntries({
 		pageSize: 20,
@@ -42,69 +55,62 @@ const Page: React.FC = () => {
 	});
 
 	const handleTimeSlotSelect = (timeSlot: any) => {
-		// Only show LogTime dialog if timeSlot has actual data
-		if (timeSlot && Object.keys(timeSlot).length > 0) {
-			setLogTimeOpen(true);
-			setSelectedTimeSlot(timeSlot);
-		} else {
-			setLogTimeOpen(false);
-			setSelectedTimeSlot(null);
-		}
+		console.log("Time slot selected:", timeSlot);
+		setSelectedTimeSlot(timeSlot);
+		setLogTimeOpen(true);
+	};
+
+	const handleLogTimeClick = () => {
+		console.log("Log Time button clicked");
+		setLogTimeOpen(true);
 	};
 
 	return (
-		<Dialog
-			open={logTimeOpen}
-			onOpenChange={(open) => {
-				if (!open || selectedTimeSlot) {
-					setLogTimeOpen(open);
-				}
-			}}>
-			<div className="flex-col gap-4">
-				{isLoading ? (
-					<Skeleton>
-						<div className="relative w-full h-fit" />
-					</Skeleton>
-				) : error ? (
-					<AlertDialog defaultOpen={true}>
-						<div className="w-[450px]">
-							<AlertDialogContent>
-								<AlertDialogTitle>Database Error</AlertDialogTitle>
-								<AlertDialogDescription>
-									The Database connection cannot be established. Check your connection and try again.
-								</AlertDialogDescription>
-							</AlertDialogContent>
-						</div>
-					</AlertDialog>
-				) : (
-					<>
-						<TimeToolBar filters={filters} setFilters={setFilters}>
-							<DialogTrigger asChild>
-								<Button variant="default">Log Time</Button>
-							</DialogTrigger>
-						</TimeToolBar>
-						<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />
-						<DialogContent 
-							className="min-w-[600px]"
-							onInteractOutside={(e) => {
-								// Prevent dialog from closing when clicking on time entries
-								if ((e.target as HTMLElement).closest('.time-entry')) {
-									e.preventDefault();
-								}
+		<div className="flex flex-col h-full">
+			<Dialog open={logTimeOpen} onOpenChange={setLogTimeOpen}>
+				<DialogTrigger asChild>
+					<Button variant="default" className="hidden" onClick={handleLogTimeClick} id="log-time-trigger">
+						Open Log Time
+					</Button>
+				</DialogTrigger>
+				<DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+					<DialogHeader>
+						<DialogTitle>Log Time</DialogTitle>
+					</DialogHeader>
+					<div className="overflow-y-auto flex-1 -mx-6 px-6">
+						<LogTime
+							initialValues={{
+								date: selectedTimeSlot?.date || new Date(),
+								startTime: selectedTimeSlot?.startTime,
+								endTime: selectedTimeSlot?.endTime,
+								duration: selectedTimeSlot?.duration,
 							}}
-						>
-							<DialogHeader>
-								<DialogTitle>Log Time</DialogTitle>
-							</DialogHeader>
-							<LogTime 
-								onClose={() => setLogTimeOpen(false)} 
-								initialValues={selectedTimeSlot || undefined} 
-							/>
-						</DialogContent>
-					</>
-				)}
-			</div>
-		</Dialog>
+							onClose={() => setLogTimeOpen(false)}
+						/>
+					</div>
+				</DialogContent>
+			</Dialog>
+			{isLoading ? (
+				<Skeleton className="h-[600px] w-full" />
+			) : error ? (
+				<AlertDialog open={true}>
+					<AlertDialogContent>
+						<AlertDialogTitle>Database Error</AlertDialogTitle>
+						<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
+					</AlertDialogContent>
+				</AlertDialog>
+			) : (
+				<>
+					<TimeToolBar filters={filters} setFilters={setFilters}>
+						<Button variant="default" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleLogTimeClick}>
+							<Clock className="h-4 w-4" />
+							<span className="font-medium">Log Time</span>
+						</Button>
+					</TimeToolBar>
+					<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />
+				</>
+			)}
+		</div>
 	);
 };
 

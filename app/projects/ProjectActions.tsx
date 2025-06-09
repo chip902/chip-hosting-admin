@@ -1,7 +1,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import EditDocument from "./EditDocument";
-import Project from "@prisma/client";
+import { Project } from "@prisma/client";
 
 interface ProjectActionsProps {
 	project: {
@@ -13,7 +13,7 @@ interface ProjectActionsProps {
 		archived: boolean;
 		dateCreated: Date;
 	};
-	onArchive: (project: typeof Project) => void;
+	onArchive: (project: Project) => void;
 }
 
 const ProjectActions = ({ project, onArchive }: ProjectActionsProps) => {

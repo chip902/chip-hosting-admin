@@ -198,7 +198,7 @@ const InvoiceGenerator = () => {
 									</Button>
 								</DropdownMenuTrigger>
 								<DropdownMenuContent align="end">
-									{[10, 20, 30, 40, 50].map((size) => (
+									{[10, 20, 30, 40, 50, 100].map((size) => (
 										<DropdownMenuItem key={size} onClick={() => setPageSize(size)}>
 											{size} rows
 										</DropdownMenuItem>

@@ -1,6 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const CALENDAR_SERVICE_URL = "http://192.168.1.10:8008";
+// Set the microservice URL from environment variable
+const getCalendarServiceUrl = (): string => {
+	const url = process.env.CALENDAR_MICROSERVICE_URL;
+	if (!url) {
+		console.error("CALENDAR_MICROSERVICE_URL is not set in environment variables");
+		throw new Error("Calendar microservice URL is not configured");
+	}
+	return url.endsWith("/") ? url.slice(0, -1) : url;
+};
+
+const CALENDAR_SERVICE_URL = getCalendarServiceUrl();
 
 // List of endpoints that should be passed through to the microservice
 const PROXIED_PATHS = [
@@ -33,20 +43,24 @@ function debugLog(...args: any[]) {
 }
 
 // Create a single handler for all HTTP methods
-export async function GET(request: NextRequest, context: { params: { path: string[] } }) {
-	return handleRequest("GET", request, context.params);
+export async function GET(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+	const params = await context.params;
+	return handleRequest("GET", request, params);
 }
 
-export async function POST(request: NextRequest, context: { params: { path: string[] } }) {
-	return handleRequest("POST", request, context.params);
+export async function POST(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+	const params = await context.params;
+	return handleRequest("POST", request, params);
 }
 
-export async function PUT(request: NextRequest, context: { params: { path: string[] } }) {
-	return handleRequest("PUT", request, context.params);
+export async function PUT(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+	const params = await context.params;
+	return handleRequest("PUT", request, params);
 }
 
-export async function DELETE(request: NextRequest, context: { params: { path: string[] } }) {
-	return handleRequest("DELETE", request, context.params);
+export async function DELETE(request: NextRequest, context: { params: Promise<{ path: string[] }> }) {
+	const params = await context.params;
+	return handleRequest("DELETE", request, params);
 }
 
 async function handleRequest(method: string, request: NextRequest, params: { path: string[] }) {

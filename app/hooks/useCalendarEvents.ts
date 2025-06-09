@@ -6,7 +6,7 @@ export function useCalendarEvents(credentials: any, calendars: any, dateRange: a
 	return useQuery({
 		queryKey: ["calendarEvents", credentials, calendars, dateRange],
 		queryFn: async () => {
-			const { data } = await axios.get("/api/calendar/events", {
+			const { data } = await axios.get("/events", {
 				params: { credentials, calendars, dateRange },
 			});
 			return data;

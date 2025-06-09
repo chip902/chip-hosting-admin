@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 
 // This route handles incorrectly formatted API requests that include an extra /api segment
 // e.g., /api/calendar/api/sync/config -> /api/calendar/sync/config
-export function GET(request: Request, { params }: { params: { path: string[] } }) {
-	const pathSegments = params.path || [];
+export async function GET(request: Request, { params }: { params: Promise<{ path: string[] }> }) {
+	const resolvedParams = await params;
+	const pathSegments = resolvedParams.path || [];
 	const newPath = `/api/calendar/${pathSegments.join("/")}`;
 	const targetUrl = new URL(newPath, request.url);
 
