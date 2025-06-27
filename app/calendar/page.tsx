@@ -16,12 +16,12 @@ const CalendarComponent = dynamic(() => import("./CalendarComponent"), { ssr: fa
 const CalendarSyncIntegration = dynamic(() => import("./CalendarSyncIntegration"), { ssr: false });
 
 // Dynamically import the RemoteAgentStatusComponent with no SSR
-const RemoteAgentStatus = dynamic(() => import("./components/RemoteAgentStatus").then(mod => ({ default: mod.RemoteAgentStatusComponent })), { ssr: false });
+const RemoteAgentStatus = dynamic(() => import("./components/RemoteAgentStatus").then((mod) => ({ default: mod.RemoteAgentStatusComponent })), { ssr: false });
 
 // Dynamically import the new CalendarManagement component with no SSR
-const CalendarManagement = dynamic(() => import("./components/CalendarManagement"), { 
+const CalendarManagement = dynamic(() => import("./components/CalendarManagement"), {
 	ssr: false,
-	loading: () => <div className="flex items-center justify-center p-8">Loading calendar management...</div>
+	loading: () => <div className="flex items-center justify-center p-8">Loading calendar management...</div>,
 });
 
 export default function CalendarPage() {
@@ -32,7 +32,7 @@ export default function CalendarPage() {
 	// Memoize CalendarClient to prevent recreation on every render
 	const calendarClient = useMemo(() => {
 		// Only create the client on the client side to avoid SSR issues
-		if (typeof window === 'undefined') {
+		if (typeof window === "undefined") {
 			return null;
 		}
 		return new CalendarClient();
@@ -67,13 +67,13 @@ export default function CalendarPage() {
 	};
 
 	return (
-		<div className="container mx-auto p-4 md:p-6 max-w-7xl calendar-wrapper">
+		<div className="container mx-auto p-4 md:p-6 max-w-5xl calendar-wrapper">
 			<Tabs defaultValue="calendar" className="space-y-6">
 				{/* Header with Tabs */}
 				<div className="flex items-center justify-between">
 					<div>
-						<h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Calendar</h1>
-						<p className="text-gray-600 dark:text-gray-400">View and manage your schedule across all your calendars</p>
+						<h1 className="text-30 font-bold tracking-tight">Calendar</h1>
+						<p className="text-16 text-muted-foreground">View and manage your schedule across all your calendars</p>
 					</div>
 
 					<TabsList className="grid w-fit grid-cols-2">
@@ -89,25 +89,23 @@ export default function CalendarPage() {
 				<TabsContent value="calendar" className="space-y-6">
 					{/* Mode Toggle and Actions */}
 					<div className="flex items-center justify-between">
-						<div className="flex rounded-lg border border-gray-200 dark:border-gray-700 p-1 bg-gray-50 dark:bg-gray-800">
+						<div className="flex rounded-lg border border-border p-1 bg-muted">
 							<button
 								onClick={() => setMode("full")}
 								className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
 									mode === "full"
-										? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-								}`}
-							>
+										? "bg-background text-foreground shadow-sm"
+										: "text-muted-foreground hover:text-foreground"
+								}`}>
 								Full Sync
 							</button>
 							<button
 								onClick={() => setMode("agents-only")}
 								className={`px-3 py-1.5 text-sm font-medium rounded-md transition-all ${
 									mode === "agents-only"
-										? "bg-white dark:bg-gray-700 text-gray-900 dark:text-white shadow-sm"
-										: "text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
-								}`}
-							>
+										? "bg-background text-foreground shadow-sm"
+										: "text-muted-foreground hover:text-foreground"
+								}`}>
 								Agents Only
 							</button>
 						</div>
@@ -116,14 +114,9 @@ export default function CalendarPage() {
 							{mode === "full" ? (
 								<CalendarSyncIntegration onEventsLoaded={handleEventsLoaded} />
 							) : (
-								calendarClient && (
-									<RemoteAgentOnlyMode 
-										calendarClient={calendarClient}
-										onEventsLoaded={handleEventsLoaded}
-									/>
-								)
+								calendarClient && <RemoteAgentOnlyMode calendarClient={calendarClient} onEventsLoaded={handleEventsLoaded} />
 							)}
-							
+
 							<Button className="gap-2">
 								<Plus className="h-4 w-4" />
 								New Event
@@ -135,7 +128,7 @@ export default function CalendarPage() {
 					<div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 						{/* Main Calendar */}
 						<div className="lg:col-span-3">
-							<div className="bg-white dark:bg-gray-900 rounded-lg shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+							<div className="bg-card rounded-lg shadow-sm border border-border overflow-hidden">
 								<CalendarComponent
 									events={events}
 									onEventClick={handleEventClick}
@@ -147,15 +140,13 @@ export default function CalendarPage() {
 						</div>
 
 						{/* Remote Agent Status Sidebar */}
-						<div className="lg:col-span-1">
-							{calendarClient && <RemoteAgentStatusComponent calendarClient={calendarClient} />}
-						</div>
+						<div className="lg:col-span-1">{calendarClient && <RemoteAgentStatusComponent calendarClient={calendarClient} />}</div>
 					</div>
 
 					{events.length === 0 && (
-						<div className="mt-8 text-center p-8 bg-gray-50 dark:bg-gray-800 rounded-lg border border-dashed border-gray-300 dark:border-gray-700">
-							<h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">No events to display</h3>
-							<p className="text-gray-600 dark:text-gray-400 mb-4">Connect your calendars using the Management tab to see your events here.</p>
+						<div className="mt-8 text-center p-8 bg-muted rounded-lg border border-dashed border-border">
+							<h3 className="text-18 font-medium mb-2">No events to display</h3>
+							<p className="text-muted-foreground mb-4">Connect your calendars using the Management tab to see your events here.</p>
 						</div>
 					)}
 				</TabsContent>

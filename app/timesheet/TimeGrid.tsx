@@ -436,7 +436,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 
 		return (
 			<div
-				className="absolute bg-blue-200 opacity-50 w-full"
+				className="absolute bg-primary/20 w-full"
 				style={{
 					top: `${top}%`,
 					height: `${height}%`,
@@ -447,15 +447,15 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 	};
 
 	return (
-		<div className="relative flex flex-col h-screen bg-white dark:bg-gray-900 border rounded-lg">
+		<div className="relative flex flex-col h-screen bg-card border border-border rounded-lg">
 			<TimeGridHeader days={days} />
 			<div className="flex-1 overflow-y-auto" ref={container}>
 				<div className="grid grid-cols-8">
 					{/* Time labels column */}
 					<div className="col-span-1">
 						{[...Array(24)].map((_, hour) => (
-							<div key={hour} className="h-16 border-t border-gray-200 dark:border-gray-700 flex items-center">
-								<div className="sticky left-0 w-14 pr-2 text-right text-xs leading-5 text-gray-400">
+							<div key={hour} className="h-16 border-t border-border flex items-center">
+								<div className="sticky left-0 w-14 pr-2 text-right text-12 leading-5 text-muted-foreground">
 									{hour % 12 === 0 ? 12 : hour % 12}
 									{hour < 12 ? "AM" : "PM"}
 								</div>
@@ -470,7 +470,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 						return (
 							<div
 								key={dayIndex}
-								className="col-span-1 relative border-l border-gray-200 dark:border-gray-700"
+								className="col-span-1 relative border-l border-border"
 								onMouseDown={(e) => handleGridMouseDown(dayIndex, e)}
 								onMouseMove={(e) => handleGridMouseMove(dayIndex, e)}
 								onMouseUp={(e) => handleGridMouseUp(e, dayIndex)}

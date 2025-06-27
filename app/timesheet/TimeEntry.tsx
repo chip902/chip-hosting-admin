@@ -680,7 +680,7 @@ const TimeEntryComponent = ({
 					<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />
 				</div>
 			</PopoverTrigger>
-			<PopoverContent className="p-6 bg-gray-900 rounded-lg shadow-lg z-[100] w-80">
+			<PopoverContent className="p-6 z-[100] w-80">
 				<form
 					className="flex flex-col space-y-4"
 					onSubmit={(e) => {
@@ -688,22 +688,22 @@ const TimeEntryComponent = ({
 						handleUpdate();
 					}}>
 					<div className="flex justify-between items-center mb-2">
-						<h3 className="text-md font-bold text-gray-100">{customerName || "Unknown Client"}</h3>
-						<span className="text-sm text-gray-300">{durationFormatted}</span>
+						<h3 className="text-16 font-bold">{customerName || "Unknown Client"}</h3>
+						<span className="text-14 text-muted-foreground">{durationFormatted}</span>
 					</div>
 
 					<div className="flex flex-wrap gap-2 mb-2">
-						{projectName && <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-200">{projectName}</span>}
-						{taskName && <span className="px-2 py-1 bg-gray-800 rounded text-xs text-gray-200">{taskName}</span>}
+						{projectName && <span className="px-2 py-1 bg-secondary rounded text-12">{projectName}</span>}
+						{taskName && <span className="px-2 py-1 bg-secondary rounded text-12">{taskName}</span>}
 					</div>
 
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-400 mb-1">Description:</span>
+						<span className="text-14 font-medium text-muted-foreground mb-1">Description:</span>
 						<Textarea
 							name="description"
 							value={formState.description}
 							onChange={handleFormChange}
-							className="w-full h-24 px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full h-24 px-3 py-2 mb-2"
 							placeholder="Add description..."
 						/>
 					</label>
@@ -715,7 +715,7 @@ const TimeEntryComponent = ({
 							name="entryDate"
 							value={formState.entryDate}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full px-3 py-2 mb-2"
 						/>
 					</label>
 
@@ -726,7 +726,7 @@ const TimeEntryComponent = ({
 							name="startTime"
 							value={formState.startTime}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full px-3 py-2 mb-2"
 						/>
 					</label>
 
@@ -737,7 +737,7 @@ const TimeEntryComponent = ({
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2 text-gray-100 bg-gray-800 border border-gray-700 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+							className="w-full px-3 py-2 mb-2"
 						/>
 					</label>
 
@@ -745,12 +745,12 @@ const TimeEntryComponent = ({
 						<button
 							type="button"
 							onClick={handleDelete}
-							className="px-4 py-2 text-sm font-medium text-gray-300 bg-red-600 rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
+							className="px-4 py-2 text-14 font-medium bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/80 focus:outline-none focus:ring-2 focus:ring-ring">
 							Delete
 						</button>
 						<button
 							type="submit"
-							className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+							className="px-4 py-2 text-14 font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-ring"
 							disabled={isLoading}>
 							{isLoading ? <Spinner /> : "Save Changes"}
 						</button>

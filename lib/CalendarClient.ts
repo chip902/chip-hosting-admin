@@ -45,7 +45,7 @@ export class CalendarClient {
 			apiBaseURL = apiBaseURL.slice(0, -1);
 		}
 
-		const isCrossOrigin = apiBaseURL && typeof window !== 'undefined' && !apiBaseURL.startsWith(window.location.origin);
+		const isCrossOrigin = apiBaseURL && typeof window !== "undefined" && !apiBaseURL.startsWith(window.location.origin);
 
 		this.api = axios.create({
 			baseURL: apiBaseURL,
@@ -54,7 +54,7 @@ export class CalendarClient {
 		});
 
 		// Add CORS headers for cross-origin requests
-		if (isCrossOrigin && typeof window !== 'undefined') {
+		if (isCrossOrigin && typeof window !== "undefined") {
 			this.api.defaults.headers.common["Access-Control-Allow-Origin"] = window.location.origin;
 			this.api.defaults.headers.common["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS";
 			this.api.defaults.headers.common["Access-Control-Allow-Headers"] = "Content-Type, Authorization";
@@ -576,3 +576,5 @@ export class CalendarClient {
 			.map((provider) => provider as CalendarProvider);
 	}
 }
+
+export { CalendarProvider };

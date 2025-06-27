@@ -121,17 +121,17 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 	// Show consistent initial state until mounted, then show loading if needed
 	if (!mounted || (loading && mounted)) {
 		return (
-			<div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4">
-				<h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Remote Agents</h3>
+			<div className="bg-card rounded-lg shadow border border-border p-4">
+				<h3 className="text-14 font-semibold mb-3">Remote Agents</h3>
 				{mounted ? (
 					<div className="animate-pulse space-y-2">
 						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-12 bg-gray-200 dark:bg-gray-700 rounded"></div>
+							<div key={i} className="h-12 bg-muted rounded"></div>
 						))}
 					</div>
 				) : (
 					<div className="space-y-2">
-						<div className="text-sm text-gray-500 dark:text-gray-400">Loading agents...</div>
+						<div className="text-14 text-muted-foreground">Loading agents...</div>
 					</div>
 				)}
 			</div>
@@ -140,12 +140,12 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 
 	if (error) {
 		return (
-			<div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800 p-4">
-				<h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">Remote Agents</h3>
-				<div className="text-red-600 dark:text-red-400 text-sm">{error}</div>
+			<div className="bg-card rounded-lg shadow border border-border p-4">
+				<h3 className="text-14 font-semibold mb-3">Remote Agents</h3>
+				<div className="text-destructive text-14">{error}</div>
 				<button
 					onClick={fetchAgents}
-					className="mt-2 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-sm"
+					className="mt-2 text-primary hover:text-primary/80 text-14"
 				>
 					Try again
 				</button>
@@ -154,13 +154,13 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 	}
 
 	return (
-		<div className="bg-white dark:bg-gray-900 rounded-lg shadow border border-gray-200 dark:border-gray-800">
-			<div className="px-4 py-3 border-b border-gray-200 dark:border-gray-700">
+		<div className="bg-card rounded-lg shadow border border-border">
+			<div className="px-4 py-3 border-b border-border">
 				<div className="flex items-center justify-between">
-					<h3 className="text-sm font-semibold text-gray-900 dark:text-white">Remote Agents</h3>
+					<h3 className="text-14 font-semibold">Remote Agents</h3>
 					<button
 						onClick={fetchAgents}
-						className="text-xs text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300"
+						className="text-12 text-primary hover:text-primary/80"
 					>
 						Refresh
 					</button>
@@ -169,17 +169,17 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 
 			{agents.length === 0 ? (
 				<div className="px-4 py-6 text-center">
-					<p className="text-sm text-gray-500 dark:text-gray-400">No agents connected</p>
+					<p className="text-14 text-muted-foreground">No agents connected</p>
 				</div>
 			) : (
-				<div className="divide-y divide-gray-200 dark:divide-gray-700">
+				<div className="divide-y divide-border">
 					{agents.map((agent) => {
 						return (
 							<div key={agent.id} className="px-4 py-3">
 								<div className="flex items-center justify-between">
 									<div className="flex-1 min-w-0">
 										<div className="flex items-center space-x-2">
-											<div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+											<div className="text-14 font-medium truncate">
 												{agent.name}
 											</div>
 											<span
@@ -190,7 +190,7 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 												{agent.status}
 											</span>
 										</div>
-										<div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+										<div className="mt-1 text-12 text-muted-foreground">
 											<div className="truncate">{agent.environment}</div>
 											<div className="mt-0.5">
 												Last seen: {getTimeSinceHeartbeat(agent.last_heartbeat)}

@@ -102,7 +102,7 @@ const Page: React.FC = () => {
 			) : (
 				<>
 					<TimeToolBar filters={filters} setFilters={setFilters}>
-						<Button variant="default" className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={handleLogTimeClick}>
+						<Button variant="default" className="flex items-center gap-2" onClick={handleLogTimeClick}>
 							<Clock className="h-4 w-4" />
 							<span className="font-medium">Log Time</span>
 						</Button>

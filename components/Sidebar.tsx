@@ -26,7 +26,7 @@ interface Props {
 
 export default function Sidebar({ currentPath, className }: Props) {
 	return (
-		<div className={classNames("flex flex-col gap-y-5 overflow-y-auto bg-gray-900 px-6 pb-4", className || "")}>
+		<div className={classNames("sidebar", className || "")}>
 			<div className="flex h-16 shrink-0 items-center mt-2">
 				<div className="h-12 w-auto rounded-full">
 					<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" />
@@ -41,8 +41,8 @@ export default function Sidebar({ currentPath, className }: Props) {
 									<Link
 										href={item.href}
 										className={classNames(
-											item.href === currentPath ? "bg-gray-800 text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white",
-											"group flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6"
+											item.href === currentPath ? "bg-accent text-accent-foreground" : "sidebar-link",
+											"group flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6"
 										)}>
 										<item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
 										{item.name}
@@ -54,7 +54,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 					<li className="mt-auto">
 						<a
 							href="#"
-							className="group -mx-2 flex gap-x-3 rounded-md p-2 text-sm font-semibold leading-6 text-gray-400 hover:bg-gray-800 hover:text-white">
+							className="sidebar-link group -mx-2 flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6">
 							<Cog6ToothIcon className="h-6 w-6 shrink-0" aria-hidden="true" />
 							Settings
 						</a>

@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { Dialog, DialogClose, DialogContent, DialogOverlay, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 
 export type TimeLogSchema = z.infer<typeof timeLogSchema>;

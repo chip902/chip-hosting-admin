@@ -26,7 +26,7 @@ html {
 }
 
 .container {
-	max-width: 1200px;
+	max-width: 1600px;
 }
 
 .time-input {
@@ -167,24 +167,24 @@ html {
 
 @layer base {
 	:root {
-		/* Light mode - Slate-based colors */
-		--background: 210 40% 98%; /* slate-50 */
+		/* Light mode - Softer slate-based colors */
+		--background: 210 40% 96%; /* softer than slate-50 */
 		--foreground: 215 25% 27%; /* slate-800 */
-		--card: 0 0% 100%;
+		--card: 210 40% 98%; /* slight gray tint instead of pure white */
 		--card-foreground: 215 25% 27%;
-		--popover: 0 0% 100%;
+		--popover: 210 40% 98%;
 		--popover-foreground: 215 25% 27%;
 		--primary: 221 83% 53%; /* blue-600 */
 		--primary-foreground: 210 40% 98%;
-		--secondary: 210 40% 96.1%; /* slate-100 */
+		--secondary: 210 40% 93%; /* softer than slate-100 */
 		--secondary-foreground: 215 25% 27%;
-		--muted: 210 40% 96.1%;
+		--muted: 210 40% 93%; /* softer background */
 		--muted-foreground: 215 16% 47%;
-		--accent: 210 40% 96.1%;
+		--accent: 210 40% 93%;
 		--accent-foreground: 215 25% 27%;
 		--destructive: 0 84.2% 60.2%;
 		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 91.4%; /* slate-200 */
+		--border: 214.3 31.8% 88%; /* softer borders */
 		--input: 214.3 31.8% 91.4%;
 		--ring: 221 83% 53%;
 		--radius: 0.5rem;
@@ -489,7 +489,7 @@ html {
 	}
 
 	.payment-transfer_btn {
-		@apply text-14 w-full bg-bank-gradient font-semibold text-white shadow-form dark:bg-blue-700 !important;
+		@apply text-14 w-full z-10 bg-bank-gradient font-semibold text-white shadow-form dark:bg-blue-700 !important;
 	}
 
 	/* Root Layout */
@@ -536,112 +536,112 @@ html {
 
 	/* Sidebar */
 	.sidebar {
-		@apply sticky left-0 top-0 flex h-screen w-fit flex-col justify-between border-r border-gray-200 bg-white pt-8 text-white max-md:hidden sm:p-4 xl:p-6 2xl:w-[355px] dark:bg-gray-800 dark:border-gray-700;
+		@apply sticky left-0 top-0 flex h-screen w-fit flex-col justify-between border-r border-border bg-card pt-8 max-md:hidden sm:p-4 xl:p-6 2xl:w-[355px];
 	}
 
 	.sidebar-logo {
-		@apply 2xl:text-26 font-ibm-plex-serif text-[26px] font-bold text-black-1 max-xl:hidden dark:text-white;
+		@apply 2xl:text-26 font-ibm-plex-serif text-[26px] font-bold max-xl:hidden;
 	}
 
 	.sidebar-link {
-		@apply flex gap-3 items-center py-1 md:p-3 2xl:p-4 rounded-lg justify-center xl:justify-start dark:hover:bg-gray-700;
+		@apply flex gap-3 items-center py-1 md:p-3 2xl:p-4 rounded-lg justify-center xl:justify-start text-muted-foreground hover:bg-accent hover:text-accent-foreground;
 	}
 
 	.sidebar-label {
-		@apply text-16 font-semibold text-black-2 max-xl:hidden dark:text-gray-300;
+		@apply text-16 font-semibold max-xl:hidden;
 	}
 }
 
-/* Dialog and Dropdown z-index fixes */
-/* Reset dialog positioning */
-/* Dialog Portal - Wrapper for positioning the dialog in the DOM */
-[data-radix-dialog-portal] {
+/* Dialog and Modal z-index fixes */
+/* Let shadcn/ui handle dialog styles */
+[data-radix-dialog-content],
+[role="dialog"] {
+  z-index: 9999 !important;
   position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  z-index: 1000 !important;
-  pointer-events: none;
-  display: flex !important;
-  width: 100vw !important;
-  height: 100vh !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  overflow: hidden;
-}
-
-/* Dialog Overlay - The semi-transparent background */
-[data-radix-dialog-overlay] {
-  position: fixed !important;
-  top: 0 !important;
-  left: 0 !important;
-  right: 0 !important;
-  bottom: 0 !important;
-  z-index: 1000 !important;
-  background-color: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  pointer-events: auto;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
-  box-sizing: border-box;
-}
-
-/* Dialog Content - The actual dialog box */
-[data-radix-dialog-content] {
-  position: relative !important;
-  z-index: 1001 !important;
+  top: 50% !important;
+  left: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: 100%;
+  max-width: 32rem;
   max-height: 90vh;
   overflow-y: auto;
-  width: 100%;
-  max-width: 500px;
-  pointer-events: auto;
+  background-color: white !important;
+  border: 1px solid #ccc !important;
   border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  background-color: var(--background);
-  color: var(--foreground);
-  margin: 0 !important;
-  background: var(--background);
-  border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  inset: auto !important;
-  bottom: auto !important;
-  right: auto !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  padding: 1.5rem;
+  outline: none;
 }
 
-/* Ensure dropdown portals appear above dialogs */
+.dark [data-radix-dialog-content],
+.dark [role="dialog"] {
+  background-color: #1f2937 !important;
+  border-color: #374151 !important;
+}
+
+[data-radix-dialog-overlay] {
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  position: fixed !important;
+  inset: 0 !important;
+  z-index: 9998 !important;
+  backdrop-filter: blur(4px);
+}
+
+/* Ensure dropdowns appear above dialogs */
 [data-radix-popper-content-wrapper] {
-  z-index: 1100 !important;
+  z-index: 50 !important;
+}
+
+/* Dialog form input styling */
+[role="dialog"] input[type="text"],
+[role="dialog"] input[type="email"], 
+[role="dialog"] input[type="number"],
+[role="dialog"] input[type="time"],
+[role="dialog"] input[type="date"],
+[role="dialog"] textarea,
+[role="dialog"] select {
+  background-color: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.dark [role="dialog"] input[type="text"],
+.dark [role="dialog"] input[type="email"],
+.dark [role="dialog"] input[type="number"], 
+.dark [role="dialog"] input[type="time"],
+.dark [role="dialog"] input[type="date"],
+.dark [role="dialog"] textarea,
+.dark [role="dialog"] select {
+  background-color: #1e293b !important;
+  border: 1px solid #475569 !important;
+  color: #f1f5f9 !important;
 }
 
 /* Time grid and entries */
 .grid {
-  position: relative;
-  z-index: 1;
+	position: relative;
+	z-index: 1;
 }
 
 .time-entry {
-  z-index: 10;
-  position: relative;
+	z-index: 10;
+	position: relative;
 }
 
 .time-entry:hover,
 .time-entry.dragging {
-  z-index: 100 !important;
+	z-index: 100 !important;
 }
 
 /* Fix for calendar dialogs */
 .calendar-wrapper [role="dialog"],
 .calendar-wrapper [data-radix-dialog-content] {
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  z-index: 1001 !important;
-  margin: 0 !important;
-  inset: auto !important;
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	z-index: 1001 !important;
+	margin: 0 !important;
+	inset: auto !important;
 }
 
 /* Dark mode specific overrides */

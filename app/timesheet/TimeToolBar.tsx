@@ -65,7 +65,7 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 	}, [filters.customerId, setFilters]);
 
 	return (
-		<header className="sticky top-0 bg-slate-50/80 backdrop-blur-sm dark:bg-gray-900/80 border-b border-slate-200 dark:border-gray-700 px-6 py-4 z-10">
+		<header className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-4 z-10">
 			<div className="flex w-full items-center justify-between">
 				{/* Left side - Log Time Button */}
 				<div className="flex items-center gap-2">
@@ -82,8 +82,8 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 				<div className="flex items-center space-x-4">
 					{/* Date display */}
 					<div className="hidden md:flex items-center space-x-3 mr-4">
-						<Calendar className="h-4 w-4 text-slate-600 dark:text-gray-400" />
-						<span className="text-sm font-medium text-slate-700 dark:text-gray-300">
+						<Calendar className="h-4 w-4 text-muted-foreground" />
+						<span className="text-14 font-medium">
 							{filters.startDate?.toLocaleDateString("en-US", {
 								month: "long",
 								day: "numeric",
@@ -102,13 +102,12 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 						<Button
 							onClick={handlePreviousWeek}
 							className={cn(
-								"relative px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700",
-								"hover:bg-slate-100 dark:hover:bg-gray-700",
-								"text-slate-700 dark:text-gray-300",
+								"relative px-3 py-2 bg-background border border-border",
+								"hover:bg-accent hover:text-accent-foreground",
 								"transition-colors duration-200",
 								"flex items-center justify-center",
 								"first:rounded-l-lg last:rounded-r-lg",
-								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-ring"
 							)}>
 							<ChevronLeft className="h-4 w-4" />
 						</Button>
@@ -116,14 +115,12 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 						<Button
 							onClick={handleToday}
 							className={cn(
-								"relative px-4 py-2 bg-white dark:bg-gray-800 border-y border-x border-slate-200 dark:border-gray-700",
-								"hover:bg-slate-100 dark:hover:bg-gray-700",
-								"text-sm font-medium",
-								"text-slate-700 dark:!text-gray-300",
-								"hover:text-slate-900 dark:hover:!text-white",
+								"relative px-4 py-2 bg-background border-y border-x border-border",
+								"hover:bg-accent hover:text-accent-foreground",
+								"text-14 font-medium",
 								"transition-colors duration-200",
 								"min-w-[80px]",
-								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-ring"
 							)}>
 							Today
 						</Button>
@@ -131,13 +128,12 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 						<Button
 							onClick={handleNextWeek}
 							className={cn(
-								"relative px-3 py-2 bg-white dark:bg-gray-800 border border-slate-200 dark:border-gray-700",
-								"hover:bg-slate-100 dark:hover:bg-gray-700",
-								"text-slate-700 dark:text-gray-300",
+								"relative px-3 py-2 bg-background border border-border",
+								"hover:bg-accent hover:text-accent-foreground",
 								"transition-colors duration-200",
 								"flex items-center justify-center",
 								"first:rounded-l-lg last:rounded-r-lg",
-								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
+								"focus:z-10 focus:outline-none focus:ring-2 focus:ring-ring"
 							)}>
 							<ChevronRight className="h-4 w-4" />
 						</Button>
