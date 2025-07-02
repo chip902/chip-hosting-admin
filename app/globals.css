@@ -3,6 +3,88 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Animation for dropdowns */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+		transform: translateY(2px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+/* Ensure the select content is visible */
+.SelectContent[data-state="open"] {
+	animation: fadeIn 0.15s ease-out;
+}
+
+/* Critical fix for select dropdowns */
+[data-radix-select-content],
+[data-radix-popper],
+[role="listbox"] {
+	z-index: 9999 !important;
+	position: fixed !important;
+	display: block !important;
+	visibility: visible !important;
+	pointer-events: auto !important;
+}
+
+/* Fix for aria-hidden dialogs blocking dropdowns */
+[aria-hidden="true"] [role="listbox"],
+[data-aria-hidden="true"] [role="listbox"],
+[aria-hidden="true"] [data-radix-select-content],
+[data-aria-hidden="true"] [data-radix-select-content],
+[aria-hidden="true"] button[role="combobox"],
+[data-aria-hidden="true"] button[role="combobox"] {
+	aria-hidden: false !important;
+	pointer-events: auto !important;
+}
+
+[data-radix-popper-content-wrapper] {
+	z-index: 9999 !important;
+	position: absolute !important;
+	overflow: visible !important;
+	pointer-events: auto !important;
+}
+
+/* Force radix portal to be above all other content */
+body > [data-radix-portal] {
+	position: relative;
+	z-index: 9999 !important;
+}
+
+/* Force select dropdown to be taller */
+[data-radix-select-content],
+[role="listbox"] {
+	min-height: 200px !important;
+	height: auto !important;
+	max-height: 300px !important;
+}
+
+/* Ensure individual select items are visible */
+[role="option"] {
+	display: block !important;
+	visibility: visible !important;
+	height: auto !important;
+}
+
+/* Target Radix UI select viewport specifically */
+[data-radix-select-viewport],
+div[role="presentation"][data-radix-select-content] > div {
+	min-height: 200px !important;
+	max-height: 300px !important;
+	height: auto !important;
+	overflow-y: auto !important;
+}
+
+/* Ensure select content wrapper has proper height */
+[data-radix-popper-content-wrapper] {
+	height: auto !important;
+	max-height: none !important;
+}
+
 /* Custom Global Styles */
 
 * {
@@ -556,64 +638,64 @@ html {
 /* Let shadcn/ui handle dialog styles */
 [data-radix-dialog-content],
 [role="dialog"] {
-  z-index: 9999 !important;
-  position: fixed !important;
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important;
-  width: 100%;
-  max-width: 32rem;
-  max-height: 90vh;
-  overflow-y: auto;
-  background-color: white !important;
-  border: 1px solid #ccc !important;
-  border-radius: 0.5rem;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  padding: 1.5rem;
-  outline: none;
+	z-index: 9999 !important;
+	position: fixed !important;
+	top: 50% !important;
+	left: 50% !important;
+	transform: translate(-50%, -50%) !important;
+	width: 100%;
+	max-width: 32rem;
+	max-height: 90vh;
+	overflow-y: auto;
+	background-color: white !important;
+	border: 1px solid #ccc !important;
+	border-radius: 0.5rem;
+	box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+	padding: 1.5rem;
+	outline: none;
 }
 
 .dark [data-radix-dialog-content],
 .dark [role="dialog"] {
-  background-color: #1f2937 !important;
-  border-color: #374151 !important;
+	background-color: #1f2937 !important;
+	border-color: #374151 !important;
 }
 
 [data-radix-dialog-overlay] {
-  background-color: rgba(0, 0, 0, 0.7) !important;
-  position: fixed !important;
-  inset: 0 !important;
-  z-index: 9998 !important;
-  backdrop-filter: blur(4px);
+	background-color: rgba(0, 0, 0, 0.7) !important;
+	position: fixed !important;
+	inset: 0 !important;
+	z-index: 9998 !important;
+	backdrop-filter: blur(4px);
 }
 
 /* Ensure dropdowns appear above dialogs */
 [data-radix-popper-content-wrapper] {
-  z-index: 50 !important;
+	z-index: 50 !important;
 }
 
 /* Dialog form input styling */
 [role="dialog"] input[type="text"],
-[role="dialog"] input[type="email"], 
+[role="dialog"] input[type="email"],
 [role="dialog"] input[type="number"],
 [role="dialog"] input[type="time"],
 [role="dialog"] input[type="date"],
 [role="dialog"] textarea,
 [role="dialog"] select {
-  background-color: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
+	background-color: #f8fafc !important;
+	border: 1px solid #e2e8f0 !important;
 }
 
 .dark [role="dialog"] input[type="text"],
 .dark [role="dialog"] input[type="email"],
-.dark [role="dialog"] input[type="number"], 
+.dark [role="dialog"] input[type="number"],
 .dark [role="dialog"] input[type="time"],
 .dark [role="dialog"] input[type="date"],
 .dark [role="dialog"] textarea,
 .dark [role="dialog"] select {
-  background-color: #1e293b !important;
-  border: 1px solid #475569 !important;
-  color: #f1f5f9 !important;
+	background-color: #1e293b !important;
+	border: 1px solid #475569 !important;
+	color: #f1f5f9 !important;
 }
 
 /* Time grid and entries */

@@ -49,24 +49,34 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	const form = useForm<TimeLogSchema>({
 		resolver: zodResolver(timeLogSchema),
 		defaultValues: {
+			customerId: initialValues?.customerId || undefined,
+			projectId: initialValues?.projectId || undefined,
+			taskId: initialValues?.taskId || undefined,
+			userId: initialValues?.userId || undefined,
 			date: initialValues?.date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
 			startTime: initialValues?.startTime || "09:00",
 			endTime: initialValues?.endTime || "17:00",
-			duration: initialValues?.duration,
+			duration: initialValues?.duration || 0,
+			description: initialValues?.description || "",
+			repeatInterval: initialValues?.repeatInterval || 0,
 		},
 	});
 
 	// Reset form when dialog is opened with new initial values
 	useEffect(() => {
-		if (initialValues) {
-			form.reset({
-				date: initialValues.date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
-				startTime: initialValues.startTime || "09:00",
-				endTime: initialValues.endTime || "17:00",
-				duration: initialValues.duration,
-			});
-		}
-	}, [initialValues, form.reset]);
+		form.reset({
+			customerId: initialValues?.customerId || undefined,
+			projectId: initialValues?.projectId || undefined,
+			taskId: initialValues?.taskId || undefined,
+			userId: initialValues?.userId || undefined,
+			date: initialValues?.date?.toISOString().split("T")[0] || new Date().toISOString().split("T")[0],
+			startTime: initialValues?.startTime || "09:00",
+			endTime: initialValues?.endTime || "17:00",
+			duration: initialValues?.duration || 0,
+			description: initialValues?.description || "",
+			repeatInterval: initialValues?.repeatInterval || 0,
+		});
+	}, [initialValues, form]);
 
 	useEffect(() => {
 		const fetchData = async () => {
@@ -231,11 +241,11 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 										value={field.value?.toString()}
 										disabled={!customers.length}>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="w-full">
 												<SelectValue placeholder="Select a Customer" />
 											</SelectTrigger>
 										</FormControl>
-										<SelectContent className="bg-white dark:bg-gray-950">
+										<SelectContent className="z-[100] pointer-events-auto" position="popper" sideOffset={5} style={{ pointerEvents: 'auto' }}>
 											{customers.map((customer) => (
 												<SelectItem key={customer.id} value={customer.id.toString()}>
 													{customer.name}
@@ -259,11 +269,11 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 										value={field.value?.toString()}
 										disabled={!selectedCustomerId || !projects.length}>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="w-full">
 												<SelectValue placeholder="Select a Project" />
 											</SelectTrigger>
 										</FormControl>
-										<SelectContent className="bg-white dark:bg-gray-950">
+										<SelectContent className="z-[100] pointer-events-auto" position="popper" sideOffset={5} style={{ pointerEvents: 'auto' }}>
 											{projects.map((project) => (
 												<SelectItem key={project.id} value={project.id.toString()}>
 													{project.name}
@@ -285,13 +295,13 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Task</FormLabel>
-									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()} disabled={!tasks.length}>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="w-full">
 												<SelectValue placeholder="Select a Task" />
 											</SelectTrigger>
 										</FormControl>
-										<SelectContent className="bg-white dark:bg-gray-950">
+										<SelectContent className="z-[100] pointer-events-auto" position="popper" sideOffset={5} style={{ pointerEvents: 'auto' }}>
 											{tasks.map((task) => (
 												<SelectItem key={task.id} value={task.id.toString()}>
 													{task.name}
@@ -310,13 +320,13 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 							render={({ field }) => (
 								<FormItem>
 									<FormLabel>Employee</FormLabel>
-									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()}>
+									<Select onValueChange={(val) => field.onChange(parseInt(val, 10))} value={field.value?.toString()} disabled={!users.length}>
 										<FormControl>
-											<SelectTrigger>
+											<SelectTrigger className="w-full">
 												<SelectValue placeholder="Select an Employee" />
 											</SelectTrigger>
 										</FormControl>
-										<SelectContent className="bg-white dark:bg-gray-950">
+										<SelectContent className="z-[100] pointer-events-auto" position="popper" sideOffset={5} style={{ pointerEvents: 'auto' }}>
 											{users.map((user) => (
 												<SelectItem key={user.id} value={user.id.toString()}>
 													{user.firstName} {user.lastName}

@@ -680,9 +680,9 @@ const TimeEntryComponent = ({
 					<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />
 				</div>
 			</PopoverTrigger>
-			<PopoverContent className="p-6 z-[100] w-80">
+			<PopoverContent className="p-6 z-[100] w-auto min-w-[24rem] max-w-[32rem] bg-popover" align="start" sideOffset={8} style={{ zIndex: 1000 }}>
 				<form
-					className="flex flex-col space-y-4"
+					className="flex flex-col space-y-4 w-full"
 					onSubmit={(e) => {
 						e.preventDefault();
 						handleUpdate();
@@ -709,35 +709,35 @@ const TimeEntryComponent = ({
 					</label>
 
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-400 mb-1">Date:</span>
+						<span className="text-sm font-medium text-muted-foreground mb-1">Date:</span>
 						<input
 							type="date"
 							name="entryDate"
 							value={formState.entryDate}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2"
+							className="w-full px-3 py-2 mb-2 border rounded-md"
 						/>
 					</label>
 
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-400 mb-1">Start Time:</span>
+						<span className="text-sm font-medium text-muted-foreground mb-1">Start Time:</span>
 						<input
 							type="time"
 							name="startTime"
 							value={formState.startTime}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2"
+							className="w-full px-3 py-2 mb-2 border rounded-md"
 						/>
 					</label>
 
 					<label className="flex flex-col">
-						<span className="text-sm font-medium text-gray-400 mb-1">Duration (minutes):</span>
+						<span className="text-sm font-medium text-muted-foreground mb-1">Duration (minutes):</span>
 						<input
 							type="number"
 							name="duration"
 							value={formState.duration}
 							onChange={handleFormChange}
-							className="w-full px-3 py-2 mb-2"
+							className="w-full px-3 py-2 mb-2 border rounded-md"
 						/>
 					</label>
 
@@ -760,5 +760,4 @@ const TimeEntryComponent = ({
 		</Popover>
 	);
 };
-
 export default TimeEntryComponent;

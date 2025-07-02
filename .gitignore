@@ -61,5 +61,7 @@ lc.js
 pv.js
 utils.js
 pv_new.js
-r3_mobileapp_lc.js
-r3_mobileapp_pv.js
+r3_mobileapp*
+CLAUDE.md
+.claude-trace/*
+scripts.js
