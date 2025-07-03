@@ -27,7 +27,7 @@ const InvoiceGenerator = () => {
 	const [filters, setFilters] = useState<{ startDate?: string; endDate?: string; customerId?: number; invoiceStatus?: string }>({});
 	const [page, setPage] = useState(1);
 	const [pageSize, setPageSize] = useState(10); // Define page size
-	const parsedCustomerId = filters.customerId ? parseInt(filters.customerId as any, 10) : undefined;
+	const parsedCustomerId = filters.customerId;
 	const parsedStartDate = filters.startDate ? new Date(filters.startDate) : undefined;
 	const parsedEndDate = filters.endDate ? new Date(filters.endDate) : undefined;
 
@@ -71,33 +71,82 @@ const InvoiceGenerator = () => {
 	const [selectedEntries, setSelectedEntries] = useState<number[]>([]);
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
+	const [isSelectAllPages, setIsSelectAllPages] = useState(false);
 
 	const handleSelectEntry = (entryId: number) => {
-		setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
+		// If we're in select all pages mode, deselecting an item should exit that mode
+		if (isSelectAllPages) {
+			setIsSelectAllPages(false);
+			// Keep all current page items selected except the one being deselected
+			const currentPageIds = timeEntries.map(entry => entry.id).filter(id => id !== entryId);
+			setSelectedEntries(currentPageIds);
+		} else {
+			setSelectedEntries((prev) => (prev.includes(entryId) ? prev.filter((id) => id !== entryId) : [...prev, entryId]));
+		}
 	};
 
 	const handleSelectAll = () => {
-		if (isSelectAll) {
-			setSelectedEntries([]); // Deselect all items
-		} else {
-			const newSelectedEntries = timeEntries.map((entry) => entry.id);
-			setSelectedEntries(newSelectedEntries); // Select all items
+		if (!isSelectAll && !isSelectAllPages) {
+			// Nothing selected -> select current page
+			const currentPageIds = timeEntries.map((entry) => entry.id);
+			setSelectedEntries(currentPageIds);
+			setIsSelectAll(true);
+			setIsSelectAllPages(false);
+		} else if (isSelectAll && !isSelectAllPages) {
+			// Current page selected -> deselect all
+			setSelectedEntries([]);
+			setIsSelectAll(false);
+			setIsSelectAllPages(false);
+		} else if (isSelectAllPages) {
+			// All pages selected -> deselect all
+			setSelectedEntries([]);
+			setIsSelectAll(false);
+			setIsSelectAllPages(false);
 		}
-		setIsSelectAll(!isSelectAll); // Toggle select all state
 	};
+
+	// Update isSelectAll when page changes or entries change
+	React.useEffect(() => {
+		if (!isSelectAllPages && selectedEntries.length > 0) {
+			const currentPageIds = timeEntries.map(entry => entry.id);
+			const allCurrentPageSelected = currentPageIds.every(id => selectedEntries.includes(id));
+			setIsSelectAll(allCurrentPageSelected);
+		}
+	}, [selectedEntries, timeEntries, isSelectAllPages]);
 
 	const handleApplyFilters = (newFilters: typeof filters) => {
 		console.log("Received new filters:", newFilters); // Debug log
+		console.log("Filter types:", {
+			customerId: typeof newFilters.customerId,
+			invoiceStatus: typeof newFilters.invoiceStatus,
+			startDate: typeof newFilters.startDate,
+			endDate: typeof newFilters.endDate
+		});
 		setFilters(newFilters);
 	};
 
 	const mutation = useMutation({
 		mutationFn: async () => {
-			const response = await axios.post("/api/invoices", { timeEntryIds: selectedEntries });
+			// If all pages are selected, send filters instead of individual IDs
+			const payload = isSelectAllPages
+				? { 
+					selectAll: true,
+					filters: {
+						startDate: parsedStartDate?.toISOString(),
+						endDate: parsedEndDate?.toISOString(),
+						customerId: parsedCustomerId,
+						invoiceStatus: filters.invoiceStatus
+					}
+				}
+				: { timeEntryIds: selectedEntries };
+			
+			const response = await axios.post("/api/invoices", payload);
 			return response.data;
 		},
 		onSuccess: () => {
 			setSelectedEntries([]);
+			setIsSelectAll(false);
+			setIsSelectAllPages(false);
 			queryClient.invalidateQueries({ queryKey: ["invoices"] });
 			router.push("/invoices");
 		},
@@ -119,14 +168,22 @@ const InvoiceGenerator = () => {
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold text-foreground">Invoice Generator</h1>
 				<CompactFileUploader />
-				<Button onClick={handleGenerateInvoice} disabled={mutation.status === "pending" || selectedEntries.length === 0} className="w-[200px]">
+				<Button 
+					onClick={handleGenerateInvoice} 
+					disabled={mutation.status === "pending" || (!isSelectAllPages && selectedEntries.length === 0)} 
+					className="w-[200px]"
+				>
 					{mutation.status === "pending" ? (
 						<>
 							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
 							Generating...
 						</>
 					) : (
-						"Generate Invoice"
+						<>
+							Generate Invoice
+							{isSelectAllPages && ` (${data?.totalEntries || 0})`}
+							{!isSelectAllPages && selectedEntries.length > 0 && ` (${selectedEntries.length})`}
+						</>
 					)}
 				</Button>
 			</div>
@@ -134,6 +191,37 @@ const InvoiceGenerator = () => {
 			<div className="rounded-lg border bg-card">
 				<FilterComponent onApplyFilters={handleApplyFilters} />
 			</div>
+			{/* Selection Info Banner */}
+			{isSelectAllPages && (
+				<div className="rounded-md bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-900/20 dark:text-blue-100">
+					<p className="font-medium">
+						All {data?.totalEntries || 0} entries across all pages are selected.
+						<button
+							onClick={() => {
+								setIsSelectAllPages(false);
+								setIsSelectAll(false);
+								setSelectedEntries([]);
+							}}
+							className="ml-2 underline hover:no-underline"
+						>
+							Clear selection
+						</button>
+					</p>
+				</div>
+			)}
+			{!isSelectAllPages && isSelectAll && data && data.totalEntries > pageSize && (
+				<div className="rounded-md bg-gray-50 p-4 text-sm text-gray-900 dark:bg-gray-900/20 dark:text-gray-100">
+					<p>
+						All {timeEntries.length} entries on this page are selected.
+						<button
+							onClick={() => setIsSelectAllPages(true)}
+							className="ml-2 font-medium underline hover:no-underline"
+						>
+							Select all {data.totalEntries} entries across all pages
+						</button>
+					</p>
+				</div>
+			)}
 			{/* Table Section */}
 			{isLoading ? (
 				<div className="space-y-3">
@@ -156,7 +244,22 @@ const InvoiceGenerator = () => {
 						<TableHeader>
 							<TableRow className="hover:bg-muted/50">
 								<TableCell className="w-[50px]">
-									<Checkbox checked={isSelectAll} onCheckedChange={handleSelectAll} aria-label="Select all" />
+									<Checkbox 
+										checked={isSelectAll || isSelectAllPages} 
+										onCheckedChange={handleSelectAll} 
+										aria-label="Select all"
+										ref={(element) => {
+											if (element) {
+												// Set indeterminate state when some but not all items are selected
+												const currentPageIds = timeEntries.map(entry => entry.id);
+												const selectedOnPage = currentPageIds.filter(id => selectedEntries.includes(id));
+												element.dataset.state = isSelectAllPages ? 'checked' : 
+													isSelectAll ? 'checked' : 
+													selectedOnPage.length > 0 && selectedOnPage.length < currentPageIds.length ? 'indeterminate' : 
+													'unchecked';
+											}
+										}}
+									/>
 								</TableCell>
 								<TableCell className="font-medium">Date</TableCell>
 								<TableCell className="font-medium">Description</TableCell>
@@ -170,7 +273,7 @@ const InvoiceGenerator = () => {
 								<TableRow key={entry.id} className="hover:bg-muted/50">
 									<TableCell>
 										<Checkbox
-											checked={selectedEntries.includes(entry.id)}
+											checked={isSelectAllPages || selectedEntries.includes(entry.id)}
 											onCheckedChange={() => handleSelectEntry(entry.id)}
 											aria-label={`Select entry ${entry.id}`}
 										/>

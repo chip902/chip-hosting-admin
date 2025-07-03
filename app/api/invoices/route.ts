@@ -15,24 +15,82 @@ function logError(step: string, error: any) {
 
 export async function POST(request: NextRequest) {
 	try {
-		const { timeEntryIds } = await request.json();
-		console.log(`Processing ${timeEntryIds.length} time entries`);
-
+		const body = await request.json();
+		const { timeEntryIds, selectAll, filters } = body;
+		
 		let timeEntries;
-		try {
-			timeEntries = await prisma.timeEntry.findMany({
-				where: { id: { in: timeEntryIds } },
-				include: { customer: true, task: true, user: true, project: true },
-			});
-			console.log(`Retrieved ${timeEntries.length} time entries`);
-		} catch (dbError) {
-			logError("fetching time entries", dbError);
-			return NextResponse.json({ error: "Database error when fetching time entries" }, { status: 500 });
+		
+		if (selectAll && filters) {
+			// Handle select all with filters
+			console.log("Processing all entries with filters:", filters);
+			
+			let whereClause: any = {};
+			
+			if (filters.startDate) {
+				whereClause.date = { ...whereClause.date, gte: new Date(filters.startDate) };
+			}
+			
+			if (filters.endDate) {
+				whereClause.date = { ...whereClause.date, lte: new Date(filters.endDate) };
+			}
+			
+			if (filters.customerId) {
+				whereClause.customerId = filters.customerId;
+			}
+			
+			if (filters.invoiceStatus && filters.invoiceStatus !== "all") {
+				whereClause.isInvoiced = filters.invoiceStatus === "true";
+			}
+			
+			try {
+				timeEntries = await prisma.timeEntry.findMany({
+					where: whereClause,
+					include: { customer: true, task: true, user: true, project: true },
+				});
+				console.log(`Retrieved ${timeEntries.length} time entries using filters`);
+			} catch (dbError) {
+				logError("fetching time entries with filters", dbError);
+				return NextResponse.json({ error: "Database error when fetching time entries" }, { status: 500 });
+			}
+		} else if (timeEntryIds && timeEntryIds.length > 0) {
+			// Handle specific IDs
+			console.log(`Processing ${timeEntryIds.length} time entries`);
+			
+			try {
+				timeEntries = await prisma.timeEntry.findMany({
+					where: { id: { in: timeEntryIds } },
+					include: { customer: true, task: true, user: true, project: true },
+				});
+				console.log(`Retrieved ${timeEntries.length} time entries`);
+			} catch (dbError) {
+				logError("fetching time entries", dbError);
+				return NextResponse.json({ error: "Database error when fetching time entries" }, { status: 500 });
+			}
+		} else {
+			return NextResponse.json({ error: "No time entries specified" }, { status: 400 });
 		}
 
 		if (timeEntries.length === 0) {
 			console.log("No time entries found");
 			return NextResponse.json({ error: "No time entries found" }, { status: 400 });
+		}
+
+		// Group time entries by customer
+		const entriesByCustomer = timeEntries.reduce((acc: any, entry: any) => {
+			const customerId = entry.customerId;
+			if (!acc[customerId]) {
+				acc[customerId] = [];
+			}
+			acc[customerId].push(entry);
+			return acc;
+		}, {});
+
+		// Check if all entries belong to the same customer
+		const customerIds = Object.keys(entriesByCustomer);
+		if (customerIds.length > 1) {
+			return NextResponse.json({ 
+				error: "Selected time entries belong to multiple customers. Please select entries from a single customer only." 
+			}, { status: 400 });
 		}
 
 		const customer = timeEntries[0].customer;
@@ -43,11 +101,14 @@ export async function POST(request: NextRequest) {
 
 		let invoice;
 		try {
+			// Extract the IDs from the fetched time entries
+			const entryIds = timeEntries.map((entry: any) => entry.id);
+			
 			invoice = await prisma.invoice.create({
 				data: {
 					customerId: customer.id,
 					totalAmount,
-					timeEntries: { connect: timeEntryIds.map((id: number) => ({ id })) },
+					timeEntries: { connect: entryIds.map((id: number) => ({ id })) },
 				},
 			});
 			console.log(`Created invoice: ${invoice.id}`);
@@ -127,8 +188,9 @@ export async function POST(request: NextRequest) {
 		}
 
 		try {
+			const entryIds = timeEntries.map((entry: any) => entry.id);
 			const updateResult = await prisma.timeEntry.updateMany({
-				where: { id: { in: timeEntryIds } },
+				where: { id: { in: entryIds } },
 				data: { isInvoiced: true },
 			});
 			console.log(`${updateResult.count} time entries marked as invoiced`);

@@ -20,69 +20,9 @@
 	animation: fadeIn 0.15s ease-out;
 }
 
-/* Critical fix for select dropdowns */
-[data-radix-select-content],
-[data-radix-popper],
-[role="listbox"] {
-	z-index: 9999 !important;
-	position: fixed !important;
-	display: block !important;
-	visibility: visible !important;
-	pointer-events: auto !important;
-}
-
-/* Fix for aria-hidden dialogs blocking dropdowns */
-[aria-hidden="true"] [role="listbox"],
-[data-aria-hidden="true"] [role="listbox"],
-[aria-hidden="true"] [data-radix-select-content],
-[data-aria-hidden="true"] [data-radix-select-content],
-[aria-hidden="true"] button[role="combobox"],
-[data-aria-hidden="true"] button[role="combobox"] {
-	aria-hidden: false !important;
-	pointer-events: auto !important;
-}
-
-[data-radix-popper-content-wrapper] {
-	z-index: 9999 !important;
-	position: absolute !important;
-	overflow: visible !important;
-	pointer-events: auto !important;
-}
-
-/* Force radix portal to be above all other content */
-body > [data-radix-portal] {
-	position: relative;
-	z-index: 9999 !important;
-}
-
-/* Force select dropdown to be taller */
-[data-radix-select-content],
-[role="listbox"] {
-	min-height: 200px !important;
-	height: auto !important;
-	max-height: 300px !important;
-}
-
-/* Ensure individual select items are visible */
-[role="option"] {
-	display: block !important;
-	visibility: visible !important;
-	height: auto !important;
-}
-
-/* Target Radix UI select viewport specifically */
-[data-radix-select-viewport],
-div[role="presentation"][data-radix-select-content] > div {
-	min-height: 200px !important;
-	max-height: 300px !important;
-	height: auto !important;
-	overflow-y: auto !important;
-}
-
-/* Ensure select content wrapper has proper height */
-[data-radix-popper-content-wrapper] {
-	height: auto !important;
-	max-height: none !important;
+/* Simplified select styling - let shadcn/ui handle most of this */
+[data-radix-select-content] {
+	z-index: 50;
 }
 
 /* Custom Global Styles */

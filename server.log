@@ -1,0 +1,39 @@
+
+> chip-hosting-admin@1.0.0 dev /Users/andrew/code/chip-hosting-admin
+> next dev
+
+   ▲ Next.js 15.3.4
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.42:3000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+Warning: Built-in CSS support is being disabled due to custom CSS configuration being detected.
+See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled
+
+Warning: Built-in CSS support is being disabled due to custom CSS configuration being detected.
+See here for more info: https://nextjs.org/docs/messages/built-in-css-disabled
+
+ ✓ Ready in 1061ms
+ ○ Compiling /api/auth/[...nextauth] ...
+ ✓ Compiled /api/auth/[...nextauth] in 938ms (586 modules)
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+ GET /api/auth/session 200 in 1303ms
+ ○ Compiling / ...
+ ✓ Compiled / in 2.1s (1722 modules)
+ ✓ Compiled in 141ms (1089 modules)
+ ✓ Compiled in 93ms (633 modules)
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+DEBUG totalCurrentBalance:  0
+ GET / 200 in 2640ms
+DEBUG totalCurrentBalance:  0
+ GET / 200 in 74ms
+ ✓ Compiled /favicon.ico in 234ms (1103 modules)
+ GET /favicon.ico 200 in 296ms
+[next-auth][warn][DEBUG_ENABLED] 
+https://next-auth.js.org/warnings#debug_enabled
+DEBUG totalCurrentBalance:  0
+ GET / 200 in 131ms
+[?25h

@@ -88,6 +88,10 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 		const adjustedData = {
 			...data,
 			endDate: data.endDate ? `${data.endDate}T23:59:59.999` : undefined,
+			// Convert invoice status to match API expectations
+			invoiceStatus: data.invoiceStatus === "invoiced" ? "true" : 
+			              data.invoiceStatus === "not-invoiced" ? "false" : 
+			              data.invoiceStatus
 		};
 		console.log("Adjusted data:", adjustedData);
 		onApplyFilters(adjustedData);

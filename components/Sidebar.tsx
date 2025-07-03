@@ -1,18 +1,17 @@
 // Sidebar.tsx
 
-import { Cog6ToothIcon, DocumentDuplicateIcon } from "@heroicons/react/20/solid";
-import { Building2, CalendarIcon, Clock, DollarSign, HomeIcon, PieChartIcon } from "lucide-react";
+import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
 const navigation = [
-	{ name: "Dashboard", href: "/", icon: HomeIcon },
+	{ name: "Dashboard", href: "/", icon: Home },
 	{ name: "Time Sheets", href: "/timesheet", icon: Clock },
 	{ name: "Invoices", href: "/invoices", icon: DollarSign },
 	{ name: "Customers", href: "/customers", icon: Building2 },
 	{ name: "Calendar", href: "/calendar", icon: CalendarIcon },
-	{ name: "Projects", href: "/projects", icon: DocumentDuplicateIcon },
-	{ name: "Transaction Reporting", href: "/transactions", icon: PieChartIcon },
+	{ name: "Projects", href: "/projects", icon: FileText },
+	{ name: "Transaction Reporting", href: "/transactions", icon: PieChart },
 ];
 
 function classNames(...classes: string[]) {
@@ -55,7 +54,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 						<a
 							href="#"
 							className="sidebar-link group -mx-2 flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6">
-							<Cog6ToothIcon className="h-6 w-6 shrink-0" aria-hidden="true" />
+							<Settings className="h-6 w-6 shrink-0" aria-hidden="true" />
 							Settings
 						</a>
 					</li>

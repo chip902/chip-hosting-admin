@@ -10,9 +10,10 @@ if (!CALENDAR_SERVICE_URL) {
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { provider: string } }
+  { params }: { params: Promise<{ provider: string }> }
 ) {
-  const provider = params.provider.toUpperCase();
+  const { provider: providerParam } = await params;
+  const provider = providerParam.toUpperCase();
   
   // Validate provider
   if (!Object.values(CalendarProvider).includes(provider as CalendarProvider)) {

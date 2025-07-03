@@ -156,7 +156,7 @@ export class CalendarClient {
 	public async exchangeAuthCode(provider: CalendarProvider, code: string, state?: string): Promise<CalendarCredentials> {
 		try {
 			// Use the direct endpoint that matches the server's expected path
-			const endpoint = `/api/auth/${provider.toLowerCase()}/callback`;
+			const endpoint = `/api/calendar-auth/${provider.toLowerCase()}/callback`;
 			const params = new URLSearchParams();
 			params.append("code", code);
 			if (state) {
