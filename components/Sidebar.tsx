@@ -1,6 +1,6 @@
 // Sidebar.tsx
 
-import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings } from "lucide-react";
+import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings, BookOpen } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -12,6 +12,7 @@ const navigation = [
 	{ name: "Calendar", href: "/calendar", icon: CalendarIcon },
 	{ name: "Projects", href: "/projects", icon: FileText },
 	{ name: "Transaction Reporting", href: "/transactions", icon: PieChart },
+	{ name: "CMS Admin", href: "/cms-admin", icon: BookOpen },
 ];
 
 function classNames(...classes: string[]) {
@@ -31,7 +32,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 					<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" />
 				</div>
 			</div>
-			<nav className="flex flex-1 flex-col">
+			<nav className="flex flex-1 flex-col mt-6">
 				<ul role="list" className="flex flex-1 flex-col gap-y-7">
 					<li>
 						<ul role="list" className="-mx-2 space-y-1">
@@ -51,9 +52,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 						</ul>
 					</li>
 					<li className="mt-auto">
-						<a
-							href="#"
-							className="sidebar-link group -mx-2 flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6">
+						<a href="#" className="sidebar-link group -mx-2 flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6">
 							<Settings className="h-6 w-6 shrink-0" aria-hidden="true" />
 							Settings
 						</a>

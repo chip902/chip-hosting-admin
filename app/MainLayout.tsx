@@ -38,7 +38,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 	const pathname = usePathname();
 
 	return (
-		<div className="h-full flex dark:bg-gray-900">
+		<div className="h-full flex dark:bg-gray-900" data-main-layout>
 			{/* Mobile sidebar using shadcn/ui Sheet */}
 			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
 				<SheetContent side="left" className="p-0 w-full max-w-xs">

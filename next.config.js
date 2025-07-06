@@ -1,8 +1,14 @@
+const { withPayload } = require('@payloadcms/next/withPayload')
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     basePath: "",
     compiler: {
         styledComponents: true,
+    },
+    sassOptions: {
+        includePaths: ['./node_modules'],
     },
     env: {
         NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
@@ -22,9 +28,21 @@ const nextConfig = {
         ]
     },
     webpack: (config, { isServer, dev }) => {
-        // Configure CSS loaders to properly handle Tailwind directives
+        // Ignore CSS files from Payload packages to avoid build errors
+        config.module.rules.push({
+            test: /\.css$|\.scss$/,
+            include: [/node_modules\/@payloadcms/],
+            use: [
+                'ignore-loader',
+            ],
+            // This ensures this rule takes precedence for Payload CSS files
+            enforce: 'pre',
+        });
+
+        // Configure CSS loaders for project files
         config.module.rules.push({
             test: /\.css$/,
+            exclude: [/node_modules\/@payloadcms/],
             use: [
                 'style-loader',
                 'css-loader',
@@ -39,6 +57,17 @@ const nextConfig = {
                         },
                     },
                 },
+            ],
+        });
+
+        // Handle SCSS files in the project
+        config.module.rules.push({
+            test: /\.scss$/,
+            exclude: [/node_modules\/@payloadcms/],
+            use: [
+                'style-loader',
+                'css-loader',
+                'sass-loader'
             ],
         });
         if (!isServer) {
@@ -68,4 +97,4 @@ const nextConfig = {
     },
 }
 
-module.exports = nextConfig;
+module.exports = withPayload(nextConfig);

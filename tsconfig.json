@@ -8,11 +8,12 @@
     "allowJs": true,
     "baseUrl": ".",
     "skipLibCheck": true,
-    "strict": true,
+    "strict": false,
     "noEmit": true,
     "esModuleInterop": true,
     "module": "esnext",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
     "resolveJsonModule": true,
     "experimentalDecorators": true,
     "isolatedModules": true,
@@ -29,6 +30,9 @@
       ],
       "@/types/*": [
         "./types/*"
+      ],
+      "@payload-config": [
+        "./payload.config.ts"
       ]
     },
     "target": "ES2017"

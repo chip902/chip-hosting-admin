@@ -2,9 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Set the microservice URL from environment variable
 const getCalendarServiceUrl = (): string => {
-	const url = process.env.CALENDAR_MICROSERVICE_URL;
+	const url = process.env.NEXT_PUBLIC_CALENDAR_MICROSERVICE_URL;
 	if (!url) {
-		console.error("CALENDAR_MICROSERVICE_URL is not set in environment variables");
+		console.error("NEXT_PUBLIC_CALENDAR_MICROSERVICE_URL is not set in environment variables");
 		throw new Error("Calendar microservice URL is not configured");
 	}
 	return url.endsWith("/") ? url.slice(0, -1) : url;

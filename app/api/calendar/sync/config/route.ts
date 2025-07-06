@@ -2,7 +2,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 // Set the microservice URL from environment variable or use default
-const CALENDAR_API_URL = process.env.CALENDAR_MICROSERVICE_URL || "http://localhost:8008";
+const CALENDAR_API_URL = process.env.NEXT_PUBLIC_CALENDAR_MICROSERVICE_URL || "http://localhost:8008";
 
 // Handle GET request for sync configuration
 export async function GET(request: NextRequest) {
