@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { useGetTimeEntries } from "../hooks/useGetTimeEntries";
+import { useGetTimeEntries } from "@/app/hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
 import { useRouter } from "next/navigation";

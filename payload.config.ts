@@ -2,9 +2,9 @@ import path from "path";
 import { mongooseAdapter } from "@payloadcms/db-mongodb";
 import { buildConfig } from "payload";
 
-console.log('[PAYLOAD CONFIG] Loading config...');
-console.log('[PAYLOAD CONFIG] DATABASE_URI:', process.env.DATABASE_URI || 'NOT SET');
-console.log('[PAYLOAD CONFIG] PAYLOAD_SECRET:', process.env.PAYLOAD_SECRET ? 'SET' : 'NOT SET');
+console.log("[PAYLOAD CONFIG] Loading config...");
+console.log("[PAYLOAD CONFIG] DATABASE_URI:", process.env.DATABASE_URI || "NOT SET");
+console.log("[PAYLOAD CONFIG] PAYLOAD_SECRET:", process.env.PAYLOAD_SECRET ? "SET" : "NOT SET");
 
 export default buildConfig({
 	admin: { user: "users" },
@@ -28,7 +28,7 @@ export default buildConfig({
 				{ name: "title", type: "text", required: true },
 				{ name: "content", type: "textarea", required: true },
 				{ name: "slug", type: "text", required: true },
-				{ 
+				{
 					name: "category",
 					type: "relationship",
 					relationTo: "categories",

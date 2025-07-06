@@ -1,42 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
-import config from "../../../payload.config.js";
+import config from "../../../payload.config.mjs";
 
 export async function GET() {
-  try {
-    const payload = await getPayload({ config });
-    
-    const result = await payload.find({
-      collection: "users",
-      limit: 100,
-    });
+	try {
+		const payload = await getPayload({ config });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("Users GET error:", error);
-    return NextResponse.json(
-      { error: "Failed to fetch users" },
-      { status: 500 }
-    );
-  }
+		const result = await payload.find({
+			collection: "users",
+			limit: 100,
+		});
+
+		return NextResponse.json(result);
+	} catch (error) {
+		console.error("Users GET error:", error);
+		return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+	}
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const payload = await getPayload({ config });
-    
-    const result = await payload.create({
-      collection: "users",
-      data: body,
-    });
+	try {
+		const body = await request.json();
+		const payload = await getPayload({ config });
 
-    return NextResponse.json(result);
-  } catch (error) {
-    console.error("Users POST error:", error);
-    return NextResponse.json(
-      { error: "Failed to create user" },
-      { status: 500 }
-    );
-  }
+		const result = await payload.create({
+			collection: "users",
+			data: body,
+		});
+
+		return NextResponse.json(result);
+	} catch (error) {
+		console.error("Users POST error:", error);
+		return NextResponse.json({ error: "Failed to create user" }, { status: 500 });
+	}
 }

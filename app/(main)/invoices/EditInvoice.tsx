@@ -1,6 +1,6 @@
 "use client";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { customerSchema } from "../validationSchemas";
+import { customerSchema } from "@/app/validationSchemas";
 import { z } from "zod";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
