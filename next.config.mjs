@@ -56,7 +56,19 @@ const nextConfig = {
     },
 };
 
-export default withPayload(nextConfig, {
+const configWithRewrites = {
+    ...nextConfig,
+    async rewrites() {
+        return [
+            {
+                source: '/media/:path*',
+                destination: '/api/media/serve/:path*',
+            },
+        ];
+    },
+};
+
+export default withPayload(configWithRewrites, {
     configPath: path.resolve(__dirname, './payload.config.mjs'),
     // Enable debug logging
     debug: process.env.NODE_ENV !== 'production',

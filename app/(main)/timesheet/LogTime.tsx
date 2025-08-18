@@ -246,7 +246,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent
-											className="z-[100] pointer-events-auto"
+											className="pointer-events-auto"
 											position="popper"
 											sideOffset={5}
 											style={{ pointerEvents: "auto" }}>
@@ -278,7 +278,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent
-											className="z-[100] pointer-events-auto"
+											className="pointer-events-auto"
 											position="popper"
 											sideOffset={5}
 											style={{ pointerEvents: "auto" }}>
@@ -310,7 +310,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent
-											className="z-[100] pointer-events-auto"
+											className="pointer-events-auto"
 											position="popper"
 											sideOffset={5}
 											style={{ pointerEvents: "auto" }}>
@@ -339,7 +339,7 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 											</SelectTrigger>
 										</FormControl>
 										<SelectContent
-											className="z-[100] pointer-events-auto"
+											className="pointer-events-auto"
 											position="popper"
 											sideOffset={5}
 											style={{ pointerEvents: "auto" }}>

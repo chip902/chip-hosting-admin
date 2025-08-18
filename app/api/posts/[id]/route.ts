@@ -6,6 +6,28 @@ type Params = {
 	params: Promise<{ id: string }>;
 };
 
+export async function GET(request: NextRequest, { params }: Params) {
+	try {
+		const { id } = await params;
+		const payload = await getPayload({ config });
+
+		const result = await payload.findByID({
+			collection: "posts",
+			id,
+			depth: 2, // Include related data like category
+		});
+
+		if (!result) {
+			return NextResponse.json({ error: "Post not found" }, { status: 404 });
+		}
+
+		return NextResponse.json(result);
+	} catch (error) {
+		console.error("Posts GET error:", error);
+		return NextResponse.json({ error: "Failed to fetch post" }, { status: 500 });
+	}
+}
+
 export async function PATCH(request: NextRequest, { params }: Params) {
 	try {
 		const { id } = await params;

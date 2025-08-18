@@ -125,7 +125,7 @@ const ProjectsPage = () => {
 										customerId: project.customerId || 0,
 										rate: project.rate || 0,
 									}}
-									onArchive={() => handleArchiveProject}
+									onArchive={handleArchiveProject}
 								/>
 							</TableCell>
 						</TableRow>

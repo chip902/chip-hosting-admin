@@ -55,6 +55,8 @@ const Page: React.FC = () => {
 	});
 
 	const handleTimeSlotSelect = (timeSlot: any) => {
+		// Ignore calls that don't include a date (used internally just to trigger refetches)
+		if (!timeSlot || !timeSlot.date) return;
 		console.log("Time slot selected:", timeSlot);
 		setSelectedTimeSlot(timeSlot);
 		setLogTimeOpen(true);

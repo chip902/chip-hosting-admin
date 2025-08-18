@@ -47,6 +47,60 @@ html {
 	color: #e2e8f0; /* dark:text-gray-100 */
 }
 
+/* Blog content styles */
+.prose {
+	line-height: 1.75;
+}
+
+/* Ensure textareas preserve newlines properly */
+textarea {
+	white-space: pre-wrap !important;
+	word-wrap: break-word !important;
+}
+
+.prose p {
+	margin-bottom: 0.75rem;
+}
+
+.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+	font-weight: 600;
+	line-height: 1.25;
+}
+
+.prose h1 { font-size: 2.25rem; }
+.prose h2 { font-size: 1.875rem; }
+.prose h3 { font-size: 1.5rem; }
+.prose h4 { font-size: 1.25rem; }
+.prose h5 { font-size: 1.125rem; }
+.prose h6 { font-size: 1rem; }
+
+.prose a {
+	color: #3b82f6;
+	text-decoration: underline;
+}
+
+.prose a:hover {
+	color: #1d4ed8;
+}
+
+.prose strong {
+	font-weight: 600;
+}
+
+.prose em {
+	font-style: italic;
+}
+
+.prose code {
+	background-color: #f3f4f6;
+	padding: 0.125rem 0.25rem;
+	border-radius: 0.25rem;
+	font-size: 0.875em;
+	font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
+}
+
 .container {
 	max-width: 1600px;
 }
@@ -786,5 +840,17 @@ html {
 
 /* Update the PopoverContent styling */
 [data-radix-popper-content-wrapper] {
-	z-index: 50 !important;
+	z-index: 10050 !important;
+}
+
+/* Fix for Select dropdowns visibility in PayloadCMS admin */
+[data-radix-select-content] {
+	z-index: 10050 !important;
+	position: fixed !important;
+	background-color: hsl(var(--popover)) !important;
+}
+
+/* Ensure Select portals render properly */
+[data-radix-select-viewport] {
+	max-height: var(--radix-select-content-available-height);
 }
