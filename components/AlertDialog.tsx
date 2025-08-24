@@ -20,7 +20,7 @@ const AlertDialogComponent = ({ error }: { error: any }) => {
 				</AlertDialogHeader>
 				<AlertDialogFooter>
 					<AlertDialogAction asChild>
-						<Button variant="destructive">Dismiss</Button>
+						<Button variant="brand-primary">Dismiss</Button>
 					</AlertDialogAction>
 				</AlertDialogFooter>
 			</AlertDialogContent>

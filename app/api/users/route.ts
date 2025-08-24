@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPayload } from "payload";
-import config from "../../../payload.config.mjs";
+import config from "@/payload.config.ts";
 
 export async function GET() {
 	try {

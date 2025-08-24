@@ -70,6 +70,7 @@
 		"date-fns-tz": "^3.2.0",
 		"eslint": "^9.33.0",
 		"exceljs": "^4.4.0",
+		"framer-motion": "^12.23.12",
 		"graceful-fs": "^4.2.11",
 		"jspdf": "^3.0.1",
 		"lodash": "^4.17.21",
@@ -91,6 +92,7 @@
 		"react-hook-form": "^7.62.0",
 		"react-plaid-link": "^3.6.1",
 		"react-server-dom-webpack": "^19.1.1",
+		"react-use-websocket": "^4.13.0",
 		"recharts": "^2.15.4",
 		"sonner": "^2.0.7",
 		"uuid": "^11.1.0",
@@ -104,6 +106,7 @@
 		"@types/node": "22.13.13",
 		"@types/papaparse": "^5.3.16",
 		"@types/react": "^19.1.10",
+		"@types/ws": "^8.18.1",
 		"autoprefixer": "^10.4.21",
 		"concurrently": "^9.2.0",
 		"css-loader": "^7.1.2",
@@ -124,7 +127,8 @@
 		"tailwindcss-animate": "^1.0.7",
 		"tsx": "^4.20.4",
 		"typescript": "5.8.2",
-		"webpack": "^5.101.1"
+		"webpack": "^5.101.1",
+		"ws": "^8.18.3"
 	},
 	"pnpm": {
 		"ignoredBuiltDependencies": [

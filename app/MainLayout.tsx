@@ -10,6 +10,9 @@ import Image from "next/image";
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { ChevronDownIcon } from "lucide-react";
+import { useJarvisFloating } from "@/hooks/use-jarvis-floating";
+import { useJarvis } from "@/app/hooks/useJarvis";
+import { Badge } from "@/components/ui/badge";
 
 // const poppins = Poppins({
 // 	subsets: ["latin"],
@@ -23,6 +26,8 @@ import { ChevronDownIcon } from "lucide-react";
 
 export default function MainLayout({ children }: { children: React.ReactNode }) {
 	const router = useRouter();
+	const { openChat } = useJarvisFloating();
+	const { isConnected } = useJarvis();
 	const userNavigation = [
 		{ name: "Your profile", href: "/admin/profile" },
 		{
@@ -43,11 +48,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 			<Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
 				<SheetContent side="left" className="p-0 w-full max-w-xs">
 					<div className="absolute right-4 top-4 lg:hidden">
-						<button
-							type="button"
-							className="-m-2.5 p-2.5"
-							onClick={() => setSidebarOpen(false)}
-						>
+						<button type="button" className="-m-2.5 p-2.5" onClick={() => setSidebarOpen(false)}>
 							<span className="sr-only">Close sidebar</span>
 							<X className="h-6 w-6" aria-hidden="true" />
 						</button>
@@ -62,29 +63,39 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 			{/* Main content */}
 			<div className="flex min-w-0 flex-1 flex-col lg:pl-72">
 				<div className="sticky top-0 z-40 flex h-16 shrink-0 items-center gap-x-4 border-b border-gray-200 bg-white px-4 shadow-sm sm:gap-x-6 sm:px-6 lg:px-8 dark:bg-gray-800 dark:border-gray-700">
-					<button
-						type="button"
-						className="-m-2.5 p-2.5 text-gray-700 lg:hidden dark:text-gray-300"
-						onClick={() => setSidebarOpen(true)}
-					>
+					<button type="button" className="-m-2.5 p-2.5 text-gray-700 lg:hidden dark:text-gray-300" onClick={() => setSidebarOpen(true)}>
 						<span className="sr-only">Open sidebar</span>
 						<Menu className="h-6 w-6" aria-hidden="true" />
 					</button>
 
 					<div className="flex flex-1 gap-x-4 self-stretch lg:gap-x-6">
-						<form className="relative flex flex-1" action="#" method="GET">
-							<label htmlFor="search-field" className="sr-only">
-								Search
-							</label>
-							<Search className="pointer-events-none absolute inset-y-0 left-0 h-full w-5 text-gray-400" aria-hidden="true" />
-							<input
-								id="search-field"
-								className="block h-full w-full border-0 bg-transparent py-0 pl-8 pr-0 text-gray-900 placeholder:text-gray-400 focus:ring-0 sm:text-sm dark:text-gray-100"
-								placeholder="Search..."
-								type="search"
-								name="search"
-							/>
-						</form>
+						{/* JARVIS Search Launcher */}
+						<button
+							onClick={openChat}
+							className="relative flex flex-1 items-center gap-3 px-4 py-2 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 hover:bg-gray-100 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors group">
+							<div className="flex items-center gap-2">
+								<div className="p-1 rounded bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-xs">🤖</div>
+								<Search className="h-4 w-4 text-gray-400 group-hover:text-blue-500 transition-colors" />
+							</div>
+
+							<div className="flex-1 text-left">
+								<span className="text-gray-500 dark:text-gray-400 group-hover:text-gray-700 dark:group-hover:text-gray-300 text-sm">
+									Ask JARVIS anything...
+								</span>
+							</div>
+
+							<div className="flex items-center gap-2">
+								{/* Connection Status Indicator */}
+								<div className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-400 animate-pulse" : "bg-red-400"}`} />
+
+								{/* Keyboard Shortcut */}
+								<div className="hidden sm:flex items-center gap-1">
+									<kbd className="px-1.5 py-0.5 text-xs bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded shadow-sm">
+										⌘K
+									</kbd>
+								</div>
+							</div>
+						</button>
 						<div className="flex items-center gap-x-4 lg:gap-x-6">
 							<DarkModeSwitch />
 							<DropdownMenu>
@@ -101,11 +112,7 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
 								<DropdownMenuContent align="end" className="w-32">
 									{userNavigation.map((item) => (
 										<DropdownMenuItem key={item.name} asChild>
-											<a
-												href={item.href}
-												onClick={item.onClick}
-												className="cursor-pointer"
-											>
+											<a href={item.href} onClick={item.onClick} className="cursor-pointer">
 												{item.name}
 											</a>
 										</DropdownMenuItem>

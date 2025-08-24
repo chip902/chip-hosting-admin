@@ -1,4 +1,6 @@
 import type { CollectionConfig } from 'payload';
+import { commentAfterChangeHook } from '../hooks/comments/afterChange';
+import { commentAfterDeleteHook } from '../hooks/comments/afterDelete';
 
 export const Comments: CollectionConfig = {
   slug: 'comments',
@@ -94,7 +96,7 @@ export const Comments: CollectionConfig = {
     {
       name: 'parentComment',
       type: 'relationship',
-      relationTo: 'comments',
+      relationTo: 'comments' as const,
       required: false,
       admin: {
         description: 'Parent comment for threaded replies',
@@ -207,6 +209,7 @@ export const Comments: CollectionConfig = {
   ],
   timestamps: true,
   hooks: {
-    // Hooks will be added after types are generated to avoid circular import issues
+    afterChange: [commentAfterChangeHook],
+    afterDelete: [commentAfterDeleteHook],
   },
 };

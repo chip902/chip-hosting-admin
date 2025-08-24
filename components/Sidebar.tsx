@@ -3,6 +3,8 @@
 import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings, BookOpen } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
+import { FadeIn } from "@/components/animations/FadeIn";
+import { FloatingElement } from "@/components/animations/FloatingElement";
 
 const navigation = [
 	{ name: "Dashboard", href: "/", icon: Home },
@@ -28,9 +30,11 @@ export default function Sidebar({ currentPath, className }: Props) {
 	return (
 		<div className={classNames("sidebar", className || "")}>
 			<div className="flex h-16 shrink-0 items-center mt-2">
-				<div className="h-12 w-auto rounded-full">
-					<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" />
-				</div>
+				<FloatingElement className="h-12 w-auto rounded-full" yOffset={8} duration={6}>
+					<div className="bg-gradient-to-r from-brand-500 to-brand-600 p-2 rounded-full shadow-lg">
+						<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" className="rounded-full" />
+					</div>
+				</FloatingElement>
 			</div>
 			<nav className="flex flex-1 flex-col mt-6">
 				<ul role="list" className="flex flex-1 flex-col gap-y-7">
@@ -41,11 +45,13 @@ export default function Sidebar({ currentPath, className }: Props) {
 									<Link
 										href={item.href}
 										className={classNames(
-											item.href === currentPath ? "bg-accent text-accent-foreground" : "sidebar-link",
-											"group flex gap-x-3 rounded-md p-2 text-14 font-semibold leading-6"
+											item.href === currentPath
+												? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg transform scale-105"
+												: "hover:bg-gradient-to-r hover:from-brand-100 hover:to-brand-200 hover:text-brand-700 transition-all duration-200",
+											"group flex gap-x-3 rounded-lg p-3 text-14 font-semibold leading-6 transition-all duration-200 hover:transform hover:scale-105 hover:shadow-md"
 										)}>
 										<item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
-										{item.name}
+										<span className="transition-all duration-200">{item.name}</span>
 									</Link>
 								</li>
 							))}

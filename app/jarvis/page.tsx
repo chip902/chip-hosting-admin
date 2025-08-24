@@ -17,13 +17,13 @@ export default function JarvisPage() {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Status Panel */}
         <div className="lg:col-span-1">
-          <JarvisStatusIndicator variant="full" showDetails={true} />
+          <JarvisStatusIndicator />
           
           {/* Quick Info */}
           <div className="mt-6 p-4 bg-blue-50 rounded-lg">
             <h3 className="font-semibold mb-2">💡 Quick Tips</h3>
             <ul className="text-sm space-y-1 text-gray-700">
-              <li>• Say "JARVIS" to activate voice mode</li>
+              <li>• Say &quot;JARVIS&quot; to activate voice mode</li>
               <li>• Type messages or use voice input</li>
               <li>• Conversations are saved to Obsidian</li>
               <li>• Local processing keeps data private</li>

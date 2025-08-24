@@ -4,6 +4,7 @@ import "./globals.css";
 import { Providers } from "./providers";
 import { Metadata } from "next";
 import { Toaster } from "sonner";
+import { JarvisFloatingChatAdvanced } from "@/components/JarvisFloatingChatAdvanced";
 
 export const metadata: Metadata = {
 	title: "Chip Hosting Admin",
@@ -18,6 +19,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 			<body className="h-full">
 				<Providers>
 					{children}
+					<JarvisFloatingChatAdvanced />
 					<Toaster richColors position="top-right" />
 				</Providers>
 			</body>

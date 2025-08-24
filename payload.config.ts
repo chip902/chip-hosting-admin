@@ -3,14 +3,17 @@ import { mongooseAdapter } from "@payloadcms/db-mongodb";
 import { buildConfig } from "payload";
 import { lexicalEditor } from "@payloadcms/richtext-lexical";
 import { seoPlugin } from "@payloadcms/plugin-seo";
-// Temporarily inline Comments collection to generate types
+// Temporarily inline Comments to avoid ESM issues
 
-console.log("[PAYLOAD CONFIG] Loading config...");
-console.log("[PAYLOAD CONFIG] DATABASE_URI:", process.env.DATABASE_URI || "NOT SET");
-console.log("[PAYLOAD CONFIG] PAYLOAD_SECRET:", process.env.PAYLOAD_SECRET ? "SET" : "NOT SET");
+console.log('[PAYLOAD CONFIG] Loading config...');
+console.log('[PAYLOAD CONFIG] DATABASE_URI:', process.env.DATABASE_URI || 'NOT SET');
+console.log('[PAYLOAD CONFIG] PAYLOAD_SECRET:', process.env.PAYLOAD_SECRET ? 'SET' : 'NOT SET');
 
-export default buildConfig({
-	admin: { user: "users" },
+const config = buildConfig({
+	admin: { 
+		user: "users",
+		autoLogin: false,
+	},
 	editor: lexicalEditor({}),
 	collections: [
 		{
@@ -22,6 +25,79 @@ export default buildConfig({
 					type: "email",
 					required: true,
 					unique: true,
+				},
+			],
+		},
+		{
+			slug: 'comments',
+			admin: {
+				useAsTitle: 'id',
+				defaultColumns: ['post', 'authorName', 'isApproved', 'createdAt'],
+			},
+			fields: [
+				{
+					name: 'post',
+					type: 'relationship',
+					relationTo: 'posts',
+					required: true,
+				},
+				{
+					name: 'content',
+					type: 'richText',
+					required: true,
+				},
+				{
+					name: 'author',
+					type: 'relationship',
+					relationTo: 'users',
+					required: false,
+				},
+				{
+					name: 'anonymousId',
+					type: 'text',
+					required: false,
+				},
+				{
+					name: 'authorName',
+					type: 'text',
+					required: false,
+				},
+				{
+					name: 'parentComment',
+					type: 'relationship',
+					relationTo: 'comments',
+					required: false,
+				},
+				{
+					name: 'votes',
+					type: 'group',
+					fields: [
+						{
+							name: 'upvotes',
+							type: 'number',
+							defaultValue: 0,
+						},
+						{
+							name: 'downvotes',
+							type: 'number',
+							defaultValue: 0,
+						},
+						{
+							name: 'score',
+							type: 'number',
+							defaultValue: 0,
+						},
+					],
+				},
+				{
+					name: 'isApproved',
+					type: 'checkbox',
+					defaultValue: false,
+				},
+				{
+					name: 'isSpam',
+					type: 'checkbox',
+					defaultValue: false,
 				},
 			],
 		},
@@ -89,14 +165,6 @@ export default buildConfig({
 						description: "Post status - drafts are not visible on the website"
 					}
 				},
-				{
-					name: "commentCount",
-					type: "number",
-					defaultValue: 0,
-					admin: {
-						description: "Number of approved comments on this post"
-					}
-				},
 			],
 		},
 		{
@@ -112,98 +180,30 @@ export default buildConfig({
 			slug: "media",
 			upload: {
 				staticDir: "media",
+				imageSizes: [
+					{
+						name: "thumbnail",
+						width: 400,
+						height: 300,
+						position: "centre",
+					},
+					{
+						name: "card",
+						width: 768,
+						height: 1024,
+						position: "centre",
+					},
+				],
+				mimeTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
 			},
 			fields: [
 				{
 					name: "alt",
 					type: "text",
-				},
-			],
-		},
-		{
-			slug: 'comments',
-			admin: {
-				useAsTitle: 'id',
-			},
-			fields: [
-				{
-					name: 'post',
-					type: 'relationship',
-					relationTo: 'posts',
 					required: true,
-				},
-				{
-					name: 'content',
-					type: 'richText',
-					required: true,
-				},
-				{
-					name: 'author',
-					type: 'relationship',
-					relationTo: 'users',
-					required: false,
-				},
-				{
-					name: 'anonymousId',
-					type: 'text',
-					required: false,
-				},
-				{
-					name: 'authorName',
-					type: 'text',
-					required: false,
-				},
-				{
-					name: 'votes',
-					type: 'group',
-					fields: [
-						{
-							name: 'upvotes',
-							type: 'number',
-							defaultValue: 0,
-						},
-						{
-							name: 'downvotes',
-							type: 'number',
-							defaultValue: 0,
-						},
-						{
-							name: 'score',
-							type: 'number',
-							defaultValue: 0,
-						},
-					],
-				},
-				{
-					name: 'voters',
-					type: 'array',
-					fields: [
-						{
-							name: 'userId',
-							type: 'text',
-							required: true,
-						},
-						{
-							name: 'vote',
-							type: 'number',
-							required: true,
-						},
-						{
-							name: 'timestamp',
-							type: 'date',
-							required: true,
-						},
-					],
-				},
-				{
-					name: 'isApproved',
-					type: 'checkbox',
-					defaultValue: false,
-				},
-				{
-					name: 'isSpam',
-					type: 'checkbox',
-					defaultValue: false,
+					admin: {
+						description: "Alternative text for accessibility and SEO"
+					}
 				},
 			],
 		},
@@ -235,9 +235,7 @@ export default buildConfig({
 		})
 	],
 	secret: process.env.PAYLOAD_SECRET || "your-secret-here",
-	typescript: {
-		outputFile: path.resolve(process.cwd(), "payload-types.ts"),
-	},
+	typescript: { outputFile: path.resolve(process.cwd(), "payload-types.ts") },
 	db: mongooseAdapter({
 		url: process.env.DATABASE_URI || "",
 		connectOptions: {
@@ -245,3 +243,6 @@ export default buildConfig({
 		},
 	}),
 });
+
+console.log('[PAYLOAD CONFIG] Config created successfully');
+export default config;

@@ -264,6 +264,19 @@ textarea {
 		--input: 214.3 31.8% 91.4%;
 		--ring: 221 83% 53%;
 		--radius: 0.5rem;
+
+		/* Chip Hosting Brand Colors */
+		--brand-50: 240 100% 97%; /* #F5F7FF */
+		--brand-100: 240 100% 94%; /* #EBEEFF */
+		--brand-200: 239 100% 89%; /* #D6DDFF */
+		--brand-300: 238 100% 82%; /* #B4C3FF */
+		--brand-400: 236 100% 75%; /* #8FA9FF */
+		--brand-500: 234 96% 59%; /* #4C34FB */
+		--brand-600: 232 91% 54%; /* #3B1FEB */
+		--brand-700: 229 84% 48%; /* #2D0DD8 */
+		--brand-800: 231 58% 24%; /* #0F073F */
+		--brand-900: 230 50% 18%; /* #0A0530 */
+		--brand-950: 229 55% 10%; /* #050220 */
 	}
 
 	.dark {
@@ -287,6 +300,19 @@ textarea {
 		--border: 217.2 32.6% 17.5%;
 		--input: 217.2 32.6% 17.5%;
 		--ring: 224.3 76.3% 48%;
+
+		/* Chip Hosting Brand Colors - Dark Mode */
+		--brand-50: 230 50% 18%; /* Darker for dark mode */
+		--brand-100: 229 55% 22%;
+		--brand-200: 230 58% 28%;
+		--brand-300: 231 61% 35%;
+		--brand-400: 232 68% 45%;
+		--brand-500: 234 96% 59%; /* Same as light */
+		--brand-600: 236 100% 65%;
+		--brand-700: 238 100% 72%;
+		--brand-800: 239 100% 82%;
+		--brand-900: 240 100% 89%;
+		--brand-950: 240 100% 94%;
 	}
 }
 
@@ -625,6 +651,40 @@ textarea {
 
 	.sidebar-label {
 		@apply text-16 font-semibold max-xl:hidden;
+	}
+
+	/* Chip Hosting Design System Utilities */
+	.btn-primary {
+		@apply inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-white bg-gradient-to-r from-brand-500 to-brand-600 hover:from-brand-600 hover:to-brand-700 focus:outline-none focus:ring-4 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-[1.02] active:scale-[0.98];
+	}
+
+	.btn-secondary {
+		@apply inline-flex items-center justify-center px-6 py-3 text-base font-semibold text-brand-600 bg-white border-2 border-brand-500 hover:bg-brand-50 hover:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-500/50 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-all duration-200 dark:text-brand-400 dark:bg-gray-800 dark:border-brand-600 dark:hover:bg-brand-950;
+	}
+
+	.link-underline {
+		@apply relative text-brand-600 hover:text-brand-700 transition-colors duration-200 after:content-[''] after:absolute after:w-0 after:h-0.5 after:bottom-0 after:left-0 after:bg-brand-600 after:transition-all after:duration-300 hover:after:w-full dark:text-brand-400 dark:after:bg-brand-400;
+	}
+
+	/* Animation delay utilities */
+	.animate-delay-100 {
+		animation-delay: 100ms;
+	}
+
+	.animate-delay-200 {
+		animation-delay: 200ms;
+	}
+
+	.animate-delay-300 {
+		animation-delay: 300ms;
+	}
+
+	.animate-delay-400 {
+		animation-delay: 400ms;
+	}
+
+	.animate-delay-500 {
+		animation-delay: 500ms;
 	}
 }
 

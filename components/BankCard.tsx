@@ -1,5 +1,8 @@
 import { formatAmount } from "@/lib/utils";
 import { CreditCardProps } from "@/types";
+import { Card3D } from "@/components/animations/Card3D";
+import { FadeIn } from "@/components/animations/FadeIn";
+import { Button } from "@/components/ui/button";
 import Image from "next/image";
 import React from "react";
 
@@ -9,8 +12,8 @@ interface EnhancedCreditCardProps extends CreditCardProps {
 
 const BankCard = ({ account, userName, showBalance = true, isActive = false }: EnhancedCreditCardProps) => {
 	return (
-		<div className="flex flex-col">
-			<div className={`bank-card relative overflow-hidden transition-all duration-300 ${isActive ? "transform shadow-xl" : ""}`}>
+		<FadeIn className="flex flex-col">
+			<Card3D className={`bank-card relative overflow-hidden transition-all duration-300 ${isActive ? "transform shadow-xl" : ""}`}>
 				<div className="bank-card_content">
 					<div>
 						<h1 className="text-16 font-semibold text-white">{account.name || userName}</h1>
@@ -34,7 +37,7 @@ const BankCard = ({ account, userName, showBalance = true, isActive = false }: E
 
 				{/* Add a subtle highlight effect when card is active */}
 				{isActive && <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white to-transparent opacity-10"></div>}
-			</div>
+			</Card3D>
 
 			{/* Card details that only show when active */}
 			{isActive && (
@@ -48,8 +51,9 @@ const BankCard = ({ account, userName, showBalance = true, isActive = false }: E
 						<span className="text-gray-600">Account Number</span>
 						<span className="font-semibold">••••{account.mask || 1234}</span>
 					</div>
-					<button
-						className="mt-3 w-full bg-blue-500 text-white py-2 rounded hover:bg-blue-600 transition-colors"
+					<Button
+						variant="brand-primary"
+						className="mt-3 w-full"
 						aria-label="Copy card number"
 						onClick={(e) => {
 							e.preventDefault();
@@ -57,10 +61,10 @@ const BankCard = ({ account, userName, showBalance = true, isActive = false }: E
 							// You could use toast here if needed
 						}}>
 						Copy Number
-					</button>
+					</Button>
 				</div>
 			)}
-		</div>
+		</FadeIn>
 	);
 };
 
