@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetTimeEntries } from "@/app/hooks/useGetTimeEntries";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import axios from "axios";
@@ -105,7 +105,7 @@ const InvoiceGenerator = () => {
 	};
 
 	// Update isSelectAll when page changes or entries change
-	React.useEffect(() => {
+	useEffect(() => {
 		if (!isSelectAllPages && selectedEntries.length > 0) {
 			const currentPageIds = timeEntries.map((entry) => entry.id);
 			const allCurrentPageSelected = currentPageIds.every((id) => selectedEntries.includes(id));

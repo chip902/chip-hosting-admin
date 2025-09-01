@@ -68,3 +68,5 @@ CLAUDE.md
 scripts.js
 scripts/test-jarvis-connection.js
 .gitignore
+scripts/test-frontend-streaming.js
+scripts/debug-jarvis-connection.js

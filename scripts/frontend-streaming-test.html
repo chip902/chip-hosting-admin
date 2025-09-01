@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JARVIS Streaming Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.connected { background-color: #d4edda; color: #155724; }
+        .status.disconnected { background-color: #f8d7da; color: #721c24; }
+        .status.connecting { background-color: #fff3cd; color: #856404; }
+        .message {
+            margin: 10px 0;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            background-color: #f8f9fa;
+        }
+        .streaming {
+            border-left-color: #28a745;
+            background-color: #d4edda;
+        }
+        .input-group {
+            margin: 20px 0;
+        }
+        input {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        button {
+            width: 25%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .log {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 JARVIS Streaming Test</h1>
+        
+        <div id="status" class="status disconnected">Disconnected</div>
+        
+        <div class="input-group">
+            <input type="text" id="messageInput" placeholder="Type your message here..." value="Hello JARVIS, please respond with a simple greeting.">
+            <button id="sendButton" disabled>Send Message</button>
+        </div>
+        
+        <h3>Messages:</h3>
+        <div id="messages"></div>
+        
+        <h3>Debug Log:</h3>
+        <div id="debugLog" class="log"></div>
+        
+        <button id="clearButton">Clear Log</button>
+    </div>
+
+    <script>
+        const WS_URL = 'ws://localhost:8765/ws';
+        let ws = null;
+        let currentMessages = [];
+
+        const statusEl = document.getElementById('status');
+        const messagesEl = document.getElementById('messages');
+        const debugLogEl = document.getElementById('debugLog');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const clearButton = document.getElementById('clearButton');
+
+        function log(message) {
+            console.log(message);
+            const time = new Date().toLocaleTimeString();
+            debugLogEl.innerHTML += `[${time}] ${message}<br>`;
+            debugLogEl.scrollTop = debugLogEl.scrollHeight;
+        }
+
+        function updateStatus(status, className) {
+            statusEl.textContent = status;
+            statusEl.className = `status ${className}`;
+        }
+
+        function updateMessage(responseId, content, isStreaming = true) {
+            const existingMessage = currentMessages.find(m => m.responseId === responseId);
+            
+            if (existingMessage) {
+                existingMessage.content = content;
+                existingMessage.isStreaming = isStreaming;
+            } else {
+                currentMessages.push({
+                    id: `msg-${responseId}`,
+                    responseId: responseId,
+                    content: content,
+                    isStreaming: isStreaming,
+                    type: 'assistant'
+                });
+            }
+            
+            renderMessages();
+        }
+
+        function renderMessages() {
+            messagesEl.innerHTML = '';
+            currentMessages.forEach(msg => {
+                const div = document.createElement('div');
+                div.className = `message ${msg.isStreaming ? 'streaming' : ''}`;
+                div.innerHTML = `
+                    <strong>${msg.type === 'user' ? 'You' : 'JARVIS'}:</strong> 
+                    ${msg.content}
+                    ${msg.isStreaming ? ' <span style="color: #28a745;">●</span>' : ''}
+                `;
+                messagesEl.appendChild(div);
+            });
+        }
+
+        function sendMessage() {
+            const message = messageInput.value.trim();
+            if (!message || !ws || ws.readyState !== WebSocket.OPEN) return;
+
+            // Add user message
+            currentMessages.push({
+                id: `user-${Date.now()}`,
+                content: message,
+                type: 'user',
+                isStreaming: false
+            });
+            renderMessages();
+
+            const wsMessage = {
+                type: 'user_message',
+                data: {
+                    message: message,
+                    metadata: {
+                        timestamp: Date.now(),
+                        source: 'test_html',
+                        session_id: 'test-session'
+                    }
+                },
+                timestamp: Date.now(),
+                id: `test-${Date.now()}`
+            };
+
+            log(`📤 Sending: ${message}`);
+            ws.send(JSON.stringify(wsMessage));
+            messageInput.value = '';
+        }
+
+        function connect() {
+            updateStatus('Connecting...', 'connecting');
+            log('🔄 Connecting to JARVIS WebSocket...');
+
+            ws = new WebSocket(WS_URL);
+
+            ws.onopen = () => {
+                log('✅ Connected to JARVIS');
+                updateStatus('Connected', 'connected');
+                sendButton.disabled = false;
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const message = JSON.parse(event.data);
+                    log(`📥 Received: ${message.type} (${message.data?.response_id || 'no-id'})`);
+                    
+                    switch (message.type) {
+                        case 'jarvis_response_stream':
+                            if (message.data.stream_started) {
+                                log(`🔄 Stream started: ${message.data.response_id}`);
+                                updateMessage(message.data.response_id, '', true);
+                            } else if (message.data.token) {
+                                log(`📝 Token: "${message.data.token}" (complete: ${!!message.data.is_complete})`);
+                                const currentMsg = currentMessages.find(m => m.responseId === message.data.response_id);
+                                const newContent = (currentMsg?.content || '') + message.data.token;
+                                updateMessage(message.data.response_id, newContent, !message.data.is_complete);
+                            }
+                            break;
+                            
+                        case 'jarvis_response_end':
+                            log(`✅ Stream ended: ${message.data.response_id}`);
+                            const finalContent = message.data.final_response || '';
+                            if (finalContent) {
+                                updateMessage(message.data.response_id, finalContent, false);
+                            }
+                            break;
+                            
+                        case 'status_update':
+                            log(`📊 Status update received`);
+                            break;
+                            
+                        default:
+                            log(`❓ Unknown message: ${message.type}`);
+                    }
+                    
+                } catch (error) {
+                    log(`❌ Parse error: ${error.message}`);
+                }
+            };
+
+            ws.onerror = (error) => {
+                log(`❌ WebSocket error: ${error}`);
+                updateStatus('Error', 'disconnected');
+            };
+
+            ws.onclose = (event) => {
+                log(`🔌 Connection closed (${event.code}): ${event.reason || 'No reason'}`);
+                updateStatus('Disconnected', 'disconnected');
+                sendButton.disabled = true;
+                
+                // Auto-reconnect after 3 seconds
+                setTimeout(() => {
+                    log('🔄 Attempting to reconnect...');
+                    connect();
+                }, 3000);
+            };
+        }
+
+        // Event listeners
+        sendButton.addEventListener('click', sendMessage);
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+        clearButton.addEventListener('click', () => {
+            debugLogEl.innerHTML = '';
+            currentMessages = [];
+            renderMessages();
+        });
+
+        // Auto-connect on load
+        connect();
+    </script>
+</body>
+</html>

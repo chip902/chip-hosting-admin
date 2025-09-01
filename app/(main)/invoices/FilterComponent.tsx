@@ -75,10 +75,6 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 	// 		customerId: undefined,
 	// 		invoiceStatus: "",
 	// 	};
-	// 	setFilters(emptyFilters);
-	// 	onApplyFilters({});
-	// };
-
 	const customerId = form.watch("customerId");
 
 	const onSubmit = (data: FilterFormSchema) => {
@@ -86,15 +82,25 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 		console.log("Form submitted with data:", data);
 		const adjustedData = {
 			...data,
+			// Normalize dates: empty -> undefined; endDate inclusive end of day
+			startDate: data.startDate ? data.startDate : undefined,
 			endDate: data.endDate ? `${data.endDate}T23:59:59.999` : undefined,
-			// Convert invoice status to match API expectations
-			invoiceStatus: data.invoiceStatus === "invoiced" ? "true" : data.invoiceStatus === "not-invoiced" ? "false" : data.invoiceStatus,
+			// Convert invoice status to API expectations; 'all' -> undefined
+			invoiceStatus:
+				data.invoiceStatus === "all"
+					? undefined
+					: data.invoiceStatus === "invoiced"
+						? "true"
+						: data.invoiceStatus === "not-invoiced"
+							? "false"
+							: data.invoiceStatus,
 		};
 		console.log("Adjusted data:", adjustedData);
 		onApplyFilters(adjustedData);
 	};
 
 	const handleReset = () => {
+		// Reset the form UI to defaults but send undefineds to clear filters upstream
 		form.reset({
 			customerId: undefined,
 			startDate: "",
@@ -103,17 +109,11 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 		});
 		onApplyFilters({
 			customerId: undefined,
-			startDate: "",
-			endDate: "",
-			invoiceStatus: "all",
+			startDate: undefined,
+			endDate: undefined,
+			invoiceStatus: undefined,
 		});
 	};
-
-	useEffect(() => {
-		if (!customerId) {
-			form.setValue("customerId", undefined);
-		}
-	}, [customerId, form.setValue]);
 
 	if (isLoading) {
 		return <div>Loading Filter Items...</div>;
@@ -142,7 +142,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 										onValueChange={(value) => {
 											field.onChange(value ? parseInt(value) : undefined);
 										}}
-										value={field.value?.toString()}>
+										value={field.value !== undefined ? field.value.toString() : undefined}>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="Select a customer" />
@@ -195,7 +195,7 @@ const FilterComponent = ({ onApplyFilters }: FilterComponentProps) => {
 							render={({ field }) => (
 								<FormItem className="w-full">
 									<FormLabel>Invoice Status</FormLabel>
-									<Select onValueChange={field.onChange} value={field.value || "all"}>
+									<Select onValueChange={field.onChange} value={field.value ?? "all"}>
 										<FormControl>
 											<SelectTrigger>
 												<SelectValue placeholder="All Entries" />

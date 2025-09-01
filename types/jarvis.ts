@@ -216,7 +216,6 @@ export interface UseJarvisReturn {
   capabilities: JarvisCapabilities | null;
   
   // Streaming support
-  streamingResponses: Map<string, string>;
   activeStreams: Set<string>;
   
   // Methods

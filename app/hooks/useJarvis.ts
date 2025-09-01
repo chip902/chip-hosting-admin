@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import useWebSocket, { ReadyState } from "react-use-websocket";
 import { jarvisApiClient, JarvisApiError, JarvisWebSocketUtils, JarvisConnectionManager, JarvisMessageQueue } from "@/lib/jarvis-client";
 import type {
@@ -79,7 +79,7 @@ export function useJarvis(): UseJarvisReturnExtended {
 
 	// Streaming and real-time state
 	const [messages, setMessages] = useState<StreamingMessage[]>([]);
-	const [streamingResponses, setStreamingResponses] = useState<Map<string, string>>(new Map());
+	// Removed streamingResponses to prevent infinite loops
 	const [activeStreams, setActiveStreams] = useState<Set<string>>(new Set());
 	const [audioLevels, setAudioLevels] = useState<AudioLevels | null>(null);
 
@@ -102,32 +102,41 @@ export function useJarvis(): UseJarvisReturnExtended {
 	const messageQueue = useRef(new JarvisMessageQueue());
 	const lastMessageRef = useRef<string>("");
 	// Track which response_ids are using explicit stream events to avoid double-processing
-	const streamModeRef = useRef<Map<string, 'explicit' | 'implicit'>>(new Map());
+	const streamModeRef = useRef<Map<string, "explicit" | "implicit">>(new Map());
 	// Track accumulated content per response to detect duplicates
 	const accumulatedContentRef = useRef<Map<string, string>>(new Map());
-	// Track last few tokens to detect repetition patterns
-	const recentTokensRef = useRef<Map<string, string[]>>(new Map());
+	// Removed complex repetition tracking for better performance
 	// Track finalized response IDs to prevent duplicate final messages
 	const finalizedResponsesRef = useRef<Set<string>>(new Set());
+	// Track processed messages to prevent infinite loops
+	const processedMessagesRef = useRef<Set<string>>(new Set());
 
 	// WebSocket configuration
 	const socketUrl = jarvisApiClient.getWebSocketUrl();
 	const shouldConnect = true;
 
+	// (WebSocket setup moved below handleWebSocketMessage)
+
 	// Handle streaming message tokens
 	const handleStreamingMessage = useCallback((message: JarvisWebSocketMessage) => {
 		const { response_id, token, stream_started } = message.data;
 
+		// Prevent processing the same message multiple times
+		const messageKey = `${response_id}-${stream_started ? 'start' : token}`;
+		if (processedMessagesRef.current.has(messageKey)) {
+			console.log(`[JARVIS] Skipping duplicate message: ${messageKey}`);
+			return;
+		}
+		processedMessagesRef.current.add(messageKey);
+
 		if (stream_started) {
 			// Mark this response_id as using explicit streaming events
-			streamModeRef.current.set(response_id, 'explicit');
+			streamModeRef.current.set(response_id, "explicit");
 			// Clear any previous accumulated content for this response
 			accumulatedContentRef.current.set(response_id, "");
-			recentTokensRef.current.set(response_id, []);
-			
+
 			// Start new streaming response
 			setActiveStreams((prev) => new Set([...prev, response_id]));
-			setStreamingResponses((prev) => new Map([...prev, [response_id, ""]]));
 
 			// Create initial streaming message
 			const streamingMessage: StreamingMessage = {
@@ -142,151 +151,98 @@ export function useJarvis(): UseJarvisReturnExtended {
 			setMessages((prev) => [...prev, streamingMessage]);
 			console.log(`[JARVIS] Stream started for response ${response_id}`);
 		} else if (token && response_id) {
-			// If we've already detected explicit streaming for this response, avoid double-adding tokens
-			const mode = streamModeRef.current.get(response_id);
-			if (mode === 'explicit' && message.type === 'jarvis_response') {
-				console.log(`[JARVIS] Skipping duplicate token from jarvis_response for explicit stream ${response_id}`);
-				return;
-			}
-
-			// Check if this token would create duplicate content
+			// Simple duplicate prevention - just check if we already have this exact content
 			const currentContent = accumulatedContentRef.current.get(response_id) || "";
-			const recentTokens = recentTokensRef.current.get(response_id) || [];
-			
-			// Check for repetition patterns
-			if (recentTokens.length >= 3) {
-				const lastThree = recentTokens.slice(-3).join('');
-				if (lastThree === token.repeat(3)) {
-					console.log(`[JARVIS] Detected repetition pattern, skipping token: "${token}"`);
-					return;
-				}
-			}
-			
-			// Check if adding this token would create duplicate content
-			if (currentContent.endsWith(token)) {
-				console.log(`[JARVIS] Skipping duplicate token: "${token}"`);
-				return;
-			}
-			// Update accumulated content and recent tokens
-			accumulatedContentRef.current.set(response_id, currentContent + token);
-			const newRecentTokens = [...recentTokens, token].slice(-5); // Keep last 5 tokens
-			recentTokensRef.current.set(response_id, newRecentTokens);
-			
-			// Append token to streaming response map (for reference)
-			setStreamingResponses((prev) => {
-				const newMap = new Map(prev);
-				const currentContent = newMap.get(response_id) || "";
-				newMap.set(response_id, currentContent + token);
-				return newMap;
-			});
+			const newContent = currentContent + token;
 
-			// Update or lazily create the streaming message on first token
-			setActiveStreams((prev) => new Set([...prev, response_id]));
+			// Update accumulated content
+			accumulatedContentRef.current.set(response_id, newContent);
+
+			// Use a ref-based update to avoid triggering re-renders during streaming
 			setMessages((prev) => {
 				const idx = prev.findIndex((m) => m.responseId === response_id);
 				if (idx !== -1) {
+					// Only update if content actually changed to prevent unnecessary re-renders
+					if (prev[idx].content === newContent) {
+						return prev; // No change, return same array reference
+					}
+					
+					// Update existing message
 					const updated = [...prev];
 					const msg = updated[idx];
-					updated[idx] = { ...msg, content: (msg.content || "") + token, isStreaming: true };
+					updated[idx] = {
+						...msg,
+						content: newContent,
+						isStreaming: !message.data.is_complete, // Stop streaming if complete
+					};
 					return updated;
-				}
+				} else {
+					// Create new streaming message if none exists
+					if (!streamModeRef.current.has(response_id)) {
+						streamModeRef.current.set(response_id, "implicit");
+					}
 
-				// If not in explicit mode, mark as implicit
-				if (!mode) {
-					streamModeRef.current.set(response_id, 'implicit');
-					accumulatedContentRef.current.set(response_id, token);
-					recentTokensRef.current.set(response_id, [token]);
+					const newMsg: StreamingMessage = {
+						id: `stream-${response_id}`,
+						type: "assistant",
+						content: newContent,
+						timestamp: Date.now(),
+						isStreaming: !message.data.is_complete,
+						responseId: response_id,
+					};
+					console.log(`[JARVIS] Created new streaming message for response ${response_id}`);
+					return [...prev, newMsg];
 				}
-				
-				const newMsg: StreamingMessage = {
-					id: `stream-${response_id}`,
-					type: "assistant",
-					content: token,
-					timestamp: Date.now(),
-					isStreaming: true,
-					responseId: response_id,
-				};
-				console.log(`[JARVIS] Created new streaming message for response ${response_id}`);
-				return [...prev, newMsg];
 			});
+
+			// Handle stream completion
+			if (message.data.is_complete) {
+				console.log(`[JARVIS] ✅ Token marked as complete, finalizing stream for ${response_id}`);
+
+				// Clean up immediately since this is the final token
+				setActiveStreams((prev) => {
+					const newSet = new Set(prev);
+					newSet.delete(response_id);
+					return newSet;
+				});
+
+				finalizedResponsesRef.current.add(response_id);
+				streamModeRef.current.delete(response_id);
+				accumulatedContentRef.current.delete(response_id);
+
+				// Clean up message tracking
+				setTimeout(() => {
+					finalizedResponsesRef.current.delete(response_id);
+					// Clear processed messages for this response to allow future interactions
+					const keysToDelete = Array.from(processedMessagesRef.current).filter(key => key.startsWith(`${response_id}-`));
+					keysToDelete.forEach(key => processedMessagesRef.current.delete(key));
+				}, 2000);
+			} else {
+				// Make sure stream is marked as active for non-complete tokens
+				setActiveStreams((prev) => new Set([...prev, response_id]));
+			}
 		}
 	}, []);
 
-	// Handle end of streaming
+	// Handle end of streaming - but don't finalize immediately since tokens may come after
 	const handleStreamEnd = useCallback((message: JarvisWebSocketMessage) => {
 		const { response_id, final_response, metadata } = message.data;
 
-		// Check if this response has already been finalized
-		if (finalizedResponsesRef.current.has(response_id)) {
-			console.log(`[JARVIS] Skipping duplicate stream end for already finalized response ${response_id}`);
-			// Clean up any lingering state just in case
-			setActiveStreams((prev) => {
-				const newSet = new Set(prev);
-				newSet.delete(response_id);
-				return newSet;
-			});
-			setStreamingResponses((prev) => {
-				const newMap = new Map(prev);
-				newMap.delete(response_id);
-				return newMap;
-			});
-			return;
+		console.log(`[JARVIS] 🔚 Received stream end for response ${response_id}, but keeping stream active for post-end tokens`);
+
+		// Store the final response and metadata for later use, but don't close the stream yet
+		const finalResponseData = {
+			final_response,
+			metadata,
+			timestamp: Date.now(),
+		};
+
+		// Store in a ref for when we actually finalize
+		if (!finalizedResponsesRef.current.has(response_id)) {
+			accumulatedContentRef.current.set(response_id + "_final", JSON.stringify(finalResponseData));
 		}
 
-		// Mark this response as finalized
-		finalizedResponsesRef.current.add(response_id);
-		console.log(`[JARVIS] Finalizing stream end for response ${response_id}`);
-		
-		// Clear this response ID from finalized set after 5 seconds to prevent memory buildup
-		setTimeout(() => {
-			finalizedResponsesRef.current.delete(response_id);
-			console.log(`[JARVIS] Cleaned up finalized response tracking for ${response_id}`);
-		}, 5000);
-
-		setActiveStreams((prev) => {
-			const newSet = new Set(prev);
-			newSet.delete(response_id);
-			return newSet;
-		});
-
-		// Update final message with complete content and metadata
-		setMessages((prev) => {
-			const idx = prev.findIndex((m) => m.responseId === response_id);
-			if (idx !== -1) {
-				const updated = [...prev];
-				const msg = updated[idx];
-				updated[idx] = {
-					...msg,
-					content: final_response || msg.content,
-					isStreaming: false,
-					isComplete: true,
-					metadata: {
-						...msg.metadata,
-						...metadata,
-						final_response: true,
-					},
-				};
-				return updated;
-			}
-
-			// If no existing message (no stream_started or tokens seen), create one now
-			const newMsg: StreamingMessage = {
-				id: `stream-${response_id}`,
-				type: "assistant",
-				content: final_response || "",
-				timestamp: Date.now(),
-				isStreaming: false,
-				isComplete: true,
-				responseId: response_id,
-				metadata: {
-					...metadata,
-					final_response: true,
-				},
-			};
-			return [...prev, newMsg];
-		});
-
-		// Update confidence and sources from metadata
+		// Update confidence and sources from metadata immediately
 		if (metadata) {
 			if (metadata.confidence !== undefined) {
 				setConfidence(metadata.confidence);
@@ -299,19 +255,47 @@ export function useJarvis(): UseJarvisReturnExtended {
 			}
 		}
 
-		// Clean up streaming state
-		setStreamingResponses((prev) => {
-			const newMap = new Map(prev);
-			newMap.delete(response_id);
-			return newMap;
-		});
+		// Set a timer to finalize streams that don't get completed naturally
+		setTimeout(() => {
+			if (!finalizedResponsesRef.current.has(response_id)) {
+				console.log(`[JARVIS] 🕰️ Timeout reached, finalizing stream for ${response_id}`);
 
-		// Clear all tracking for this response
-		streamModeRef.current.delete(response_id);
-		accumulatedContentRef.current.delete(response_id);
-		recentTokensRef.current.delete(response_id);
-		console.log(`[JARVIS] Stream ended for response ${response_id}`);
+				setActiveStreams((prev) => {
+					const newSet = new Set(prev);
+					newSet.delete(response_id);
+					return newSet;
+				});
+
+				setMessages((prev) => {
+					const idx = prev.findIndex((m) => m.responseId === response_id);
+					if (idx !== -1) {
+						const updated = [...prev];
+						const msg = updated[idx];
+						updated[idx] = {
+							...msg,
+							content: finalResponseData.final_response || msg.content,
+							isStreaming: false,
+							isComplete: true,
+							metadata: {
+								...msg.metadata,
+								...finalResponseData.metadata,
+								final_response: true,
+							},
+						};
+						return updated;
+					}
+					return prev;
+				});
+
+				finalizedResponsesRef.current.add(response_id);
+				streamModeRef.current.delete(response_id);
+				accumulatedContentRef.current.delete(response_id);
+				accumulatedContentRef.current.delete(response_id + "_final");
+			}
+		}, 2000); // Wait 2 seconds for any delayed tokens
 	}, []);
+
+	// Simplified cleanup - remove the separate finalizeStream function
 
 	// Handle complete (non-streaming) response
 	const handleCompleteResponse = useCallback((message: JarvisWebSocketMessage) => {
@@ -333,14 +317,9 @@ export function useJarvis(): UseJarvisReturnExtended {
 				newSet.delete(response_id);
 				return newSet;
 			});
-			setStreamingResponses((prev) => {
-				const newMap = new Map(prev);
-				newMap.delete(response_id);
-				return newMap;
-			});
+			// Streaming responses state removed to prevent infinite loops
 			streamModeRef.current.delete(response_id);
 			accumulatedContentRef.current.delete(response_id);
-			recentTokensRef.current.delete(response_id);
 
 			setMessages((prev) => {
 				const idx = prev.findIndex((m) => m.responseId === response_id);
@@ -349,7 +328,7 @@ export function useJarvis(): UseJarvisReturnExtended {
 					const msg = updated[idx];
 					updated[idx] = {
 						...msg,
-						content: (final_response || response || msg.content || ""),
+						content: final_response || response || msg.content || "",
 						isStreaming: false,
 						isComplete: true,
 						metadata: {
@@ -444,10 +423,8 @@ export function useJarvis(): UseJarvisReturnExtended {
 		setError(errorData.message || "Unknown WebSocket error");
 		// Clear all streaming state so UI input can re-enable
 		setActiveStreams(new Set());
-		setStreamingResponses(new Map());
 		streamModeRef.current.clear();
 		accumulatedContentRef.current.clear();
-		recentTokensRef.current.clear();
 		finalizedResponsesRef.current.clear();
 		console.error(`[JARVIS] Error: ${errorData.message || "Unknown WebSocket error"}`);
 	}, []);
@@ -501,7 +478,7 @@ export function useJarvis(): UseJarvisReturnExtended {
 						if (message.data?.response_id) {
 							const existingMode = streamModeRef.current.get(message.data.response_id);
 							if (!existingMode) {
-								streamModeRef.current.set(message.data.response_id, 'explicit');
+								streamModeRef.current.set(message.data.response_id, "explicit");
 							}
 						}
 						handleStreamingMessage(message);
@@ -513,12 +490,14 @@ export function useJarvis(): UseJarvisReturnExtended {
 						// Some backends may emit streaming tokens under 'jarvis_response'
 						const d = message.data || {};
 						const rid = d.response_id;
-						
+
 						// Log the incoming jarvis_response for debugging
-						console.log(`[JARVIS] Received jarvis_response - response_id: ${rid}, has final_response: ${!!d.final_response}, has response: ${!!d.response}, has token: ${!!d.token}`);
-						
+						console.log(
+							`[JARVIS] Received jarvis_response - response_id: ${rid}, has final_response: ${!!d.final_response}, has response: ${!!d.response}, has token: ${!!d.token}`
+						);
+
 						const mode = rid ? streamModeRef.current.get(rid) : undefined;
-						if ((d.stream_started || d.token) && mode !== 'explicit') {
+						if ((d.stream_started || d.token) && mode !== "explicit") {
 							handleStreamingMessage(message);
 						} else if (d.final_response || typeof d.response === "string") {
 							// Finalize stream (even if no explicit end event is sent)
@@ -573,79 +552,66 @@ export function useJarvis(): UseJarvisReturnExtended {
 		]
 	);
 
-	// WebSocket connection with react-use-websocket
-	const {
-		sendMessage: sendRawMessage,
-		lastMessage,
-		readyState,
-		getWebSocket,
-	} = useWebSocket(
-		socketUrl,
-		{
-			onOpen: () => {
-				console.log("JARVIS WebSocket connected");
-				connectionManager.current.resetReconnectAttempts();
-				connectionManager.current.startHeartbeat((message) => {
-					sendRawMessage(JSON.stringify(message));
+	// Stable WebSocket options and initialization (must be declared after handlers)
+	const wsOptions = useMemo(
+		() => ({
+			onClose: (event: CloseEvent) => {
+				console.warn("[JARVIS] WebSocket closed", {
+					code: event.code,
+					reason: event.reason,
+					wasClean: event.wasClean,
 				});
-				setError(null);
-				// Process any queued messages
-				messageQueue.current.processQueue(sendRawMessage);
-			},
-			onClose: (event) => {
-				console.log("JARVIS WebSocket disconnected:", event.reason);
+				// Stop heartbeat when closed
 				connectionManager.current.stopHeartbeat();
-				// Schedule reconnection if needed
-				if (connectionManager.current.shouldReconnect()) {
-					connectionManager.current.scheduleReconnect(() => {
-						// The hook will automatically reconnect
-					});
-				}
 			},
-			onError: (event) => {
-				console.error("JARVIS WebSocket error:", event);
-				setError("WebSocket connection error");
+			onError: (event: Event) => {
+				console.error("[JARVIS] WebSocket error", event);
+				setError("WebSocket encountered an error");
 			},
-			onMessage: (event) => {
+			onMessage: (event: MessageEvent) => {
+				// Delegate to our stable message handler
 				handleWebSocketMessage(event);
 			},
 			shouldReconnect: () => connectionManager.current.shouldReconnect(),
 			reconnectAttempts: jarvisApiClient.getConfig().websocket.reconnectAttempts,
-			reconnectInterval: (attemptNumber) => connectionManager.current.getReconnectDelay(),
-			heartbeat: {
-				message: "ping",
-				returnMessage: "pong",
-				timeout: 60000,
-				interval: 30000,
-			},
-		},
+			reconnectInterval: () => connectionManager.current.getReconnectDelay(),
+		}),
+		[handleWebSocketMessage]
+	);
+
+	const { sendMessage: sendRawMessage, readyState, getWebSocket } = useWebSocket(
+		socketUrl,
+		wsOptions,
 		shouldConnect
 	);
 
-	// Computed connection state
+	// Derived connection state flags
 	const isConnected = readyState === ReadyState.OPEN;
 	const isConnecting = readyState === ReadyState.CONNECTING;
 
-	// Refresh status using API fallback
+	// Connection lifecycle: process queued messages when connected (heartbeat disabled)
+	useEffect(() => {
+		if (isConnected) {
+			connectionManager.current.resetReconnectAttempts();
+			setError(null);
+			messageQueue.current.processQueue(sendRawMessage);
+		}
+		return () => {};
+	}, [isConnected, sendRawMessage]);
+
+	// Refresh status using REST API fallback
 	const refreshStatus = useCallback(async () => {
 		if (!isMounted.current) return;
-
 		try {
 			const statusResponse = await jarvisApiClient.getStatus();
-
 			if (!isMounted.current) return;
-
 			setStatus(statusResponse);
-
-			// Update capabilities if available
 			if (statusResponse.health.jarvis_status?.capabilities) {
 				setCapabilities(statusResponse.health.jarvis_status.capabilities as JarvisCapabilities);
 			}
-
 			setError(null);
 		} catch (err) {
 			if (!isMounted.current) return;
-
 			if (err instanceof JarvisApiError) {
 				setError(err.getUserMessage());
 			} else {
@@ -679,6 +645,12 @@ export function useJarvis(): UseJarvisReturnExtended {
 
 				if (isConnected) {
 					// Send via WebSocket if connected
+					console.log(`[JARVIS] 📤 Sending WebSocket message:`, {
+						type: wsMessage.type,
+						message_preview: message.substring(0, 50) + (message.length > 50 ? "..." : ""),
+						metadata: metadata,
+						timestamp: new Date().toISOString(),
+					});
 					sendRawMessage(JSON.stringify(wsMessage));
 					lastMessageRef.current = message;
 				} else {
@@ -770,10 +742,9 @@ export function useJarvis(): UseJarvisReturnExtended {
 	// Clear messages
 	const clearMessages = useCallback(() => {
 		setMessages([]);
-		setStreamingResponses(new Map());
 		setActiveStreams(new Set());
 		finalizedResponsesRef.current.clear();
-		console.log('[JARVIS] Cleared all messages and tracking state');
+		console.log("[JARVIS] Cleared all messages and tracking state");
 	}, []);
 
 	// Send custom WebSocket message (for meeting mode control)
@@ -865,7 +836,6 @@ export function useJarvis(): UseJarvisReturnExtended {
 		capabilities,
 
 		// Streaming support
-		streamingResponses,
 		activeStreams,
 
 		// Actions
