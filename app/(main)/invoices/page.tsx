@@ -8,7 +8,7 @@ import FilterComponent from "./FilterComponent";
 import PaginationComponent from "./PaginationComponent";
 import { format } from "date-fns-tz";
 import React from "react";
-import { TimeEntryData } from "@/types";
+import { TimeEntry, TimeEntryData } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { AlertDialog, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,11 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import CompactFileUploader from "./CompactFileUploader";
+import { TimeEntryActions } from "./TimeEntryActions";
+import { EditTimeEntryModal } from "./EditTimeEntryModal";
+import { BulkActionsBar } from "./BulkActionsBar";
+import { InlineDescriptionEdit } from "./InlineDescriptionEdit";
+import { InvoiceStatusToggle } from "./InvoiceStatusToggle";
 
 const InvoiceGenerator = () => {
 	const router = useRouter();
@@ -71,6 +76,8 @@ const InvoiceGenerator = () => {
 	const [errorMessage, setErrorMessage] = useState<string | null>(null);
 	const [isSelectAll, setIsSelectAll] = useState(false);
 	const [isSelectAllPages, setIsSelectAllPages] = useState(false);
+	const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
 	const handleSelectEntry = (entryId: number) => {
 		// If we're in select all pages mode, deselecting an item should exit that mode
@@ -124,6 +131,26 @@ const InvoiceGenerator = () => {
 		setFilters(newFilters);
 	};
 
+	const handleRefresh = () => {
+		queryClient.invalidateQueries({ queryKey: ["timeEntries"] });
+	};
+
+	const handleEditEntry = (entry: TimeEntry) => {
+		setEditingEntry(entry);
+		setIsEditModalOpen(true);
+	};
+
+	const handleCloseEditModal = () => {
+		setEditingEntry(null);
+		setIsEditModalOpen(false);
+	};
+
+	const handleClearSelection = () => {
+		setSelectedEntries([]);
+		setIsSelectAll(false);
+		setIsSelectAllPages(false);
+	};
+
 	const mutation = useMutation({
 		mutationFn: async () => {
 			// If all pages are selected, send filters instead of individual IDs
@@ -166,29 +193,41 @@ const InvoiceGenerator = () => {
 			{/* Header Section */}
 			<div className="flex items-center justify-between">
 				<h1 className="text-2xl font-semibold text-foreground">Invoice Generator</h1>
-				<CompactFileUploader />
-				<Button
-					onClick={handleGenerateInvoice}
-					disabled={mutation.status === "pending" || (!isSelectAllPages && selectedEntries.length === 0)}
-					className="w-[200px]">
-					{mutation.status === "pending" ? (
-						<>
-							<Loader2 className="mr-2 h-4 w-4 animate-spin" />
-							Generating...
-						</>
-					) : (
-						<>
-							Generate Invoice
-							{isSelectAllPages && ` (${data?.totalEntries || 0})`}
-							{!isSelectAllPages && selectedEntries.length > 0 && ` (${selectedEntries.length})`}
-						</>
-					)}
-				</Button>
+				<div className="flex items-center gap-4">
+					<CompactFileUploader />
+					<Button
+						onClick={handleGenerateInvoice}
+						disabled={mutation.status === "pending" || (!isSelectAllPages && selectedEntries.length === 0)}
+						className="w-[200px]">
+						{mutation.status === "pending" ? (
+							<>
+								<Loader2 className="mr-2 h-4 w-4 animate-spin" />
+								Generating...
+							</>
+						) : (
+							<>
+								Generate Invoice
+								{isSelectAllPages && ` (${data?.totalEntries || 0})`}
+								{!isSelectAllPages && selectedEntries.length > 0 && ` (${selectedEntries.length})`}
+							</>
+						)}
+					</Button>
+				</div>
 			</div>
 			{/* Filters Section */}
 			<div className="rounded-lg border bg-card">
 				<FilterComponent onApplyFilters={handleApplyFilters} />
 			</div>
+
+			{/* Bulk Actions Bar */}
+			<BulkActionsBar
+				selectedEntries={selectedEntries}
+				timeEntries={timeEntries}
+				isSelectAllPages={isSelectAllPages}
+				totalEntries={data?.totalEntries || 0}
+				onRefresh={handleRefresh}
+				onClearSelection={handleClearSelection}
+			/>
 			{/* Selection Info Banner */}
 			{isSelectAllPages && (
 				<div className="rounded-md bg-blue-50 p-4 text-sm text-blue-900 dark:bg-blue-900/20 dark:text-blue-100">
@@ -207,7 +246,7 @@ const InvoiceGenerator = () => {
 				</div>
 			)}
 			{!isSelectAllPages && isSelectAll && data && data.totalEntries > pageSize && (
-				<div className="rounded-md bg-gray-50 p-4 text-sm text-gray-900 dark:bg-gray-900/20 dark:text-gray-100">
+				<div className="rounded-md bg-muted p-4 text-sm text-foreground">
 					<p>
 						All {timeEntries.length} entries on this page are selected.
 						<button onClick={() => setIsSelectAllPages(true)} className="ml-2 font-medium underline hover:no-underline">
@@ -263,10 +302,12 @@ const InvoiceGenerator = () => {
 								<TableCell className="font-medium">Customer</TableCell>
 								<TableCell className="font-medium">Project</TableCell>
 								<TableCell className="font-medium">Duration</TableCell>
+								<TableCell className="font-medium">Invoice Status</TableCell>
+								<TableCell className="font-medium w-[50px]">Actions</TableCell>
 							</TableRow>
 						</TableHeader>
 						<TableBody>
-							{transformedEntries?.map((entry: TimeEntryData) => (
+							{timeEntries?.map((entry: TimeEntry) => (
 								<TableRow key={entry.id} className="hover:bg-muted/50">
 									<TableCell>
 										<Checkbox
@@ -276,11 +317,29 @@ const InvoiceGenerator = () => {
 										/>
 									</TableCell>
 									<TableCell>{format(new Date(entry.date), "MM/dd/yyyy")}</TableCell>
-									<TableCell className="max-w-[300px] truncate">{entry.description}</TableCell>
-									<TableCell>{entry.customerName}</TableCell>
-									<TableCell>{entry.project.name}</TableCell>
+									<TableCell className="max-w-[300px]">
+										<InlineDescriptionEdit 
+											entry={entry} 
+											onRefresh={handleRefresh}
+										/>
+									</TableCell>
+									<TableCell>{entry.customer?.name || "Unknown"}</TableCell>
+									<TableCell>{entry.project?.name || "Unknown Project"}</TableCell>
 									<TableCell>
 										{Math.floor(entry.duration / 60)}h {entry.duration % 60}m
+									</TableCell>
+									<TableCell>
+										<InvoiceStatusToggle 
+											entry={entry} 
+											onRefresh={handleRefresh}
+										/>
+									</TableCell>
+									<TableCell>
+										<TimeEntryActions 
+											entry={entry} 
+											onEdit={() => handleEditEntry(entry)}
+											onRefresh={handleRefresh}
+										/>
 									</TableCell>
 								</TableRow>
 							))}
@@ -310,6 +369,14 @@ const InvoiceGenerator = () => {
 				</div>
 			)}
 			{errorMessage && <div className="rounded-md bg-destructive/15 p-3 text-destructive">{errorMessage}</div>}
+
+			{/* Edit Modal */}
+			<EditTimeEntryModal
+				entry={editingEntry}
+				isOpen={isEditModalOpen}
+				onClose={handleCloseEditModal}
+				onRefresh={handleRefresh}
+			/>
 		</div>
 	);
 };

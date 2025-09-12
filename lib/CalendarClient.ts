@@ -196,8 +196,33 @@ export class CalendarClient {
 	 */
 	public async listCalendars(): Promise<Record<string, CalendarInfo[]>> {
 		try {
-			const response = await this.api.get("/calendars");
-			return response.data || {};
+			// For Chroniton Capacitor, get calendars from sync sources
+			const response = await this.api.get("/sync/sources");
+			
+			// Convert sync sources to calendar format
+			const sources = response.data || [];
+			const calendarsMap: Record<string, CalendarInfo[]> = {};
+			
+			sources.forEach((source: any) => {
+				const provider = source.provider_type || source.providerType;
+				if (!calendarsMap[provider]) {
+					calendarsMap[provider] = [];
+				}
+				
+				// Add calendar info from sync source
+				if (source.calendar_selections) {
+					source.calendar_selections.forEach((cal: any) => {
+						calendarsMap[provider].push({
+							id: cal.id,
+							name: cal.name || cal.summary || 'Unknown Calendar',
+							primary: cal.primary || false,
+							selected: true // sync sources are already selected
+						});
+					});
+				}
+			});
+			
+			return calendarsMap;
 		} catch (error: any) {
 			const errorMessage = error.response?.data?.error || error.message;
 			console.error("Error listing calendars:", errorMessage);
@@ -260,9 +285,9 @@ export class CalendarClient {
 				params.end = endDate.toISOString();
 			}
 
-			// Make API call
-			console.log("🚀 Making API call to /events with params:", params);
-			const response = await this.api.get("/events", { params });
+			// Make API call to sync endpoints (Chroniton Capacitor format)
+			console.log("🚀 Making API call to /sync/events with params:", params);
+			const response = await this.api.get("/sync/events", { params });
 			console.log("✅ Events API response status:", response.status);
 			console.log("📊 Events received:", response.data?.events?.length || 0);
 

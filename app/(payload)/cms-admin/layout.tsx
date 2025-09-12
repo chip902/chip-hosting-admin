@@ -28,7 +28,7 @@ function CMSSidebar() {
 			<div className="flex h-16 shrink-0 items-center px-6 border-b border-border">
 				<div className="flex items-center gap-3">
 					<div className="h-8 w-8 rounded-full">
-						<Image width="32" height="32" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" />
+						<Image width="32" height="32" src="/CHS_logo_v2.webp" alt="Chip Hosting Solutions Logo" />
 					</div>
 					<div>
 						<h2 className="text-lg font-semibold">CMS</h2>

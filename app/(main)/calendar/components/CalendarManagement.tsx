@@ -328,8 +328,14 @@ export default function CalendarManagement() {
 			{/* Header */}
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-3xl font-bold tracking-tight">Calendar Management</h1>
-					<p className="text-muted-foreground">Manage calendar synchronization from all remote agents</p>
+					<h1 className="text-3xl font-bold tracking-tight">Legacy Calendar Management</h1>
+					<p className="text-muted-foreground">Manage calendar synchronization from remote agents</p>
+					<Alert className="mt-2">
+						<AlertCircle className="h-4 w-4" />
+						<AlertDescription>
+							<strong>New:</strong> For multi-account OAuth sync with Google, Microsoft, and other providers, check out the <strong>Multi-Account Sync</strong> tab for enhanced capabilities.
+						</AlertDescription>
+					</Alert>
 				</div>
 				<div className="flex gap-2">
 					<Button onClick={loadAgentStatus} variant="outline" size="sm">

@@ -17,7 +17,7 @@ const CustomerTable = () => {
 	const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
 
 	return (
-		<div className="flex flex-col p-8 bg-gray-25 dark:bg-gray-900">
+		<div className="flex flex-col p-8 bg-background">
 			<div className="flex justify-between items-center mb-6">
 				<h2 className="header-box-title">Customers</h2>
 				<Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>

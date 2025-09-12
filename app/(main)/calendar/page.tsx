@@ -16,12 +16,26 @@ const CalendarComponent = dynamic(() => import("./CalendarComponent"), { ssr: fa
 const CalendarSyncIntegration = dynamic(() => import("./CalendarSyncIntegration"), { ssr: false });
 
 // Dynamically import the RemoteAgentStatusComponent with no SSR
-const RemoteAgentStatus = dynamic(() => import("./components/RemoteAgentStatus").then((mod) => ({ default: mod.RemoteAgentStatusComponent })), { ssr: false });
+const RemoteAgentStatus = dynamic(() => import("./components/RemoteAgentStatus").then((mod) => ({ default: mod.RemoteAgentStatusComponent })), { 
+	ssr: false,
+	loading: () => <div className="bg-card rounded-lg shadow border border-border p-4"><h3 className="text-14 font-semibold mb-3">Remote Agents</h3><div className="text-14 text-muted-foreground">Loading agents...</div></div>
+});
 
 // Dynamically import the new CalendarManagement component with no SSR
 const CalendarManagement = dynamic(() => import("./components/CalendarManagement"), {
 	ssr: false,
 	loading: () => <div className="flex items-center justify-center p-8">Loading calendar management...</div>,
+});
+
+// Dynamically import the Chroniton components with no SSR
+const ChronitorCleanManager = dynamic(() => import("./components/ChronitorCleanManager"), {
+	ssr: false,
+	loading: () => <div className="flex items-center justify-center p-8">Loading calendar sync...</div>,
+});
+
+const ChronitorSyncMonitor = dynamic(() => import("./components/ChronitorSyncMonitor"), {
+	ssr: false,
+	loading: () => <div className="flex items-center justify-center p-8">Loading sync monitor...</div>,
 });
 
 export default function CalendarPage() {
@@ -76,11 +90,14 @@ export default function CalendarPage() {
 						<p className="text-16 text-muted-foreground">View and manage your schedule across all your calendars</p>
 					</div>
 
-					<TabsList className="grid w-fit grid-cols-2">
+					<TabsList className="grid w-fit grid-cols-3">
 						<TabsTrigger value="calendar">Calendar View</TabsTrigger>
 						<TabsTrigger value="management">
 							<Settings className="w-4 h-4 mr-2" />
 							Management
+						</TabsTrigger>
+						<TabsTrigger value="chroniton">
+							Multi-Account Sync
 						</TabsTrigger>
 					</TabsList>
 				</div>
@@ -140,7 +157,9 @@ export default function CalendarPage() {
 						</div>
 
 						{/* Remote Agent Status Sidebar */}
-						<div className="lg:col-span-1">{calendarClient && <RemoteAgentStatusComponent calendarClient={calendarClient} />}</div>
+						<div className="lg:col-span-1">
+							<RemoteAgentStatus calendarClient={calendarClient} />
+						</div>
 					</div>
 
 					{events.length === 0 && (
@@ -154,6 +173,11 @@ export default function CalendarPage() {
 				{/* Calendar Management Tab */}
 				<TabsContent value="management">
 					<CalendarManagement />
+				</TabsContent>
+
+				{/* Chroniton Multi-Account Sync Tab */}
+				<TabsContent value="chroniton" className="space-y-6" suppressHydrationWarning>
+					<ChronitorCleanManager />
 				</TabsContent>
 			</Tabs>
 		</div>

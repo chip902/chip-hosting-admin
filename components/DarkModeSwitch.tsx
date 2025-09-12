@@ -29,9 +29,9 @@ export default function DarkModeToggle() {
 	return (
 		<button
 			onClick={toggleDarkMode}
-			className="p-2 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-100 focus:ring-indigo-500"
+			className="p-2 rounded-md hover:bg-accent focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background focus:ring-ring transition-colors"
 			aria-label="Toggle Dark Mode">
-			{isDarkMode ? <Sun className="text-yellow-500" /> : <Moon className="text-gray-800 dark:text-gray-200" />}
+			{isDarkMode ? <Sun className="h-5 w-5 text-yellow-500" /> : <Moon className="h-5 w-5 text-muted-foreground" />}
 		</button>
 	);
 }

@@ -474,7 +474,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 								onMouseLeave={(e) => handleGridMouseUp(e, dayIndex)}>
 								{/* Hour grid cells */}
 								{[...Array(24)].map((_, hour) => (
-									<div key={hour} className="h-16 border-t border-gray-200 dark:border-gray-700 grid-cell" data-hour={hour} />
+									<div key={hour} className="h-16 border-t border-border grid-cell" data-hour={hour} />
 								))}
 
 								{/* Show drag selection */}

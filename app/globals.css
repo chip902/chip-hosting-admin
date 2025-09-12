@@ -243,25 +243,25 @@ textarea {
 
 @layer base {
 	:root {
-		/* Light mode - Softer slate-based colors */
-		--background: 210 40% 96%; /* softer than slate-50 */
-		--foreground: 215 25% 27%; /* slate-800 */
-		--card: 210 40% 98%; /* slight gray tint instead of pure white */
-		--card-foreground: 215 25% 27%;
-		--popover: 210 40% 98%;
-		--popover-foreground: 215 25% 27%;
+		/* Light mode - Soft, warm colors for reduced eye strain */
+		--background: 30 20% 98%; /* soft off-white with warm tint */
+		--foreground: 222.2 47% 11%; /* dark blue-gray for softer contrast */
+		--card: 0 0% 100%; /* pure white for cards to stand out */
+		--card-foreground: 222.2 47% 11%;
+		--popover: 0 0% 100%;
+		--popover-foreground: 222.2 47% 11%;
 		--primary: 221 83% 53%; /* blue-600 */
-		--primary-foreground: 210 40% 98%;
-		--secondary: 210 40% 93%; /* softer than slate-100 */
-		--secondary-foreground: 215 25% 27%;
-		--muted: 210 40% 93%; /* softer background */
-		--muted-foreground: 215 16% 47%;
-		--accent: 210 40% 93%;
-		--accent-foreground: 215 25% 27%;
+		--primary-foreground: 0 0% 100%; /* white text on primary */
+		--secondary: 210 25% 94%; /* softer light gray */
+		--secondary-foreground: 222.2 47% 11%;
+		--muted: 210 25% 95%; /* very light gray for muted elements */
+		--muted-foreground: 215 16% 35%; /* darker gray text for better contrast */
+		--accent: 210 30% 92%; /* subtle accent background */
+		--accent-foreground: 222.2 47% 11%;
 		--destructive: 0 84.2% 60.2%;
-		--destructive-foreground: 210 40% 98%;
-		--border: 214.3 31.8% 88%; /* softer borders */
-		--input: 214.3 31.8% 91.4%;
+		--destructive-foreground: 0 0% 100%;
+		--border: 214.3 25% 87%; /* softer gray borders */
+		--input: 214.3 25% 91%;
 		--ring: 221 83% 53%;
 		--radius: 0.5rem;
 

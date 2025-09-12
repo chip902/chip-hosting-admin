@@ -5,7 +5,7 @@ import { CalendarClient } from "@/lib/CalendarClient";
 import { RemoteAgent, RemoteAgentStatus } from "@/types/calendar";
 
 interface RemoteAgentStatusProps {
-	calendarClient: CalendarClient;
+	calendarClient: CalendarClient | null;
 }
 
 export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
@@ -15,7 +15,16 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 	const [agentStatuses, setAgentStatuses] = useState<Record<string, RemoteAgentStatus>>({});
 	const [loading, setLoading] = useState(false); // Start with false to avoid hydration mismatch
 	const [error, setError] = useState<string | null>(null);
-	const [mounted, setMounted] = useState(false);
+
+	// Return early if no calendarClient
+	if (!calendarClient) {
+		return (
+			<div className="bg-card rounded-lg shadow border border-border p-4">
+				<h3 className="text-14 font-semibold mb-3">Remote Agents</h3>
+				<div className="text-14 text-muted-foreground">Calendar client not initialized</div>
+			</div>
+		);
+	}
 
 	const fetchAgents = async () => {
 		try {
@@ -64,20 +73,16 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 		}
 	};
 
-	useEffect(() => {
-		// Mark component as mounted
-		setMounted(true);
-	}, []);
 
 	useEffect(() => {
-		// Only run on client side after mounting to avoid hydration issues
-		if (mounted && typeof window !== 'undefined') {
+		// Only run on client side to avoid hydration issues
+		if (typeof window !== 'undefined') {
 			fetchAgents();
 			// Set up polling for status updates every 30 seconds
 			const interval = setInterval(fetchAgents, 30000);
 			return () => clearInterval(interval);
 		}
-	}, [mounted, calendarClient]);
+	}, [calendarClient]);
 
 	const getStatusBadgeColor = (status: string) => {
 		switch (status) {
@@ -118,22 +123,16 @@ export const RemoteAgentStatusComponent: React.FC<RemoteAgentStatusProps> = ({
 		return `${diffDays}d ago`;
 	};
 
-	// Show consistent initial state until mounted, then show loading if needed
-	if (!mounted || (loading && mounted)) {
+	// Show loading state
+	if (loading) {
 		return (
 			<div className="bg-card rounded-lg shadow border border-border p-4">
 				<h3 className="text-14 font-semibold mb-3">Remote Agents</h3>
-				{mounted ? (
-					<div className="animate-pulse space-y-2">
-						{[1, 2, 3].map((i) => (
-							<div key={i} className="h-12 bg-muted rounded"></div>
-						))}
-					</div>
-				) : (
-					<div className="space-y-2">
-						<div className="text-14 text-muted-foreground">Loading agents...</div>
-					</div>
-				)}
+				<div className="animate-pulse space-y-2">
+					{[1, 2, 3].map((i) => (
+						<div key={i} className="h-12 bg-muted rounded"></div>
+					))}
+				</div>
 			</div>
 		);
 	}

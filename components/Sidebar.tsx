@@ -3,7 +3,6 @@
 import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings, BookOpen } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { FadeIn } from "@/components/animations/FadeIn";
 import { FloatingElement } from "@/components/animations/FloatingElement";
 
 const navigation = [
@@ -30,9 +29,15 @@ export default function Sidebar({ currentPath, className }: Props) {
 	return (
 		<div className={classNames("sidebar", className || "")}>
 			<div className="flex h-16 shrink-0 items-center mt-2">
-				<FloatingElement className="h-12 w-auto rounded-full" yOffset={8} duration={6}>
-					<div className="bg-gradient-to-r from-brand-500 to-brand-600 p-2 rounded-full shadow-lg">
-						<Image width="50" height="50" src="/CHS_Logo.png" alt="Chip Hosting Solutions Logo" className="rounded-full" />
+				<FloatingElement className="h-16 w-auto rounded-full" yOffset={8} duration={6}>
+					<div className="rounded-full shadow-2xl p-0.5 bg-white/95 dark:bg-white/90 dark:shadow-md">
+						<Image
+							width="60"
+							height="60"
+							src="/CHS_logo_v2.webp"
+							alt="Chip Hosting Solutions Logo"
+							className="rounded-full dark:brightness-110 dark:contrast-110"
+						/>
 					</div>
 				</FloatingElement>
 			</div>
@@ -47,7 +52,7 @@ export default function Sidebar({ currentPath, className }: Props) {
 										className={classNames(
 											item.href === currentPath
 												? "bg-gradient-to-r from-brand-500 to-brand-600 text-white shadow-lg transform scale-105"
-												: "hover:bg-gradient-to-r hover:from-brand-100 hover:to-brand-200 hover:text-brand-700 transition-all duration-200",
+												: "text-muted-foreground hover:bg-accent hover:text-accent-foreground transition-all duration-200",
 											"group flex gap-x-3 rounded-lg p-3 text-14 font-semibold leading-6 transition-all duration-200 hover:transform hover:scale-105 hover:shadow-md"
 										)}>
 										<item.icon className="h-6 w-6 shrink-0" aria-hidden="true" />
