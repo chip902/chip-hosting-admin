@@ -149,81 +149,118 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 			column: 0,
 			columns: 1,
 			originalIndex: index,
+			basePriority: 0, // Will be set based on duration
 		};
 	});
 
-	// Sort entries by start time, then by duration (shorter first)
+	// Sort entries by start time, then by duration (longer first for initial processing)
 	processedEntries.sort((a, b) => {
 		const startDiff = a.startMinutes - b.startMinutes;
 		if (startDiff !== 0) return startDiff;
-		return a.endMinutes - a.startMinutes - (b.endMinutes - b.startMinutes);
+		// Sort by duration descending (longer entries first)
+		return (b.durationMinutes) - (a.durationMinutes);
 	});
 
-	// Initialize columns for overlapping detection
-	const columns: Array<{ end: number }> = [];
+	// Find all overlapping groups
+	const overlapGroups: Array<typeof processedEntries> = [];
+	const processed = new Set<number>();
 
-	// Assign columns to each entry to handle overlapping
-	for (const entry of processedEntries) {
-		let columnIndex = 0;
-
-		// Find the first column that's available (where the entry doesn't overlap with existing entries in that column)
-		while (columnIndex < columns.length) {
-			if (columns[columnIndex].end <= entry.startMinutes) {
-				// This column is available
-				break;
+	for (let i = 0; i < processedEntries.length; i++) {
+		if (processed.has(i)) continue;
+		
+		const group = [processedEntries[i]];
+		processed.add(i);
+		
+		// Find all entries that overlap with this one
+		for (let j = i + 1; j < processedEntries.length; j++) {
+			if (processed.has(j)) continue;
+			
+			const entryA = processedEntries[i];
+			const entryB = processedEntries[j];
+			
+			// Check if entries overlap
+			const overlaps = (entryA.startMinutes < entryB.endMinutes && entryA.endMinutes > entryB.startMinutes);
+			
+			if (overlaps) {
+				group.push(processedEntries[j]);
+				processed.add(j);
 			}
-			columnIndex++;
 		}
-
-		// If no available column was found, add a new one
-		if (columnIndex === columns.length) {
-			columns.push({ end: 0 });
+		
+		if (group.length > 1) {
+			// Sort group by duration (shortest first for z-index priority)
+			group.sort((a, b) => a.durationMinutes - b.durationMinutes);
+			overlapGroups.push(group);
 		}
+	}
 
-		// Update the column's end time
-		columns[columnIndex].end = entry.endMinutes;
-
-		// Update entry properties
-		entry.column = columnIndex;
-		entry.columns = columns.length;
-		entry.overlapping = columns.length > 1;
+	// Process each overlap group
+	for (const group of overlapGroups) {
+		const numEntries = group.length;
+		
+		// Mark all as overlapping
+		group.forEach(entry => {
+			entry.overlapping = true;
+			entry.columns = numEntries;
+		});
+		
+		// Assign columns based on duration (shortest gets highest column for visibility)
+		group.forEach((entry, idx) => {
+			entry.column = idx;
+		});
 	}
 
 	// Sort back to original order
 	const result = [...processedEntries].sort((a, b) => a.originalIndex - b.originalIndex);
 
+	// Calculate base priority for z-index (shorter duration = higher priority)
+	const durations = result.map(e => e.durationMinutes);
+	const maxDuration = Math.max(...durations);
+	const minDuration = Math.min(...durations);
+	const durationRange = maxDuration - minDuration || 1;
+
 	// Calculate final positions and dimensions with improved overlap handling
 	for (const entry of result) {
-		if (entry.overlapping && entry.columns && entry.columns > 1) {
-			// Smart layout for multiple overlapping entries
-			if (entry.columns <= 2) {
-				// 2 entries: side by side with better spacing
-				entry.width = 0.48;
-				entry.left = (entry.column || 0) * 0.52;
-			} else if (entry.columns <= 3) {
-				// 3 entries: better distribution
-				entry.width = 0.31;
-				entry.left = (entry.column || 0) * 0.345;
-			} else {
-				// 4+ entries: improved layered/stacked approach
-				if (entry.column === 0) {
-					// Primary entry (usually longest or first)
-					entry.width = 0.65;
-					entry.left = 0;
-					entry.isMainEntry = true;
-				} else {
-					// Secondary entries: card-like stacking with better spacing
-					entry.width = 0.32;
-					entry.left = 0.68 + (entry.column - 1) * 0.08; // Better offset spacing
-					entry.isStackedEntry = true;
-					entry.stackIndex = entry.column - 1;
-				}
-			}
+		// Calculate z-index based on duration (shorter entries get higher z-index)
+		const durationNormalized = (entry.durationMinutes - minDuration) / durationRange;
+		entry.basePriority = Math.floor((1 - durationNormalized) * 20) + 20; // Range: 20-40
 
-			// Add visual separation gaps
-			const gap = 0.015;
-			if (entry.column! < entry.columns - 1 && entry.columns <= 3) {
-				entry.width -= gap;
+		if (entry.overlapping && entry.columns && entry.columns > 1) {
+			const numColumns = entry.columns;
+			const columnIndex = entry.column || 0;
+			
+			// For all overlapping entries, use a cascading card layout
+			// Shorter duration entries (lower column index) appear on top
+			if (numColumns <= 2) {
+				// 2 entries: side by side
+				entry.width = 0.48;
+				entry.left = columnIndex * 0.52;
+				entry.zIndex = entry.basePriority + (numColumns - columnIndex) * 5;
+			} else if (numColumns <= 3) {
+				// 3 entries: distribute with slight overlap
+				entry.width = 0.4;
+				entry.left = columnIndex * 0.3;
+				entry.zIndex = entry.basePriority + (numColumns - columnIndex) * 5;
+			} else {
+				// 4+ entries: cascading cards with clear visibility
+				const baseWidth = 0.6;  // Make cards narrower to see more
+				const cascadeOffset = 0.08; // Smaller offset for tighter stacking
+				const widthReduction = 0.02;
+				
+				// Shortest duration (column 0) should be on top and most to the right
+				// Longest duration should be on bottom and most to the left
+				const reverseIndex = numColumns - 1 - columnIndex;
+				
+				entry.width = baseWidth - (reverseIndex * widthReduction);
+				entry.left = (numColumns - 1 - reverseIndex) * cascadeOffset; // Reverse the cascade direction
+				entry.isStackedEntry = true;
+				entry.stackIndex = columnIndex;
+				
+				// Higher z-index for shorter duration entries (column 0 = shortest)
+				entry.zIndex = 50 + (numColumns - columnIndex) * 20; // Much higher z-index differences
+				
+				// Debug logging
+				console.log(`Entry ${entry.id}: duration=${entry.durationMinutes}, column=${columnIndex}, z-index=${entry.zIndex}, left=${entry.left}`);
 			}
 		} else {
 			// Full width for non-overlapping entries
@@ -232,6 +269,7 @@ const processOverlappingEntries = (entries: ProcessedTimeEntry[], day: Date): Pr
 			entry.column = 0;
 			entry.columns = 1;
 			entry.isMainEntry = true;
+			entry.zIndex = entry.basePriority;
 		}
 
 		// Ensure values are within bounds with better constraints
@@ -502,6 +540,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 											isStackedEntry={entry.isStackedEntry}
 											stackIndex={entry.stackIndex}
 											totalStacked={entry.columns}
+											calculatedZIndex={entry.zIndex || entry.basePriority}
 										/>
 									);
 								})}

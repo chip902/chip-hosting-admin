@@ -45,12 +45,14 @@ const TimeEntryComponent = ({
 	isStackedEntry = false,
 	stackIndex = 0,
 	totalStacked = 1,
-}: TimeEntryProps) => {
+	calculatedZIndex = 10,
+}: TimeEntryProps & { calculatedZIndex?: number }) => {
 	const [isOpen, setIsOpen] = useState(false);
 	const [isLoading, setLoading] = useState(false);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const [isResizingTop, setIsResizingTop] = useState(false);
+	const [isHovered, setIsHovered] = useState(false);
 	const [dragStartPosition, setDragStartPosition] = useState<{ x: number; y: number } | null>(null);
 	const entryRef = useRef<HTMLDivElement>(null);
 	const wasMoved = useRef(false);
@@ -678,8 +680,8 @@ const TimeEntryComponent = ({
 								left: `${left * 100}%`,
 								width: `${width * 100}%`,
 								backgroundColor: color,
-								zIndex: isDragging || isResizing || isResizingTop ? 90 : isMainEntry ? 15 : isStackedEntry ? 12 + stackIndex : 10,
-								transform: "translateZ(0)",
+								zIndex: isDragging || isResizing || isResizingTop ? 999 : isHovered ? calculatedZIndex + 50 : calculatedZIndex,
+								transform: isHovered && !isDragging ? "translateZ(0) scale(1.02)" : "translateZ(0)",
 								boxSizing: "border-box",
 								pointerEvents: "auto",
 								minWidth: "60px",
@@ -687,12 +689,16 @@ const TimeEntryComponent = ({
 								flexDirection: "column",
 								borderRadius: "0.375rem",
 								transformOrigin: "center",
-								transition: "box-shadow 0.15s ease-out",
+								transition: "all 0.15s ease-out",
 								backfaceVisibility: "hidden",
-								boxShadow: "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
+								boxShadow: isHovered ? "0 8px 16px rgba(0, 0, 0, 0.4)" : isStackedEntry ? `0 4px 8px rgba(0, 0, 0, ${0.2 + stackIndex * 0.05})` : "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
 								cursor: isDragging ? "grabbing" : "grab",
+								opacity: isStackedEntry && !isHovered ? 0.92 : 1,
+								border: isStackedEntry ? "2px solid rgba(255, 255, 255, 0.3)" : "none",
 							}}
-							onMouseDown={handleMouseDown}>
+							onMouseDown={handleMouseDown}
+							onMouseEnter={() => setIsHovered(true)}
+							onMouseLeave={() => setIsHovered(false)}>
 							<div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize top-resize-handle" onMouseDown={handleTopResizeStart} />
 							<div className={`flex flex-col h-full justify-between text-left max-w-full ${isStackedEntry ? "p-1" : "p-1.5"}`}>
 								<div className="w-full overflow-hidden">
