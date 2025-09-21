@@ -1,11 +1,12 @@
 "use client";
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import useDeleteTimeEntry from "@/app/hooks/useDeleteTimeEntry";
 import useUpdateTimeEntry from "@/app/hooks/useUpdateTimeEntry";
 import useDuplicateTimeEntry from "@/app/hooks/useDuplicateTimeEntry";
 import { TimeEntryProps } from "@/types";
 import { addMinutes, format, startOfDay } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { createPortal } from "react-dom";
 import { Spinner } from "@/components/ui/spinner";
 import { Typography } from "@/components/ui/typography";
 import { Textarea } from "@/components/ui/textarea";
@@ -54,6 +55,9 @@ const TimeEntryComponent = ({
 	const [isResizingTop, setIsResizingTop] = useState(false);
 	const [isHovered, setIsHovered] = useState(false);
 	const [dragStartPosition, setDragStartPosition] = useState<{ x: number; y: number } | null>(null);
+	const [popoverAlign, setPopoverAlign] = useState<"start" | "center" | "end">("start");
+	const [popoverSide, setPopoverSide] = useState<"top" | "right" | "bottom" | "left">("right");
+	const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>({});
 	const entryRef = useRef<HTMLDivElement>(null);
 	const wasMoved = useRef(false);
 	const mouseDownTime = useRef(0);
@@ -72,6 +76,56 @@ const TimeEntryComponent = ({
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: duplicateTimeEntry, status: duplicateStatus } = useDuplicateTimeEntry();
+
+	// Calculate optimal popover positioning to stay within viewport
+	const calculatePopoverPosition = useCallback(() => {
+		if (!entryRef.current) return;
+
+		const entryRect = entryRef.current.getBoundingClientRect();
+		const viewportWidth = window.innerWidth;
+		const viewportHeight = window.innerHeight;
+		
+		// Approximate popover dimensions
+		const popoverWidth = 400;
+		const popoverHeight = 500;
+		const padding = 20; // Safe padding from viewport edges
+
+		// Calculate position to keep popover within viewport
+		let targetX = entryRect.right + 8; // Default to right side
+		let targetY = entryRect.top;
+
+		// Check if popover fits on the right
+		if (targetX + popoverWidth > viewportWidth - padding) {
+			// Try left side
+			targetX = entryRect.left - popoverWidth - 8;
+			
+			// If left side doesn't fit either, constrain to viewport
+			if (targetX < padding) {
+				targetX = Math.max(padding, Math.min(viewportWidth - popoverWidth - padding, entryRect.left));
+			}
+		}
+
+		// Ensure vertical position stays within viewport
+		if (targetY + popoverHeight > viewportHeight - padding) {
+			targetY = viewportHeight - popoverHeight - padding;
+		}
+		if (targetY < padding) {
+			targetY = padding;
+		}
+
+		// Set custom positioning styles
+		setPopoverStyle({
+			position: 'fixed',
+			left: `${targetX}px`,
+			top: `${targetY}px`,
+			transform: 'none',
+			zIndex: 1000
+		});
+
+		// Keep simple alignment for Radix
+		setPopoverAlign("start");
+		setPopoverSide("right");
+	}, []);
 
 	// Calculate position and height as percentages of a 24-hour day (1440 minutes)
 	const calculatePosition = () => {
@@ -476,6 +530,7 @@ const TimeEntryComponent = ({
 
 		switch (action) {
 			case "edit":
+				calculatePopoverPosition();
 				setIsOpen(true);
 				break;
 			case "duplicate":
@@ -486,6 +541,32 @@ const TimeEntryComponent = ({
 				break;
 		}
 	};
+
+	// Handle popover open state change
+	const handlePopoverOpenChange = useCallback((open: boolean) => {
+		if (open) {
+			// Calculate optimal position before opening
+			calculatePopoverPosition();
+		}
+		setIsOpen(open);
+	}, [calculatePopoverPosition]);
+
+	// Add window resize listener to recalculate position when popover is open
+	useEffect(() => {
+		if (!isOpen) return;
+
+		const handleResize = () => {
+			calculatePopoverPosition();
+		};
+
+		window.addEventListener('resize', handleResize);
+		window.addEventListener('scroll', handleResize);
+
+		return () => {
+			window.removeEventListener('resize', handleResize);
+			window.removeEventListener('scroll', handleResize);
+		};
+	}, [isOpen, calculatePopoverPosition]);
 
 	// Bottom resize functionality
 	const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -652,85 +733,127 @@ const TimeEntryComponent = ({
 	};
 
 	return (
-		<ContextMenu>
-			<ContextMenuTrigger asChild>
-				<Popover open={isOpen} onOpenChange={setIsOpen}>
-					<PopoverTrigger asChild>
-						<div
-							ref={entryRef}
-							className={`
-	            time-entry
-	            absolute
-	            text-white
-	            rounded-md
-	            shadow-sm
-	            overflow-hidden
-	            hover:shadow-lg
-	            border-l-2 border-white/20
-	            ${isDragging || isResizing || isResizingTop ? "dragging" : ""}
-	            ${width < 1 ? "overlapping" : ""}
-	            ${endSlot - startSlot < 60 ? "short" : ""}
-	            ${isMainEntry ? "main-entry" : ""}
-	            ${isStackedEntry ? "stacked-entry" : ""}
-	            ${totalStacked > 3 ? "dense-stacked" : ""}
-	          `}
-							style={{
-								top,
-								height,
-								left: `${left * 100}%`,
-								width: `${width * 100}%`,
-								backgroundColor: color,
-								zIndex: isDragging || isResizing || isResizingTop ? 999 : isHovered ? calculatedZIndex + 50 : calculatedZIndex,
-								transform: isHovered && !isDragging ? "translateZ(0) scale(1.02)" : "translateZ(0)",
-								boxSizing: "border-box",
-								pointerEvents: "auto",
-								minWidth: "60px",
-								display: "flex",
-								flexDirection: "column",
-								borderRadius: "0.375rem",
-								transformOrigin: "center",
-								transition: "all 0.15s ease-out",
-								backfaceVisibility: "hidden",
-								boxShadow: isHovered ? "0 8px 16px rgba(0, 0, 0, 0.4)" : isStackedEntry ? `0 4px 8px rgba(0, 0, 0, ${0.2 + stackIndex * 0.05})` : "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
-								cursor: isDragging ? "grabbing" : "grab",
-								opacity: isStackedEntry && !isHovered ? 0.92 : 1,
-								border: isStackedEntry ? "2px solid rgba(255, 255, 255, 0.3)" : "none",
-							}}
-							onMouseDown={handleMouseDown}
-							onMouseEnter={() => setIsHovered(true)}
-							onMouseLeave={() => setIsHovered(false)}>
-							<div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize top-resize-handle" onMouseDown={handleTopResizeStart} />
-							<div className={`flex flex-col h-full justify-between text-left max-w-full ${isStackedEntry ? "p-1" : "p-1.5"}`}>
-								<div className="w-full overflow-hidden">
-									<Typography className={`text-xs font-bold text-white/90 truncate block ${isStackedEntry ? "text-[10px]" : ""}`}>
-										{isStackedEntry ? `${startTimeFormatted}` : startTimeFormatted}
-									</Typography>
-									{customerName && !isStackedEntry && (
-										<Typography className="text-xs text-white/90 truncate block">{customerName}</Typography>
-									)}
-									{projectName && (
-										<Typography className={`text-xs text-white/90 truncate block ${isStackedEntry ? "text-[9px]" : ""}`}>
-											{isStackedEntry ? projectName.substring(0, 8) + (projectName.length > 8 ? "..." : "") : projectName}
-										</Typography>
-									)}
-									{taskName && !isStackedEntry && <Typography className="text-xs text-white/90 truncate block">{taskName}</Typography>}
-									{isStackedEntry && totalStacked > 3 && (
-										<Typography className="text-[8px] text-white/70 truncate block">+{totalStacked - 1} more</Typography>
-									)}
-								</div>
-								{duration >= 60 && !isStackedEntry && (
-									<Typography className="text-xs font-semibold text-white/90 truncate block mt-auto">{durationFormatted} Hours</Typography>
+		<>
+			<ContextMenu>
+				<ContextMenuTrigger asChild>
+					<div
+						ref={entryRef}
+						className={`
+            time-entry
+            absolute
+            text-white
+            rounded-md
+            shadow-sm
+            overflow-hidden
+            hover:shadow-lg
+            border-l-2 border-white/20
+            ${isDragging || isResizing || isResizingTop ? "dragging" : ""}
+            ${width < 1 ? "overlapping" : ""}
+            ${endSlot - startSlot < 60 ? "short" : ""}
+            ${isMainEntry ? "main-entry" : ""}
+            ${isStackedEntry ? "stacked-entry" : ""}
+            ${totalStacked > 3 ? "dense-stacked" : ""}
+          `}
+						style={{
+							top,
+							height,
+							left: `${left * 100}%`,
+							width: `${width * 100}%`,
+							backgroundColor: color,
+							zIndex: isDragging || isResizing || isResizingTop ? 999 : isHovered ? calculatedZIndex + 50 : calculatedZIndex,
+							transform: isHovered && !isDragging ? "translateZ(0) scale(1.02)" : "translateZ(0)",
+							boxSizing: "border-box",
+							pointerEvents: "auto",
+							minWidth: "60px",
+							display: "flex",
+							flexDirection: "column",
+							borderRadius: "0.375rem",
+							transformOrigin: "center",
+							transition: "all 0.15s ease-out",
+							backfaceVisibility: "hidden",
+							boxShadow: isHovered ? "0 8px 16px rgba(0, 0, 0, 0.4)" : isStackedEntry ? `0 4px 8px rgba(0, 0, 0, ${0.2 + stackIndex * 0.05})` : "0 1px 2px 0 rgba(0, 0, 0, 0.1)",
+							cursor: isDragging ? "grabbing" : "grab",
+							opacity: isStackedEntry && !isHovered ? 0.92 : 1,
+							border: isStackedEntry ? "2px solid rgba(255, 255, 255, 0.3)" : "none",
+						}}
+						onMouseDown={handleMouseDown}
+						onMouseEnter={() => setIsHovered(true)}
+						onMouseLeave={() => setIsHovered(false)}
+						onClick={(e) => {
+							if (!isDragging && !wasMoved.current) {
+								e.stopPropagation();
+								calculatePopoverPosition();
+								setIsOpen(true);
+							}
+						}}>
+						<div className="absolute top-0 left-0 right-0 h-2 cursor-ns-resize top-resize-handle" onMouseDown={handleTopResizeStart} />
+						<div className={`flex flex-col h-full justify-between text-left max-w-full ${isStackedEntry ? "p-1" : "p-1.5"}`}>
+							<div className="w-full overflow-hidden">
+								<Typography className={`text-xs font-bold text-white/90 truncate block ${isStackedEntry ? "text-[10px]" : ""}`}>
+									{isStackedEntry ? `${startTimeFormatted}` : startTimeFormatted}
+								</Typography>
+								{customerName && !isStackedEntry && (
+									<Typography className="text-xs text-white/90 truncate block">{customerName}</Typography>
 								)}
-								{isStackedEntry && (
-									<Typography className="text-[8px] font-semibold text-white/80 truncate block mt-auto">
-										{Math.round(duration / 60)}h
+								{projectName && (
+									<Typography className={`text-xs text-white/90 truncate block ${isStackedEntry ? "text-[9px]" : ""}`}>
+										{isStackedEntry ? projectName.substring(0, 8) + (projectName.length > 8 ? "..." : "") : projectName}
 									</Typography>
+								)}
+								{taskName && !isStackedEntry && <Typography className="text-xs text-white/90 truncate block">{taskName}</Typography>}
+								{isStackedEntry && totalStacked > 3 && (
+									<Typography className="text-[8px] text-white/70 truncate block">+{totalStacked - 1} more</Typography>
 								)}
 							</div>
-							<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />
+							{duration >= 60 && !isStackedEntry && (
+								<Typography className="text-xs font-semibold text-white/90 truncate block mt-auto">{durationFormatted} Hours</Typography>
+							)}
+							{isStackedEntry && (
+								<Typography className="text-[8px] font-semibold text-white/80 truncate block mt-auto">
+									{Math.round(duration / 60)}h
+								</Typography>
+							)}
 						</div>
-					</PopoverTrigger>
-					<PopoverContent className="p-6 z-[100] w-auto min-w-[24rem] max-w-[32rem] bg-popover" align="start" sideOffset={8} style={{ zIndex: 1000 }}>
+						<div className="absolute bottom-0 left-0 right-0 h-2 cursor-ns-resize resize-handle" onMouseDown={handleResizeStart} />
+					</div>
+				</ContextMenuTrigger>
+				<ContextMenuContent className="w-56">
+					<ContextMenuItem onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("edit", e)} className="cursor-pointer">
+						<Edit className="w-4 h-4 mr-2" />
+						Edit Entry
+					</ContextMenuItem>
+					<ContextMenuItem
+						onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("duplicate", e)}
+						className="cursor-pointer"
+						disabled={duplicateStatus === "pending"}>
+						<Copy className="w-4 h-4 mr-2" />
+						{duplicateStatus === "pending" ? "Duplicating..." : "Duplicate Entry"}
+					</ContextMenuItem>
+					<ContextMenuSeparator />
+					<ContextMenuItem
+						onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("delete", e)}
+						className="cursor-pointer text-destructive focus:text-destructive">
+						<Trash2 className="w-4 h-4 mr-2" />
+						Delete Entry
+					</ContextMenuItem>
+				</ContextMenuContent>
+			</ContextMenu>
+			
+			{/* Custom positioned modal */}
+			{isOpen && typeof document !== 'undefined' && createPortal(
+				<div 
+					className="fixed inset-0 z-[1000] flex"
+					onClick={(e) => {
+						if (e.target === e.currentTarget) {
+							setIsOpen(false);
+						}
+					}}
+				>
+					<div
+						className="bg-popover border rounded-lg shadow-lg p-6 w-auto min-w-[24rem] max-w-[32rem]"
+						style={popoverStyle}
+						onClick={(e) => e.stopPropagation()}
+					>
 						<form
 							className="flex flex-col space-y-4 w-full"
 							onSubmit={(e) => {
@@ -806,30 +929,11 @@ const TimeEntryComponent = ({
 								</button>
 							</div>
 						</form>
-					</PopoverContent>
-				</Popover>
-			</ContextMenuTrigger>
-			<ContextMenuContent className="w-56">
-				<ContextMenuItem onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("edit", e)} className="cursor-pointer">
-					<Edit className="w-4 h-4 mr-2" />
-					Edit Entry
-				</ContextMenuItem>
-				<ContextMenuItem
-					onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("duplicate", e)}
-					className="cursor-pointer"
-					disabled={duplicateStatus === "pending"}>
-					<Copy className="w-4 h-4 mr-2" />
-					{duplicateStatus === "pending" ? "Duplicating..." : "Duplicate Entry"}
-				</ContextMenuItem>
-				<ContextMenuSeparator />
-				<ContextMenuItem
-					onClick={(e: React.MouseEvent<HTMLDivElement>) => handleContextMenuAction("delete", e)}
-					className="cursor-pointer text-destructive focus:text-destructive">
-					<Trash2 className="w-4 h-4 mr-2" />
-					Delete Entry
-				</ContextMenuItem>
-			</ContextMenuContent>
-		</ContextMenu>
+					</div>
+				</div>,
+				document.body
+			)}
+		</>
 	);
 };
 export default TimeEntryComponent;
