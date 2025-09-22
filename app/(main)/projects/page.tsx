@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import AddDocument from "./AddDocument";
 import ProjectFilters from "./ProjectFilters";
 import { useProjects } from "@/app/hooks/useProjects";
@@ -9,13 +9,27 @@ import { Project } from "@/prisma/app/generated/prisma/client";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import ProjectActions from "./ProjectActions";
 import { toast } from "sonner";
+import { Customer } from "@/types";
 
 const ProjectsPage = () => {
 	const queryClient = useQueryClient();
 	const { data: projects } = useProjects();
+	const [customers, setCustomers] = useState<Customer[]>([]);
 	const [searchQuery, setSearchQuery] = useState("");
 	const [sortBy, setSortBy] = useState("name-asc");
 	const [showArchived, setShowArchived] = useState(false);
+
+	useEffect(() => {
+		const fetchCustomers = async () => {
+			try {
+				const response = await axios.get("/api/data");
+				setCustomers(response.data.customers);
+			} catch (error) {
+				console.error("Error fetching customers:", error);
+			}
+		};
+		fetchCustomers();
+	}, []);
 
 	const archiveMutation = useMutation({
 		mutationFn: async (project: Project) => {
@@ -102,34 +116,56 @@ const ProjectsPage = () => {
 				<TableHeader>
 					<TableRow>
 						<TableCell>Project Name</TableCell>
-						<TableCell>Project Description</TableCell>
-						<TableCell>Project Rate</TableCell>
+						<TableCell>Customer</TableCell>
+						<TableCell>Description</TableCell>
+						<TableCell>Rate</TableCell>
+						<TableCell>Tasks</TableCell>
 						<TableCell>Status</TableCell>
 						<TableCell>Actions</TableCell>
 					</TableRow>
 				</TableHeader>
 
 				<TableBody>
-					{sortedProjects?.map((project) => (
-						<TableRow key={project.id} className={project.archived ? "opacity-60" : ""}>
-							<TableCell>{project.name}</TableCell>
-							<TableCell>{project.description}</TableCell>
-							<TableCell>${project.rate}</TableCell>
-							<TableCell>{project.archived ? "Archived" : "Active"}</TableCell>
-							<TableCell>
-								<ProjectActions
-									project={{
-										...project,
-										name: project.name || "",
-										description: project.description || "",
-										customerId: project.customerId || 0,
-										rate: project.rate || 0,
-									}}
-									onArchive={handleArchiveProject}
-								/>
-							</TableCell>
-						</TableRow>
-					))}
+					{sortedProjects?.map((project) => {
+						const customer = customers?.find(c => c.id === project.customerId);
+						return (
+							<TableRow key={project.id} className={project.archived ? "opacity-60" : ""}>
+								<TableCell className="font-medium">{project.name}</TableCell>
+								<TableCell>{customer?.name || "Unknown Customer"}</TableCell>
+								<TableCell>{project.description || "No description"}</TableCell>
+								<TableCell>${project.rate || 0}</TableCell>
+								<TableCell>
+									{(project as any).tasks?.length > 0 ? (
+										<div className="flex flex-wrap gap-1">
+											{(project as any).tasks.slice(0, 2).map((task: any) => (
+												<span key={task.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-blue-100 text-blue-800">
+													{task.name}
+												</span>
+											))}
+											{(project as any).tasks.length > 2 && (
+												<span className="text-xs text-muted-foreground">+{(project as any).tasks.length - 2} more</span>
+											)}
+										</div>
+									) : (
+										<span className="text-muted-foreground text-sm">No tasks</span>
+									)}
+								</TableCell>
+								<TableCell>{project.archived ? "Archived" : "Active"}</TableCell>
+								<TableCell>
+									<ProjectActions
+										project={{
+											...project,
+											name: project.name || "",
+											description: project.description || "",
+											customerId: project.customerId || 0,
+											rate: project.rate || 0,
+										}}
+										onArchive={handleArchiveProject}
+									/>
+								</TableCell>
+							</TableRow>
+						);
+					})}
 				</TableBody>
 			</Table>
 		</div>

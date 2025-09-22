@@ -46,6 +46,10 @@ export async function POST(request: NextRequest) {
 				email: body.email,
 				defaultRate: body.defaultRate,
 				color: body.color,
+				paymentTerms: body.paymentTerms,
+				employmentType: body.employmentType || 'CONTRACTOR_1099',
+				isW2: body.isW2 || false,
+				w2HourlyRate: body.w2HourlyRate || null,
 			},
 		});
 		return NextResponse.json(newCustomer, { status: 201 });
@@ -82,8 +86,11 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
 	try {
 		const body = await request.json();
+		console.log('[CUSTOMER UPDATE] Request body:', JSON.stringify(body, null, 2));
+		
 		const validation = customerSchema.safeParse(body);
 		if (!validation.success) {
+			console.log('[CUSTOMER UPDATE] Validation failed:', JSON.stringify(validation.error.format(), null, 2));
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
 
@@ -101,6 +108,10 @@ export async function PATCH(request: NextRequest) {
 				email: data.email,
 				defaultRate: data.defaultRate,
 				color: data.color,
+				paymentTerms: data.paymentTerms,
+				employmentType: data.employmentType || 'CONTRACTOR_1099',
+				isW2: data.isW2 || false,
+				w2HourlyRate: data.w2HourlyRate || null,
 			},
 		});
 

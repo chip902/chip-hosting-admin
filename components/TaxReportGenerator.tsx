@@ -4,7 +4,7 @@ import React, { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Download } from "lucide-react";
 import { Account, Transaction } from "@/types";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { formatAmount } from "@/lib/utils";
 import axios from "axios";
 import { useQuery } from "@tanstack/react-query";
@@ -299,7 +299,7 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 			);
 
 			// Create Excel workbook
-			const wb = XLSX.utils.book_new();
+			const wb = new ExcelJS.Workbook();
 
 			// Define headers
 			const expenseHeaders = [
@@ -324,46 +324,90 @@ const TaxReportGenerator: React.FC<TaxReportGeneratorProps> = ({ year, userId, a
 
 			// Create Expenses sheet if there are expenses
 			if (final.expenses.length > 0) {
-				const wsExpenses = XLSX.utils.json_to_sheet(final.expenses, {
-					header: expenseHeaders,
-					skipHeader: true,
+				const wsExpenses = wb.addWorksheet("Expenses");
+
+				// Add header row with styling
+				wsExpenses.addRow(expenseHeaders);
+				const headerRow = wsExpenses.getRow(1);
+				headerRow.font = { bold: true };
+				headerRow.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: "FFE0E0E0" },
+				};
+
+				// Add data rows
+				final.expenses.forEach((expense) => {
+					const row = [
+						expense.Date,
+						expense["Check #"] || "",
+						expense.Payee,
+						expense.Amount,
+						expense["Office Expense"] || 0,
+						expense["Telephone Expense"] || 0,
+						expense.Personal || 0,
+						expense.Accounting || 0,
+						expense["Bank Charge"] || 0,
+						expense.Ads || 0,
+						expense.Insurance || 0,
+						expense["Medical Exp"] || 0,
+						expense.Utilities || 0,
+						expense.MISC || 0,
+						expense.Description,
+					];
+					wsExpenses.addRow(row);
 				});
 
-				// Add headers with styling
-				XLSX.utils.sheet_add_aoa(wsExpenses, [expenseHeaders], { origin: "A1" });
-
-				// Optional: Add some basic styling to headers
-				for (let i = 0; i < expenseHeaders.length; i++) {
-					const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-					if (!wsExpenses[cellRef]) wsExpenses[cellRef] = {};
-					wsExpenses[cellRef].s = { font: { bold: true } };
-				}
-
-				XLSX.utils.book_append_sheet(wb, wsExpenses, "Expenses");
+				// Auto-fit columns
+				wsExpenses.columns.forEach((column) => {
+					column.width = 15;
+				});
 			}
 
 			// Create Deposits sheet if there are deposits
 			if (final.deposits.length > 0) {
-				const wsDeposits = XLSX.utils.json_to_sheet(final.deposits, {
-					header: depositHeaders,
-					skipHeader: true,
+				const wsDeposits = wb.addWorksheet("Deposits");
+
+				// Add header row with styling
+				wsDeposits.addRow(depositHeaders);
+				const headerRow = wsDeposits.getRow(1);
+				headerRow.font = { bold: true };
+				headerRow.fill = {
+					type: "pattern",
+					pattern: "solid",
+					fgColor: { argb: "FFE0E0E0" },
+				};
+
+				// Add data rows
+				final.deposits.forEach((deposit) => {
+					const row = [
+						deposit.Date,
+						deposit.Source,
+						deposit.Amount,
+						deposit["W-2 Income"] || "",
+						deposit["Self Employed Income"] || "",
+						deposit["Personal funds"] || "",
+					];
+					wsDeposits.addRow(row);
 				});
 
-				// Add headers with styling
-				XLSX.utils.sheet_add_aoa(wsDeposits, [depositHeaders], { origin: "A1" });
-
-				// Optional: Add some basic styling to headers
-				for (let i = 0; i < depositHeaders.length; i++) {
-					const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
-					if (!wsDeposits[cellRef]) wsDeposits[cellRef] = {};
-					wsDeposits[cellRef].s = { font: { bold: true } };
-				}
-
-				XLSX.utils.book_append_sheet(wb, wsDeposits, "Deposits");
+				// Auto-fit columns
+				wsDeposits.columns.forEach((column) => {
+					column.width = 15;
+				});
 			}
 
 			// Save the file
-			XLSX.writeFile(wb, `tax_report_${year}.xlsx`);
+			const buffer = await wb.xlsx.writeBuffer();
+			const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+			const url = window.URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `tax_report_${year}.xlsx`;
+			document.body.appendChild(a);
+			a.click();
+			document.body.removeChild(a);
+			window.URL.revokeObjectURL(url);
 		} catch (err) {
 			console.error("Error generating report:", err);
 			// You might want to add some user feedback here

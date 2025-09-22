@@ -45,6 +45,7 @@ export const useGetTimeEntries = ({ page, pageSize, startDate, endDate, customer
 				...(endDate && { endDate: format(endDate, "yyyy-MM-dd") }),
 				...(customerId !== undefined && { customerId: customerId.toString() }),
 				...(invoiceStatus !== undefined && { invoiceStatus: invoiceStatus.toString() }),
+				timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
 				sortBy,
 				sortOrder,
 			});

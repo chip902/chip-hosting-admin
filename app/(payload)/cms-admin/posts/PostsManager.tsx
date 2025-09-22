@@ -322,25 +322,19 @@ export default function PostsManager() {
         body.author = formData.authorId
       }
 
-      // Add tags
-      if (formData.tags.length > 0) {
-        body.tags = formData.tags
-      }
+      // Add tags - ensure it's always an array, even if empty
+      body.tags = formData.tags.length > 0 ? formData.tags : []
 
-      // Add SEO meta fields
-      const meta: any = {}
+      // Add SEO meta fields - always include meta object even if empty
+      body.meta = {}
       if (formData.metaTitle.trim()) {
-        meta.title = formData.metaTitle.trim()
+        body.meta.title = formData.metaTitle.trim()
       }
       if (formData.metaDescription.trim()) {
-        meta.description = formData.metaDescription.trim()
+        body.meta.description = formData.metaDescription.trim()
       }
       if (formData.metaImageId && formData.metaImageId !== 'none') {
-        meta.image = formData.metaImageId
-      }
-      
-      if (Object.keys(meta).length > 0) {
-        body.meta = meta
+        body.meta.image = formData.metaImageId
       }
 
       if (formData.status === 'published' && !editingPost?.publishedAt) {
@@ -372,6 +366,12 @@ export default function PostsManager() {
 
   const handleEdit = (post: Post) => {
     setEditingPost(post)
+
+    // Debug logging to see what's in the post object
+    console.log('Editing post:', post)
+    console.log('Post tags:', post.tags)
+    console.log('Post meta:', post.meta)
+
     setFormData({
       title: post.title,
       slug: post.slug,
@@ -381,7 +381,7 @@ export default function PostsManager() {
       categoryId: typeof post.category === 'object' && post.category ? post.category.id : 'none',
       featuredImageId: typeof post.featuredImage === 'object' && post.featuredImage ? post.featuredImage.id : 'none',
       authorId: typeof post.author === 'object' && post.author ? post.author.id : 'none',
-      tags: post.tags || [],
+      tags: Array.isArray(post.tags) ? post.tags : [],
       metaTitle: post.meta?.title || '',
       metaDescription: post.meta?.description || '',
       metaImageId: typeof post.meta?.image === 'object' && post.meta?.image ? post.meta.image.id : 'none'
@@ -653,12 +653,41 @@ export default function PostsManager() {
                   <Input
                     id="tags"
                     value={formData.tags.join(', ')}
-                    onChange={(e) => setFormData({ ...formData, tags: e.target.value.split(',').map(tag => tag.trim()).filter(Boolean) })}
+                    onChange={(e) => {
+                      const newTags = e.target.value.split(',').map(tag => tag.trim()).filter(Boolean)
+                      setFormData({ ...formData, tags: newTags })
+                    }}
+                    onBlur={(e) => {
+                      // Clean up tags on blur to ensure proper formatting
+                      const cleanedTags = e.target.value
+                        .split(',')
+                        .map(tag => tag.trim())
+                        .filter(Boolean)
+                        .filter((tag, index, self) => self.indexOf(tag) === index) // Remove duplicates
+                      setFormData({ ...formData, tags: cleanedTags })
+                    }}
                     placeholder="tag1, tag2, tag3"
                   />
                   <p className="text-xs text-muted-foreground mt-1">
-                    Enter tags separated by commas.
+                    Enter tags separated by commas. {formData.tags.length > 0 && `(${formData.tags.length} tags)`}
                   </p>
+                  {formData.tags.length > 0 && (
+                    <div className="flex gap-1 flex-wrap mt-2">
+                      {formData.tags.map((tag, index) => (
+                        <Badge
+                          key={index}
+                          variant="secondary"
+                          className="text-xs cursor-pointer"
+                          onClick={() => {
+                            const newTags = formData.tags.filter((_, i) => i !== index)
+                            setFormData({ ...formData, tags: newTags })
+                          }}
+                        >
+                          {tag} ×
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
                 {/* SEO Section */}
@@ -822,6 +851,12 @@ export default function PostsManager() {
                         <span>Featured image: {post.featuredImage.filename}</span>
                       </div>
                     )}
+                    {(post.meta?.title || post.meta?.description) && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <FileText className="w-3 h-3" />
+                        <span>SEO: {post.meta?.title ? '✓ Title' : ''} {post.meta?.description ? '✓ Description' : ''}</span>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-2">
                     <Badge variant={getStatusColor(post.status) as any} className="capitalize">
@@ -868,15 +903,26 @@ export default function PostsManager() {
                 </div>
                 <div className="flex items-center justify-between mt-4">
                   <code className="text-xs bg-muted px-2 py-1 rounded">/{post.slug}</code>
-                  {post.status === 'published' && (
-                    <Button variant="ghost" size="sm" asChild>
-                      <Link href={`/blog/${post.slug}`} target="_blank">
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                        <ExternalLink className="w-3 h-3 ml-1" />
-                      </Link>
-                    </Button>
-                  )}
+                  <div className="flex gap-1">
+                    {post.status === 'published' && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/blog/${post.slug}`} target="_blank">
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                          <ExternalLink className="w-3 h-3 ml-1" />
+                        </Link>
+                      </Button>
+                    )}
+                    {post.status === 'draft' && (
+                      <Button variant="ghost" size="sm" asChild>
+                        <Link href={`/blog/${post.slug}?preview=true`} target="_blank">
+                          <Eye className="w-4 h-4 mr-1" />
+                          Preview
+                          <ExternalLink className="w-3 h-3 ml-1" />
+                        </Link>
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </CardContent>
             </Card>

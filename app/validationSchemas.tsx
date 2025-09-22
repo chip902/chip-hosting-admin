@@ -8,6 +8,9 @@ export const customerSchema = z.object({
 	defaultRate: z.number().positive(),
 	color: z.string().max(7).nullable().optional(),
 	paymentTerms: z.string().optional(),
+	employmentType: z.enum(["W2", "CONTRACTOR_1099"]).default("CONTRACTOR_1099"),
+	isW2: z.boolean().default(false),
+	w2HourlyRate: z.union([z.number().positive(), z.null()]).optional(),
 });
 
 export const timeLogSchema = z.object({

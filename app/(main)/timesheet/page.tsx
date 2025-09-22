@@ -1,17 +1,24 @@
 "use client";
-import { useState, useEffect, useRef } from "react";
-import "./timeEntries.css";
-import { endOfWeek, startOfWeek } from "date-fns";
-import { useGetTimeEntries } from "@/app/hooks/useGetTimeEntries";
-import TimeToolBar from "./TimeToolBar";
-import TimeGrid from "./TimeGrid";
-import LogTime from "./LogTime";
-import React from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Clock } from "lucide-react";
-import { Skeleton } from "@/components/ui/skeleton";
-import { AlertDialog, AlertDialogContent, AlertDialogDescription, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+import React, { useState } from "react";
+import dynamic from "next/dynamic";
+import { startOfWeek, endOfWeek } from "date-fns";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Clock, CalendarCheck2 } from "lucide-react";
+import LogTime from "./LogTime";
+import TimeToolBar from "./TimeToolBar";
+import { EditTimeEntryModal } from "../invoices/EditTimeEntryModal";
+
+// Dynamically import the calendar to avoid SSR issues with FullCalendar
+const TimesheetCalendar = dynamic(() => import("./TimesheetCalendar"), {
+	ssr: false,
+	loading: () => (
+		<div className="flex items-center justify-center h-full bg-gray-50 dark:bg-gray-800 rounded-lg">
+			<p className="text-muted-foreground">Loading calendar...</p>
+		</div>
+	),
+});
 
 interface Filters {
 	startDate?: Date;
@@ -19,57 +26,68 @@ interface Filters {
 	customerId?: number;
 }
 
-const Page: React.FC = () => {
+export default function TimesheetPage() {
 	const [filters, setFilters] = useState<Filters>({
 		startDate: startOfWeek(new Date(), { weekStartsOn: 0 }),
 		endDate: endOfWeek(new Date(), { weekStartsOn: 0 }),
 		customerId: undefined,
 	});
 
-	const [logTimeOpen, setLogTimeOpen] = useState(false);
+	const [isLogTimeOpen, setIsLogTimeOpen] = useState(false);
 	const [selectedTimeSlot, setSelectedTimeSlot] = useState<{
 		date?: Date;
 		startTime?: string;
 		endTime?: string;
 		duration?: number;
 	} | null>(null);
-	const [isMounted, setIsMounted] = useState(false);
-	const dialogRef = useRef<HTMLDivElement>(null);
+	const [isW2WeekEntry, setIsW2WeekEntry] = useState(false);
+	const [editingEntry, setEditingEntry] = useState<any>(null);
+	const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
-	useEffect(() => {
-		setIsMounted(true);
-		return () => setIsMounted(false);
-	}, []);
-
-	// Debug effect to log dialog state changes
-	useEffect(() => {
-		console.log("Dialog state changed:", logTimeOpen);
-	}, [logTimeOpen]);
-
-	const { data, error, isLoading } = useGetTimeEntries({
-		pageSize: 20,
-		page: 1,
-		startDate: filters.startDate ? new Date(filters.startDate) : undefined,
-		endDate: filters.endDate ? new Date(filters.endDate) : undefined,
-		customerId: filters.customerId !== null && filters.customerId !== undefined ? filters.customerId : undefined,
-	});
-
-	const handleTimeSlotSelect = (timeSlot: any) => {
-		// Ignore calls that don't include a date (used internally just to trigger refetches)
-		if (!timeSlot || !timeSlot.date) return;
-		console.log("Time slot selected:", timeSlot);
-		setSelectedTimeSlot(timeSlot);
-		setLogTimeOpen(true);
+	const handleDateRangeChange = (start: Date, end: Date) => {
+		setFilters((prev) => ({
+			...prev,
+			startDate: start,
+			endDate: end,
+		}));
 	};
 
 	const handleLogTimeClick = () => {
-		console.log("Log Time button clicked");
-		setLogTimeOpen(true);
+		setIsW2WeekEntry(false);
+		setEditingEntry(null);
+		setSelectedTimeSlot({
+			date: new Date(),
+			startTime: "09:00",
+			endTime: "17:00",
+			duration: 480,
+		});
+		setIsLogTimeOpen(true);
+	};
+
+	const handleW2WeekClick = () => {
+		console.log("W-2 Week button clicked");
+		setIsW2WeekEntry(true);
+		setEditingEntry(null);
+		// Set to Monday of current week
+		const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
+		setSelectedTimeSlot({
+			date: monday,
+			startTime: "09:00",
+			endTime: "17:00",
+			duration: 480,
+		});
+		setIsLogTimeOpen(true);
+	};
+
+	const handleEventClick = (entry: any) => {
+		console.log("Opening entry for edit:", entry);
+		setEditingEntry(entry);
+		setIsEditModalOpen(true);
 	};
 
 	return (
-		<div className="flex flex-col h-full">
-			<Dialog open={logTimeOpen} onOpenChange={setLogTimeOpen}>
+		<div className="flex flex-col h-screen overflow-hidden">
+			<Dialog open={isLogTimeOpen} onOpenChange={setIsLogTimeOpen}>
 				<DialogTrigger asChild>
 					<Button variant="default" className="hidden" onClick={handleLogTimeClick} id="log-time-trigger">
 						Open Log Time
@@ -87,33 +105,45 @@ const Page: React.FC = () => {
 								endTime: selectedTimeSlot?.endTime,
 								duration: selectedTimeSlot?.duration,
 							}}
-							onClose={() => setLogTimeOpen(false)}
+							onClose={() => setIsLogTimeOpen(false)}
 						/>
 					</div>
 				</DialogContent>
 			</Dialog>
-			{isLoading ? (
-				<Skeleton className="h-[600px] w-full" />
-			) : error ? (
-				<AlertDialog open={true}>
-					<AlertDialogContent>
-						<AlertDialogTitle>Database Error</AlertDialogTitle>
-						<AlertDialogDescription>The Database connection cannot be established. Check your connection and try again.</AlertDialogDescription>
-					</AlertDialogContent>
-				</AlertDialog>
-			) : (
-				<>
-					<TimeToolBar filters={filters} setFilters={setFilters}>
-						<Button variant="default" className="flex items-center gap-2" onClick={handleLogTimeClick}>
-							<Clock className="h-4 w-4" />
-							<span className="font-medium">Log Time</span>
-						</Button>
-					</TimeToolBar>
-					<TimeGrid filters={filters} onTimeSlotSelect={handleTimeSlotSelect} isDialogOpen={logTimeOpen} />
-				</>
-			)}
+
+			<TimeToolBar filters={filters} setFilters={setFilters}>
+				<Button variant="default" className="flex items-center gap-2" onClick={handleLogTimeClick}>
+					<Clock className="h-4 w-4" />
+					<span className="font-medium">Log Time</span>
+				</Button>
+				<Button variant="outline" className="flex items-center gap-2" onClick={handleW2WeekClick}>
+					<CalendarCheck2 className="h-4 w-4" />
+					<span className="font-medium">W-2 Week</span>
+				</Button>
+			</TimeToolBar>
+
+			{/* Main Calendar View - Takes remaining space */}
+			<div className="flex-1 min-h-0 overflow-hidden">
+				<TimesheetCalendar
+					startDate={filters.startDate || new Date()}
+					endDate={filters.endDate || new Date()}
+					onDateRangeChange={handleDateRangeChange}
+					onEventClick={handleEventClick}
+				/>
+			</div>
+
+			{/* Edit Time Entry Modal */}
+			<EditTimeEntryModal
+				entry={editingEntry}
+				isOpen={isEditModalOpen}
+				onClose={() => {
+					setIsEditModalOpen(false);
+					setEditingEntry(null);
+				}}
+				onRefresh={() => {
+					// The TimesheetCalendar will auto-refresh via react-query
+				}}
+			/>
 		</div>
 	);
-};
-
-export default Page;
+}

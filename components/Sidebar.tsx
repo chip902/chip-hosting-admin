@@ -1,6 +1,6 @@
 // Sidebar.tsx
 
-import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings, BookOpen } from "lucide-react";
+import { Building2, CalendarIcon, Clock, DollarSign, FileText, Home, PieChart, Settings, BookOpen, ListTodo } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { FloatingElement } from "@/components/animations/FloatingElement";
@@ -12,6 +12,7 @@ const navigation = [
 	{ name: "Customers", href: "/customers", icon: Building2 },
 	{ name: "Calendar", href: "/calendar", icon: CalendarIcon },
 	{ name: "Projects", href: "/projects", icon: FileText },
+	{ name: "Tasks", href: "/tasks", icon: ListTodo },
 	{ name: "Transaction Reporting", href: "/transactions", icon: PieChart },
 	{ name: "CMS Admin", href: "/cms-admin", icon: BookOpen },
 ];

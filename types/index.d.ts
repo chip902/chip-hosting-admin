@@ -431,7 +431,10 @@ export interface TimeEntryData {
 
 export interface UpdateTimeEntryParams {
 	id: number;
-	data: Partial<TimeEntryData>;
+	data: Partial<TimeEntryData> & {
+		endDate?: Date | string;
+	};
+	timezone?: string;
 }
 
 export interface DeleteTimeEntryParams {

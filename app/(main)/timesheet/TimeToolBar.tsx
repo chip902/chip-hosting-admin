@@ -64,7 +64,7 @@ const TimeToolBar = ({ filters, setFilters, children }: ITimeToolBar) => {
 	}, [filters.customerId, setFilters]);
 
 	return (
-		<header className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border px-6 py-4 z-10">
+		<header className="sticky top-0 bg-background/80 backdrop-blur-sm border-b border-border px-4 py-3 z-10 flex-shrink-0">
 			<div className="flex w-full items-center justify-between">
 				{/* Left side - Log Time Button */}
 				<div className="flex items-center gap-2">

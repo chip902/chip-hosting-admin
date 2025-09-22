@@ -13,8 +13,10 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, CalendarCheck2 } from "lucide-react";
 import { toast } from "sonner";
+import { generateW2WeekEntries, isUSFederalHoliday } from "@/lib/holidays";
+import { Switch } from "@/components/ui/switch";
 
 export type TimeLogSchema = z.infer<typeof timeLogSchema>;
 
@@ -43,6 +45,9 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 	const [projects, setProjects] = useState<Project[]>([]);
 	const [tasks, setTasks] = useState<Task[]>([]);
 	const [users, setUsers] = useState<User[]>([]);
+	const [isW2Customer, setIsW2Customer] = useState(false);
+	const [useQuickW2Entry, setUseQuickW2Entry] = useState(false);
+	const [w2StandardHours, setW2StandardHours] = useState(true);
 	const router = useRouter();
 	const { mutateAsync: createTimeEntry } = useCreateTimeEntry();
 
@@ -108,11 +113,29 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 			if (currentProjectId && !filteredProjects.some((p) => p.id === currentProjectId)) {
 				form.setValue("projectId", undefined as any);
 			}
+
+			// Check if selected customer is W-2
+			const customer = customers.find(c => c.id === selectedCustomerId);
+			if (customer && (customer as any).employmentType === 'W2') {
+				setIsW2Customer(true);
+				// Auto-enable quick entry for W2 customers
+				setUseQuickW2Entry(true);
+				if (w2StandardHours) {
+					form.setValue("startTime", "09:00");
+					form.setValue("endTime", "17:00");
+					form.setValue("duration", 480); // 8 hours in minutes
+				}
+			} else {
+				setIsW2Customer(false);
+				setUseQuickW2Entry(false);
+			}
 		} else {
 			setProjects([]);
 			form.setValue("projectId", undefined as any);
+			setIsW2Customer(false);
+			setUseQuickW2Entry(false);
 		}
-	}, [selectedCustomerId, allProjects, form]);
+	}, [selectedCustomerId, allProjects, form, customers, w2StandardHours]);
 
 	useEffect(() => {
 		if (startTime && endTime) {
@@ -149,12 +172,6 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 				date: new Date(logData.date),
 			};
 
-			// Show loading toast for multiple entries
-			const loadingToast =
-				parsedRepeatInterval && parsedRepeatInterval > 1
-					? toast.loading(`Creating ${parsedRepeatInterval} time entries...`)
-					: toast.loading("Logging time entry...");
-
 			if (parsedRepeatInterval) {
 				let currentDate = new Date(logDataWithDate.date);
 				for (let i = 0; i < parsedRepeatInterval; i++) {
@@ -176,26 +193,23 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 				});
 			}
 
-			await Promise.all(
-				logEntries.map((entry) =>
-					toast.promise(() => createTimeEntry(entry), {
-						loading: "Creating time entry...",
-						success: `Time entry for ${entry.date.toLocaleDateString()} created successfully`,
-						error: "Failed to create time entry",
-					})
-				)
-			);
-
-			// Dismiss loading toast if it exists
-			if (loadingToast) {
-				toast.dismiss(loadingToast);
-			}
-
-			// Show success message
-			toast.success(
-				parsedRepeatInterval && parsedRepeatInterval > 1
-					? `Successfully created ${parsedRepeatInterval} time entries`
-					: "Time entry logged successfully"
+			// Use a single toast.promise for better UX
+			await toast.promise(
+				Promise.all(logEntries.map((entry) => createTimeEntry(entry))),
+				{
+					loading: parsedRepeatInterval && parsedRepeatInterval > 1 
+						? `Creating ${parsedRepeatInterval} time entries...` 
+						: "Logging time entry...",
+					success: (results) => {
+						if (isW2Customer && useQuickW2Entry) {
+							return `Successfully created ${results.length} W-2 time entries`;
+						}
+						return parsedRepeatInterval && parsedRepeatInterval > 1
+							? `Successfully created ${results.length} time entries`
+							: "Time entry logged successfully";
+					},
+					error: "Failed to create time entries",
+				}
 			);
 
 			onClose();
@@ -439,12 +453,58 @@ const LogTime = ({ onClose, initialValues }: LogTimeProps) => {
 										value={value?.toString() || ""}
 										onChange={(e) => onChange(e.target.value === "" ? undefined : parseInt(e.target.value, 10))}
 										{...field}
+										disabled={isW2Customer && useQuickW2Entry}
 									/>
 								</FormControl>
 								<FormMessage />
 							</FormItem>
 						)}
 					/>
+
+					{isW2Customer && (
+						<div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+							<div className="flex items-center justify-between">
+								<div className="flex items-center gap-2">
+									<CalendarCheck2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+									<span className="font-medium text-blue-900 dark:text-blue-100">W-2 Quick Entry</span>
+								</div>
+								<Switch
+									checked={useQuickW2Entry}
+									onCheckedChange={(checked) => {
+										setUseQuickW2Entry(checked);
+										if (checked && w2StandardHours) {
+											form.setValue("startTime", "09:00");
+											form.setValue("endTime", "17:00");
+											form.setValue("duration", 480);
+										}
+									}}
+								/>
+							</div>
+
+							{useQuickW2Entry && (
+								<div className="space-y-3">
+									<div className="text-sm text-blue-700 dark:text-blue-300">
+										This will create entries for Monday-Friday of the selected week, automatically skipping federal holidays.
+									</div>
+
+									<div className="flex items-center justify-between">
+										<span className="text-sm">Use standard hours (9 AM - 5 PM)</span>
+										<Switch
+											checked={w2StandardHours}
+											onCheckedChange={(checked) => {
+												setW2StandardHours(checked);
+												if (checked) {
+													form.setValue("startTime", "09:00");
+													form.setValue("endTime", "17:00");
+													form.setValue("duration", 480);
+												}
+											}}
+										/>
+									</div>
+								</div>
+							)}
+						</div>
+					)}
 
 					<div className="flex justify-end gap-3 mt-4">
 						<Button type="button" variant="destructive" onClick={onClose}>

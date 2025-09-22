@@ -11,6 +11,8 @@ import { Form, FormControl, FormField, FormLabel, FormItem, FormMessage } from "
 import { Spinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
 
@@ -24,6 +26,9 @@ interface EditCustomerProps {
 		defaultRate: number;
 		color: string | null;
 		paymentTerms: string | null;
+		employmentType?: string;
+		isW2?: boolean;
+		w2HourlyRate?: number;
 	};
 	onClose: () => void;
 }
@@ -31,6 +36,7 @@ interface EditCustomerProps {
 const EditCustomer = ({ customer, onClose }: EditCustomerProps) => {
 	const router = useRouter();
 	const queryClient = useQueryClient();
+	const [isW2, setIsW2] = useState(customer?.employmentType === 'W2' || false);
 	const form = useForm<CustomerSchema>({
 		resolver: zodResolver(customerSchema),
 		defaultValues: {
@@ -41,6 +47,9 @@ const EditCustomer = ({ customer, onClose }: EditCustomerProps) => {
 			shortName: customer?.shortName || "",
 			defaultRate: customer?.defaultRate || 0,
 			paymentTerms: customer?.paymentTerms || "30",
+			employmentType: (customer?.employmentType as "W2" | "CONTRACTOR_1099") || "CONTRACTOR_1099",
+			isW2: customer?.isW2 || false,
+			w2HourlyRate: customer?.w2HourlyRate || undefined,
 		},
 	});
 	const [error, setError] = useState("");
@@ -54,6 +63,10 @@ const EditCustomer = ({ customer, onClose }: EditCustomerProps) => {
 			form.setValue("email", customer.email || "");
 			form.setValue("defaultRate", customer.defaultRate || 0);
 			form.setValue("color", customer.color || "#000000");
+			form.setValue("employmentType", (customer.employmentType as "W2" | "CONTRACTOR_1099") || "CONTRACTOR_1099");
+			form.setValue("isW2", customer.isW2 || false);
+			form.setValue("w2HourlyRate", customer.w2HourlyRate || undefined);
+			setIsW2(customer.employmentType === 'W2');
 		}
 	}, [customer, form.setValue]);
 
@@ -67,6 +80,9 @@ const EditCustomer = ({ customer, onClose }: EditCustomerProps) => {
 				shortName: data.shortName,
 				email: data.email,
 				paymentTerms: data.paymentTerms,
+				employmentType: data.employmentType,
+				isW2: data.isW2,
+				w2HourlyRate: data.w2HourlyRate ? parseFloat(data.w2HourlyRate.toString()) : null,
 			};
 
 			if (customer) {
@@ -199,7 +215,73 @@ const EditCustomer = ({ customer, onClose }: EditCustomerProps) => {
 								</FormItem>
 							)}
 						/>
+
+						<FormField
+							control={form.control}
+							name="employmentType"
+							render={({ field }) => (
+								<FormItem>
+									<FormLabel>Employment Type</FormLabel>
+									<Select
+										onValueChange={(value) => {
+											field.onChange(value);
+											const isW2Selected = value === 'W2';
+											setIsW2(isW2Selected);
+											form.setValue('isW2', isW2Selected);
+											if (!isW2Selected) {
+												form.setValue('w2HourlyRate', undefined);
+											}
+										}}
+										value={field.value}
+									>
+										<FormControl>
+											<SelectTrigger>
+												<SelectValue placeholder="Select employment type" />
+											</SelectTrigger>
+										</FormControl>
+										<SelectContent>
+											<SelectItem value="CONTRACTOR_1099">1099 Contractor</SelectItem>
+											<SelectItem value="W2">W-2 Employee</SelectItem>
+										</SelectContent>
+									</Select>
+									<FormMessage />
+								</FormItem>
+							)}
+						/>
 					</div>
+
+					{isW2 && (
+						<div className="space-y-4 p-4 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
+							<div className="text-sm font-medium text-blue-900 dark:text-blue-100 mb-3">
+								W-2 Employee Settings
+							</div>
+
+							<FormField
+								control={form.control}
+								name="w2HourlyRate"
+								render={({ field }) => (
+									<FormItem>
+										<FormLabel>W-2 Hourly Rate ($)</FormLabel>
+										<FormControl>
+											<Input
+												type="number"
+												placeholder="0.00"
+												step="0.01"
+												{...field}
+												value={field.value || ''}
+												onChange={(e) => field.onChange(e.target.value ? parseFloat(e.target.value) : undefined)}
+											/>
+										</FormControl>
+										<FormMessage />
+									</FormItem>
+								)}
+							/>
+
+							<div className="text-xs text-blue-700 dark:text-blue-300">
+								W-2 employees can use quick time entry features with automatic 8-hour workday setup.
+							</div>
+						</div>
+					)}
 
 					<div className="flex justify-end gap-3 mt-4">
 						<Button type="button" variant="destructive" onClick={onClose}>

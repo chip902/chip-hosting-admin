@@ -1,6 +1,6 @@
 "use client";
 import React, { useEffect, useRef, useState, useCallback } from "react";
-import TimeEntryComponent from "./TimeEntry";
+import TimeEntryComponent from "./TimeEntrySimple";
 import TimeGridHeader from "./TimeGridHeader";
 import { useGetTimeEntries } from "@/app/hooks/useGetTimeEntries";
 
@@ -525,10 +525,16 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 										return null;
 									}
 
+									// Calculate top and height from slots (assuming 15-minute slots)
+									const top = entry.startSlot * 15; // 15px per slot
+									const height = (entry.endSlot - entry.startSlot) * 15;
+
 									return (
 										<TimeEntryComponent
 											key={entry.id}
 											entry={entry as unknown as TimeEntry}
+											top={top}
+											height={height}
 											startSlot={entry.startSlot}
 											endSlot={entry.endSlot}
 											color={entry.color}
@@ -540,7 +546,7 @@ const TimeGrid = ({ filters, onTimeSlotSelect, isDialogOpen }: TimeGridProps) =>
 											isStackedEntry={entry.isStackedEntry}
 											stackIndex={entry.stackIndex}
 											totalStacked={entry.columns}
-											calculatedZIndex={entry.zIndex || entry.basePriority}
+											calculatedZIndex={entry.zIndex || 100}
 										/>
 									);
 								})}

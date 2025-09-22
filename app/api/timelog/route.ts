@@ -4,7 +4,7 @@ import { prisma } from "@/prisma/client";
 import { parseISO, isValid } from "date-fns";
 import { timeLogSchema } from "@/app/validationSchemas";
 import { ProcessedTimeEntry } from "@/types";
-import { format } from "date-fns-tz";
+import { format, fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Customer, Project, Task, TimeEntry } from "@/prisma/app/generated/prisma/client";
 
 export async function GET(request: NextRequest) {
@@ -77,15 +77,26 @@ export async function GET(request: NextRequest) {
 		});
 
 		const formattedEntries: ProcessedTimeEntry[] = timeEntries.map((entry: TimeEntry & { customer: Customer; project: Project; task: Task }) => {
-			const startTime = format(entry.date, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+			// The issue is that when times are stored, they're being converted to UTC
+			// but we want to display them as they were originally entered (local time)
+			// Since FullCalendar will interpret ISO strings in the user's local timezone,
+			// we need to construct the time as if it were already in the correct timezone
+
+			// Get the timezone offset for proper conversion
+			const timezone = searchParams.get("timezone") || "America/New_York"; // Default or from request
+
+			// Convert UTC time back to local time representation
+			const localStartTime = toZonedTime(entry.date, timezone);
+			const startTime = format(localStartTime, "yyyy-MM-dd'T'HH:mm:ss");
+
 			let actualEndDate: Date;
 			if (entry.endDate) {
-				actualEndDate = entry.endDate;
+				actualEndDate = toZonedTime(entry.endDate, timezone);
 			} else {
 				const durationMs = (entry.duration ?? 0) * 60_000;
-				actualEndDate = new Date(entry.date.getTime() + durationMs);
+				actualEndDate = new Date(localStartTime.getTime() + durationMs);
 			}
-			const endTime = format(actualEndDate, "yyyy-MM-dd'T'HH:mm:ss'Z'");
+			const endTime = format(actualEndDate, "yyyy-MM-dd'T'HH:mm:ss");
 			const duration = entry.duration ?? 0;
 
 			return {
@@ -97,7 +108,12 @@ export async function GET(request: NextRequest) {
 				customerName: entry.customer.name,
 				projectName: entry.project.name,
 				taskName: entry.task.name,
-				customer: { id: entry.customer.id, name: entry.customer.name },
+				customer: { 
+					id: entry.customer.id, 
+					name: entry.customer.name,
+					employmentType: entry.customer.employmentType,
+					isW2: entry.customer.isW2
+				},
 				project: { id: entry.project.id, name: entry.project.name },
 				task: { id: entry.task.id, name: entry.task.name },
 				width: entry.width || 20,
@@ -135,7 +151,7 @@ export async function POST(request: NextRequest) {
 			return NextResponse.json(validation.error.format(), { status: 400 });
 		}
 
-		const { date, startTime, endTime, customerId, projectId, taskId, userId, ...rest } = body;
+		const { date, startTime, endTime, customerId, projectId, taskId, userId, timezone, ...rest } = body;
 
 		// Extract the date part from the date string
 		const dateOnly = date.split("T")[0];
@@ -147,27 +163,35 @@ export async function POST(request: NextRequest) {
 		console.log("Start DateTime String:", startDateTimeString);
 		console.log("End DateTime String:", endDateTimeString);
 
-		// Parse the ISO date-time strings
-		const startDateTime = parseISO(startDateTimeString);
-		const endDateTime = parseISO(endDateTimeString);
+		// Parse the ISO date-time strings as local time, then convert to UTC for storage
+		const localStartDateTime = parseISO(startDateTimeString);
+		const localEndDateTime = parseISO(endDateTimeString);
 
-		console.log("Start DateTime:", startDateTime);
-		console.log("End DateTime:", endDateTime);
+		// Convert local time to UTC for database storage
+		const userTimezone = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+		const utcStartDateTime = fromZonedTime(localStartDateTime, userTimezone);
+		const utcEndDateTime = fromZonedTime(localEndDateTime, userTimezone);
 
-		if (!isValid(startDateTime) || !isValid(endDateTime)) {
+		console.log("Local Start DateTime:", localStartDateTime);
+		console.log("UTC Start DateTime:", utcStartDateTime);
+		console.log("Local End DateTime:", localEndDateTime);
+		console.log("UTC End DateTime:", utcEndDateTime);
+
+		if (!isValid(utcStartDateTime) || !isValid(utcEndDateTime)) {
 			throw new Error("Invalid start or end time");
 		}
 
-		if (startDateTime >= endDateTime) {
+		if (utcStartDateTime >= utcEndDateTime) {
 			throw new Error("Start time must be before end time");
 		}
 
-		const duration = (endDateTime.getTime() - startDateTime.getTime()) / (1000 * 60);
+		const duration = (utcEndDateTime.getTime() - utcStartDateTime.getTime()) / (1000 * 60);
 
 		const newEntry = await prisma.timeEntry.create({
 			data: {
 				...rest,
-				date: startDateTime,
+				date: utcStartDateTime,
+				endDate: utcEndDateTime,
 				duration,
 				customerId: parseInt(customerId, 10),
 				projectId: parseInt(projectId, 10),

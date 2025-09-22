@@ -13,8 +13,13 @@ export async function POST(request: NextRequest) {
 			data: {
 				name: body.name,
 				email: body.email,
-				defaultRate: body.rate,
+				defaultRate: body.rate || body.defaultRate,
 				color: body.color,
+				shortName: body.shortName,
+				paymentTerms: body.paymentTerms,
+				employmentType: body.employmentType || 'CONTRACTOR_1099',
+				isW2: body.isW2 || false,
+				w2HourlyRate: body.w2HourlyRate || null,
 			},
 		});
 		return NextResponse.json(newCustomer, { status: 201 });
@@ -35,8 +40,13 @@ export async function PATCH(request: NextRequest) {
 			data: {
 				name: body.name,
 				email: body.email,
-				defaultRate: body.rate,
+				defaultRate: body.rate || body.defaultRate,
 				color: body.color,
+				shortName: body.shortName,
+				paymentTerms: body.paymentTerms,
+				employmentType: body.employmentType || 'CONTRACTOR_1099',
+				isW2: body.isW2 || false,
+				w2HourlyRate: body.w2HourlyRate || null,
 			},
 		});
 		return NextResponse.json(updatedCustomer, { status: 200 });

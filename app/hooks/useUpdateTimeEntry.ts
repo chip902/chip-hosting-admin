@@ -3,7 +3,7 @@ import axios, { AxiosResponse } from "axios";
 import { UpdateTimeEntryParams } from "@/types";
 import { useQueryClient } from "@tanstack/react-query";
 
-const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<AxiosResponse> => {
+const updateTimeEntry = async ({ id, data, timezone }: UpdateTimeEntryParams): Promise<AxiosResponse> => {
 	try {
 		console.log(`Updating time entry ${id} with data:`, data);
 
@@ -34,6 +34,15 @@ const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<Axi
 			}
 		}
 
+		// Handle direct endDate field from drag/drop operations
+		if (data.endDate) {
+			try {
+				prismaData.endDate = data.endDate instanceof Date ? data.endDate : new Date(data.endDate);
+			} catch (e) {
+				console.error('Failed to parse endDate', e);
+			}
+		}
+
 		// If there's relevant data from your TimeEntry related fields,
 		// extract just what Prisma needs
 		const dataAny = data as any; // Cast to any to bypass TypeScript restrictions
@@ -56,8 +65,11 @@ const updateTimeEntry = async ({ id, data }: UpdateTimeEntryParams): Promise<Axi
 
 		console.log('Sending to Prisma:', prismaData);
 
+		// Prepare query parameters with timezone if provided
+		const queryParams = timezone ? `?timezone=${encodeURIComponent(timezone)}` : '';
+
 		// Send a PATCH request with the properly formatted data for Prisma
-		const response = await axios.patch(url, prismaData);
+		const response = await axios.patch(`${url}${queryParams}`, prismaData);
 
 		if (response.status !== 200) {
 			console.error(`Received non-200 response: ${response.status}`, response.data);

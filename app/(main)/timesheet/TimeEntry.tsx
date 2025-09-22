@@ -73,6 +73,9 @@ const TimeEntryComponent = ({
 		startTime: entry.startTime?.match(/T(\d{2}:\d{2})/) ? entry.startTime.match(/T(\d{2}:\d{2})/)![1] : "09:00",
 	});
 
+	// Track if component is in interaction mode to prevent conflicts
+	const [isInteracting, setIsInteracting] = useState(false);
+
 	const { mutate: deleteTimeEntry } = useDeleteTimeEntry();
 	const { mutate: updateTimeEntry } = useUpdateTimeEntry();
 	const { mutate: duplicateTimeEntry, status: duplicateStatus } = useDuplicateTimeEntry();
@@ -85,10 +88,11 @@ const TimeEntryComponent = ({
 		const viewportWidth = window.innerWidth;
 		const viewportHeight = window.innerHeight;
 		
-		// Approximate popover dimensions
+		// Approximate popover dimensions (updated for larger form)
 		const popoverWidth = 400;
-		const popoverHeight = 500;
+		const popoverHeight = Math.min(600, viewportHeight * 0.8); // Use 80% of viewport height max
 		const padding = 20; // Safe padding from viewport edges
+		
 
 		// Calculate position to keep popover within viewport
 		let targetX = entryRect.right + 8; // Default to right side
@@ -106,13 +110,23 @@ const TimeEntryComponent = ({
 		}
 
 		// Ensure vertical position stays within viewport
-		if (targetY + popoverHeight > viewportHeight - padding) {
-			targetY = viewportHeight - popoverHeight - padding;
+		const bottomOverflow = (targetY + popoverHeight) - (viewportHeight - padding);
+		
+		if (bottomOverflow > 0) {
+			// Try positioning above the entry instead
+			const aboveY = entryRect.top - popoverHeight - 8;
+			if (aboveY >= padding) {
+				targetY = aboveY;
+			} else {
+				// If neither above nor below works, move up by the overflow amount
+				targetY = Math.max(padding, targetY - bottomOverflow);
+			}
 		}
-		if (targetY < padding) {
-			targetY = padding;
-		}
-
+		
+		// Final constraint to viewport bounds
+		targetY = Math.max(padding, Math.min(targetY, viewportHeight - popoverHeight - padding));
+		
+		
 		// Set custom positioning styles
 		setPopoverStyle({
 			position: 'fixed',
@@ -148,8 +162,8 @@ const TimeEntryComponent = ({
 
 	// Handle mouse down on the time entry
 	const handleMouseDown = (e: React.MouseEvent) => {
-		// Completely disable drag functionality when any dialog is open
-		if (isDialogOpen) {
+		// Completely disable drag functionality when any dialog is open or popover is open
+		if (isDialogOpen || isOpen) {
 			return;
 		}
 
@@ -177,7 +191,9 @@ const TimeEntryComponent = ({
 		e.stopPropagation();
 		e.preventDefault();
 
-		// Record the initial position for drag threshold
+		console.log('MouseDown - starting drag detection');
+
+		// Record the initial position for drag threshold (don't set isInteracting yet)
 		setDragStartPosition({ x: e.clientX, y: e.clientY });
 		mouseDownTime.current = Date.now();
 
@@ -195,6 +211,7 @@ const TimeEntryComponent = ({
 		}
 
 		// Add temporary listeners to detect actual drag intent
+		console.log('Adding initial event listeners');
 		document.addEventListener("mousemove", handleInitialMouseMove);
 		document.addEventListener("mouseup", handleInitialMouseUp);
 	};
@@ -207,12 +224,16 @@ const TimeEntryComponent = ({
 		const deltaX = Math.abs(e.clientX - dragStartPosition.x);
 		const deltaY = Math.abs(e.clientY - dragStartPosition.y);
 
+		console.log('MouseMove - delta:', { deltaX, deltaY, threshold });
+
 		// If mouse moved beyond threshold, start dragging
 		if (deltaX > threshold || deltaY > threshold) {
+			console.log('Threshold exceeded - starting drag');
 			document.removeEventListener("mousemove", handleInitialMouseMove);
 			document.removeEventListener("mouseup", handleInitialMouseUp);
 
 			setIsDragging(true);
+			setIsInteracting(true); // Now set interaction state when actually dragging
 			document.body.style.userSelect = "none";
 			document.body.style.cursor = "grabbing";
 			setDragStartPosition(null);
@@ -338,6 +359,7 @@ const TimeEntryComponent = ({
 
 		// Reset dragging state immediately
 		setIsDragging(false);
+		setIsInteracting(false);
 		wasMoved.current = false;
 		document.body.style.userSelect = "";
 		document.body.style.cursor = "";
@@ -393,14 +415,19 @@ const TimeEntryComponent = ({
 					},
 				});
 
-				if (onTimeSlotSelect) {
-					onTimeSlotSelect({});
-				}
+				// Use setTimeout to prevent re-render during drag operation cleanup
+				setTimeout(() => {
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
+				}, 10);
 			} catch (error) {
 				console.error("Failed to update position:", error);
-				if (onTimeSlotSelect) {
-					onTimeSlotSelect({});
-				}
+				setTimeout(() => {
+					if (onTimeSlotSelect) {
+						onTimeSlotSelect({});
+					}
+				}, 10);
 			} finally {
 				// Always reset the styles
 				if (entryRef.current) {
@@ -568,12 +595,68 @@ const TimeEntryComponent = ({
 		};
 	}, [isOpen, calculatePopoverPosition]);
 
+	// Cleanup event listeners on unmount and state changes
+	useEffect(() => {
+		return () => {
+			// Clean up any remaining event listeners
+			document.removeEventListener("mousemove", handleInitialMouseMove);
+			document.removeEventListener("mouseup", handleInitialMouseUp);
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+			document.removeEventListener("mousemove", handleResizeMove);
+			document.removeEventListener("mouseup", handleResizeEnd);
+			document.removeEventListener("mousemove", handleTopResizeMove);
+			document.removeEventListener("mouseup", handleTopResizeEnd);
+			
+			// Reset body styles
+			document.body.style.userSelect = "";
+			document.body.style.cursor = "";
+		};
+	}, []);
+
+	// Clean up drag state when interaction modes conflict (only run once when conflicts are detected)
+	useEffect(() => {
+		// Only cleanup if popover opens while actively dragging/resizing
+		const hasActiveInteraction = isDragging || isResizing || isResizingTop;
+		
+		if (isOpen && hasActiveInteraction) {
+			// Force cleanup if popover opens during drag/resize
+			setIsDragging(false);
+			setIsResizing(false);
+			setIsResizingTop(false);
+			setIsInteracting(false);
+			
+			// Clean up event listeners
+			document.removeEventListener("mousemove", handleMouseMove);
+			document.removeEventListener("mouseup", handleMouseUp);
+			document.removeEventListener("mousemove", handleResizeMove);
+			document.removeEventListener("mouseup", handleResizeEnd);
+			document.removeEventListener("mousemove", handleTopResizeMove);
+			document.removeEventListener("mouseup", handleTopResizeEnd);
+			
+			// Reset styles
+			document.body.style.userSelect = "";
+			document.body.style.cursor = "";
+			if (entryRef.current) {
+				entryRef.current.style.position = "";
+				entryRef.current.style.top = "";
+				entryRef.current.style.height = "";
+				entryRef.current.style.zIndex = "";
+				entryRef.current.style.opacity = "";
+				entryRef.current.style.transform = "";
+				entryRef.current.style.boxShadow = "";
+				entryRef.current.removeAttribute("data-target-day");
+			}
+		}
+	}, [isOpen, isDragging, isResizing, isResizingTop]);
+
 	// Bottom resize functionality
 	const handleResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
-		if (isDialogOpen) return;
+		if (isDialogOpen || isOpen) return;
 		e.stopPropagation();
 		e.preventDefault();
 
+		setIsInteracting(true);
 		setIsResizing(true);
 		document.addEventListener("mousemove", handleResizeMove);
 		document.addEventListener("mouseup", handleResizeEnd);
@@ -581,10 +664,11 @@ const TimeEntryComponent = ({
 
 	// Top resize functionality
 	const handleTopResizeStart = (e: React.MouseEvent<HTMLDivElement>) => {
-		if (isDialogOpen) return;
+		if (isDialogOpen || isOpen) return;
 		e.stopPropagation();
 		e.preventDefault();
 
+		setIsInteracting(true);
 		setIsResizingTop(true);
 		document.addEventListener("mousemove", handleTopResizeMove);
 		document.addEventListener("mouseup", handleTopResizeEnd);
@@ -615,6 +699,7 @@ const TimeEntryComponent = ({
 		const gridElement = entryRef.current.closest(".col-span-1");
 		if (!gridElement) {
 			setIsResizing(false);
+			setIsInteracting(false);
 			return;
 		}
 
@@ -644,14 +729,18 @@ const TimeEntryComponent = ({
 				},
 			});
 
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
-			}
+			// Use setTimeout to prevent re-render during resize operation cleanup
+			setTimeout(() => {
+				if (onTimeSlotSelect) {
+					onTimeSlotSelect({});
+				}
+			}, 10);
 		} catch (error) {
 			console.error("Failed to resize entry:", error);
 		}
 
 		setIsResizing(false);
+		setIsInteracting(false);
 		// Reset only temporary resize styles, let component re-render with new data
 		if (entryRef.current) {
 			entryRef.current.style.height = "";
@@ -687,6 +776,7 @@ const TimeEntryComponent = ({
 		const gridElement = entryRef.current.closest(".col-span-1");
 		if (!gridElement) {
 			setIsResizingTop(false);
+			setIsInteracting(false);
 			return;
 		}
 
@@ -716,14 +806,18 @@ const TimeEntryComponent = ({
 				},
 			});
 
-			if (onTimeSlotSelect) {
-				onTimeSlotSelect({});
-			}
+			// Use setTimeout to prevent re-render during resize operation cleanup
+			setTimeout(() => {
+				if (onTimeSlotSelect) {
+					onTimeSlotSelect({});
+				}
+			}, 10);
 		} catch (error) {
 			console.error("Failed to resize entry:", error);
 		}
 
 		setIsResizingTop(false);
+		setIsInteracting(false);
 		// Reset only temporary resize styles, let component re-render with new data
 		if (entryRef.current) {
 			entryRef.current.style.top = "";
@@ -738,6 +832,7 @@ const TimeEntryComponent = ({
 				<ContextMenuTrigger asChild>
 					<div
 						ref={entryRef}
+						onMouseDown={handleMouseDown}
 						className={`
             time-entry
             absolute
@@ -776,7 +871,6 @@ const TimeEntryComponent = ({
 							opacity: isStackedEntry && !isHovered ? 0.92 : 1,
 							border: isStackedEntry ? "2px solid rgba(255, 255, 255, 0.3)" : "none",
 						}}
-						onMouseDown={handleMouseDown}
 						onMouseEnter={() => setIsHovered(true)}
 						onMouseLeave={() => setIsHovered(false)}
 						onClick={(e) => {
@@ -850,8 +944,11 @@ const TimeEntryComponent = ({
 					}}
 				>
 					<div
-						className="bg-popover border rounded-lg shadow-lg p-6 w-auto min-w-[24rem] max-w-[32rem]"
-						style={popoverStyle}
+						className="bg-popover border rounded-lg shadow-lg p-6 w-auto min-w-[24rem] max-w-[32rem] overflow-y-auto"
+						style={{
+							...popoverStyle,
+							maxHeight: `${Math.min(600, window.innerHeight * 0.8)}px`
+						}}
 						onClick={(e) => e.stopPropagation()}
 					>
 						<form

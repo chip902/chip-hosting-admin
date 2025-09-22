@@ -1,6 +1,7 @@
 // app/api/timelog/[id]/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/prisma/client";
+import { fromZonedTime, toZonedTime } from "date-fns-tz";
 
 export async function PATCH(req: Request) {
 	const url = new URL(req.url);
@@ -23,30 +24,35 @@ export async function PATCH(req: Request) {
 		const data = await req.json();
 		console.log("Update request received for time entry ID:", id, "with data:", data);
 
+		// Get timezone from query params or use default
+		const timezone = url.searchParams.get("timezone") || "America/New_York";
+
 		// Create a clean object for updating
 		let updateData: any = { ...data };
 
-		// Validate and process date field
+		// Validate and process date field with timezone conversion
 		if (data.date) {
 			try {
-				const isoDate = new Date(data.date);
-				if (isNaN(isoDate.getTime())) {
+				const localDate = new Date(data.date);
+				if (isNaN(localDate.getTime())) {
 					return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
 				}
-				updateData.date = isoDate;
+				// Convert local time to UTC for database storage
+				updateData.date = fromZonedTime(localDate, timezone);
 			} catch (e) {
 				return NextResponse.json({ error: "Invalid date format" }, { status: 400 });
 			}
 		}
 
-		// Validate and process endDate field if present
+		// Validate and process endDate field if present with timezone conversion
 		if (data.endDate) {
 			try {
-				const endDate = new Date(data.endDate);
-				if (isNaN(endDate.getTime())) {
+				const localEndDate = new Date(data.endDate);
+				if (isNaN(localEndDate.getTime())) {
 					return NextResponse.json({ error: "Invalid endDate format" }, { status: 400 });
 				}
-				updateData.endDate = endDate;
+				// Convert local time to UTC for database storage
+				updateData.endDate = fromZonedTime(localEndDate, timezone);
 			} catch (e) {
 				return NextResponse.json({ error: "Invalid endDate format" }, { status: 400 });
 			}

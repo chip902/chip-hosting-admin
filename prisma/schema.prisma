@@ -29,17 +29,30 @@ model User {
 }
 
 model Customer {
-  id           Int         @id @default(autoincrement())
-  name         String      @db.VarChar(255)
-  email        String      @db.VarChar(255)
-  dateCreated  DateTime    @default(now())
-  defaultRate  Float
-  color        String?
-  shortName    String?
-  paymentTerms String?
-  invoices     Invoice[]
-  projects     Project[]
-  timeEntries  TimeEntry[]
+  id             Int            @id @default(autoincrement())
+  name           String         @db.VarChar(255)
+  email          String         @db.VarChar(255)
+  dateCreated    DateTime       @default(now())
+  defaultRate    Float
+  color          String?
+  shortName      String?
+  paymentTerms   String?
+  employmentType EmploymentType @default(CONTRACTOR_1099)
+  isW2           Boolean        @default(false)
+  w2HourlyRate   Float?
+  invoices       Invoice[]
+  projects       Project[]
+  timeEntries    TimeEntry[]
+}
+
+enum EmploymentType {
+  W2
+  CONTRACTOR_1099
+}
+
+enum EntryType {
+  MANUAL
+  QUICK_W2
 }
 
 model Project {
@@ -109,6 +122,8 @@ model TimeEntry {
   totalHours    Float?
   width         Int?
   left          Int?
+  isW2Entry     Boolean?     @default(false)
+  entryType     EntryType?   @default(MANUAL)
   invoice       Invoice?     @relation("InvoiceTimeEntries", fields: [invoiceId], references: [id], map: "TimeEntry_InvoiceTimeEntries_fkey")
   customer      Customer     @relation(fields: [customerId], references: [id])
   invoiceItem   InvoiceItem? @relation(fields: [invoiceItemId], references: [id])

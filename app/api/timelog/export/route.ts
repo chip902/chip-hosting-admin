@@ -1,7 +1,7 @@
 // app/api/timelog/export/route.ts
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/prisma/client";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 import { format } from "date-fns";
 
 export async function POST(request: NextRequest) {
@@ -18,55 +18,75 @@ export async function POST(request: NextRequest) {
 		}
 
 		// Create a new workbook
-		const workbook = XLSX.utils.book_new();
+		const workbook = new ExcelJS.Workbook();
+		const worksheet = workbook.addWorksheet("Time Log");
 
-		// Format data for the worksheet
-		const worksheetData = entries.map((entry: any) => ({
-			Date: entry.date,
-			"Start Time": entry.startTime,
-			"End Time": entry.endTime,
-			Duration: typeof entry.duration === "number" ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m` : entry.duration,
-			Description: entry.description || "",
-			Customer: entry.customerName,
-			Project: entry.projectName,
-			Task: entry.taskName,
-			Invoiced: entry.isInvoiced ? "Yes" : "No",
-		}));
-
-		// Create a worksheet with the data
-		const worksheet = XLSX.utils.json_to_sheet(worksheetData);
-
-		// Set column widths
-		const colWidths = [
-			{ wch: 12 }, // Date
-			{ wch: 10 }, // Start Time
-			{ wch: 10 }, // End Time
-			{ wch: 12 }, // Duration
-			{ wch: 40 }, // Description
-			{ wch: 20 }, // Customer
-			{ wch: 20 }, // Project
-			{ wch: 20 }, // Task
-			{ wch: 10 }, // Invoiced
+		// Define headers
+		const headers = [
+			"Date",
+			"Start Time",
+			"End Time",
+			"Duration",
+			"Description",
+			"Customer",
+			"Project",
+			"Task",
+			"Invoiced",
 		];
 
-		worksheet["!cols"] = colWidths;
+		// Add header row with styling
+		worksheet.addRow(headers);
+		const headerRow = worksheet.getRow(1);
+		headerRow.font = { bold: true };
+		headerRow.fill = {
+			type: "pattern",
+			pattern: "solid",
+			fgColor: { argb: "FFE0E0E0" },
+		};
 
-		// Add the worksheet to the workbook
-		XLSX.utils.book_append_sheet(workbook, worksheet, "Time Log");
+		// Add data rows
+		entries.forEach((entry: any) => {
+			const row = [
+				entry.date,
+				entry.startTime,
+				entry.endTime,
+				typeof entry.duration === "number" ? `${Math.floor(entry.duration / 60)}h ${entry.duration % 60}m` : entry.duration,
+				entry.description || "",
+				entry.customerName,
+				entry.projectName,
+				entry.taskName,
+				entry.isInvoiced ? "Yes" : "No",
+			];
+			worksheet.addRow(row);
+		});
+
+		// Set column widths
+		worksheet.columns = [
+			{ width: 12 }, // Date
+			{ width: 10 }, // Start Time
+			{ width: 10 }, // End Time
+			{ width: 12 }, // Duration
+			{ width: 40 }, // Description
+			{ width: 20 }, // Customer
+			{ width: 20 }, // Project
+			{ width: 20 }, // Task
+			{ width: 10 }, // Invoiced
+		];
 
 		// Generate a filename with current date
 		const fileName = `TimeLog_Export_${format(new Date(), "yyyy-MM-dd")}.xlsx`;
 
 		// Write the workbook to a buffer
-		const buffer = XLSX.write(workbook, { type: "buffer", bookType: "xlsx" });
+		const buffer = await workbook.xlsx.writeBuffer();
+		const uint8Array = new Uint8Array(buffer);
 
 		// Return the Excel file
-		return new NextResponse(buffer, {
+		return new NextResponse(uint8Array, {
 			status: 200,
 			headers: {
 				"Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 				"Content-Disposition": `attachment; filename="${fileName}"`,
-				"Content-Length": buffer.length.toString(),
+				"Content-Length": uint8Array.length.toString(),
 			},
 		});
 	} catch (error: any) {
