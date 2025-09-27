@@ -1,5 +1,6 @@
 /* eslint-disable no-unused-vars */
 import { PersonalFinanceCategory } from "plaid";
+import type { EmploymentType } from "@prisma/client";
 import { User as AuthUser } from "./next-auth.d.ts";
 
 export type SearchParamProps = {
@@ -343,6 +344,9 @@ export interface Customer {
 	color?: string;
 	shortName?: string;
 	paymentTerms?: string;
+	employmentType: EmploymentType;
+	isW2: boolean;
+	w2HourlyRate?: number | null;
 	invoices?: Invoice[];
 	projects?: Project[];
 	timeEntries?: TimeEntry[];

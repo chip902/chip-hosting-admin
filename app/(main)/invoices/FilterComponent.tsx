@@ -4,14 +4,13 @@ import { filterSchema } from "@/app/validationSchemas";
 import { z } from "zod";
 import { useCustomers } from "@/app/hooks/useCustomers";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Customer } from "@/prisma/app/generated/prisma/client";
+import type { Customer } from "@/types";
 
 type FilterFormSchema = z.infer<typeof filterSchema>;
 

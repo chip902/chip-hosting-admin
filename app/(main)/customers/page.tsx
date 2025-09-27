@@ -2,13 +2,13 @@
 import { AddCustomer } from "./AddCustomer";
 import EditCustomer from "./EditCustomer";
 import { useCustomers } from "@/app/hooks/useCustomers";
-import { Customer } from "@/prisma/app/generated/prisma/client";
 import { Table, TableBody, TableCell, TableHeader, TableRow } from "@/components/ui/table";
 import { Box } from "lucide-react";
 import { DotsVerticalIcon } from "@radix-ui/react-icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
+import type { Customer } from "@/types/prisma";
 
 const CustomerTable = () => {
 	const { data: customers } = useCustomers();
@@ -59,6 +59,9 @@ const CustomerTable = () => {
 								defaultRate: customer.defaultRate,
 								color: customer.color ?? null,
 								paymentTerms: customer.paymentTerms,
+								employmentType: customer.employmentType,
+								isW2: customer.isW2,
+								w2HourlyRate: customer.w2HourlyRate
 							};
 
 							return (

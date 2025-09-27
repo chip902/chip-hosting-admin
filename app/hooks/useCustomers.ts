@@ -1,5 +1,5 @@
 // app/hooks/useCustomers.ts
-import { Customer } from "@/prisma/app/generated/prisma/client";
+import type { Customer } from "@/types";
 import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 
