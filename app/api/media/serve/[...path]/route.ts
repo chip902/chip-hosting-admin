@@ -1,16 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getPayload } from "payload";
-import config from "../../../../../payload.config.mjs";
-import path from "path";
 import fs from "fs";
+import nodePath from "path";
 
 export async function GET(
 	request: NextRequest,
-	{ params }: { params: { path: string[] } }
+	context: { params: Promise<Record<string, string | string[] | undefined>> }
 ) {
 	try {
-		const filepath = params.path.join("/");
-		const mediaPath = path.join(process.cwd(), "media", filepath);
+		const resolvedParams = context.params ? await context.params : {};
+		const rawPath = resolvedParams?.path;
+		const pathSegments = Array.isArray(rawPath)
+			? rawPath
+			: typeof rawPath === "string" && rawPath.length > 0
+				? [rawPath]
+				: [];
+		const filepath = pathSegments.join("/");
+		const mediaPath = nodePath.join(process.cwd(), "media", filepath);
 
 		// Check if file exists
 		if (!fs.existsSync(mediaPath)) {
@@ -22,7 +27,7 @@ export async function GET(
 		const fileSize = stats.size;
 
 		// Determine content type
-		const ext = path.extname(filepath).toLowerCase();
+		const ext = nodePath.extname(filepath).toLowerCase();
 		const contentTypeMap: { [key: string]: string } = {
 			'.jpg': 'image/jpeg',
 			'.jpeg': 'image/jpeg',

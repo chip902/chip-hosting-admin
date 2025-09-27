@@ -11,10 +11,9 @@ import _ from "lodash";
 import { Account } from "@/types";
 import TaxReportGenerator from "./TaxReportGenerator";
 import { Alert, AlertDescription } from "./ui/alert";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
-import { CalendarIcon } from "lucide-react";
-import { Calendar } from "./ui/calendar";
-import { format } from "date-fns";
+import { DateRangePicker } from "./ui/date-range-picker";
+import { DateRange } from "react-day-picker";
+import { format, startOfYear, endOfYear } from "date-fns";
 
 interface TransactionReportingProps {
 	userId: string;
@@ -25,44 +24,21 @@ interface TransactionReportingProps {
 }
 
 const TransactionReporting = ({ userId }: TransactionReportingProps) => {
+	// Initialize with current year (Jan 1 to today for YTD view)
+	const currentYear = new Date().getFullYear();
+	const [dateRange, setDateRange] = useState<DateRange>({
+		from: startOfYear(new Date()),
+		to: new Date(), // Today's date for YTD view
+	});
+	const [selectedTab, setSelectedTab] = useState<string>("all");
+
+	const { mutate: syncTransactions, isPending: isSyncing, isSuccess: isSyncSuccess, data: syncData } = useSyncTransactions(userId);
+
 	useEffect(() => {
 		if (userId) {
 			syncTransactions();
 		}
 	}, [userId]);
-
-	const [dateRange, setDateRange] = useState({
-		startDate: new Date(),
-		endDate: new Date(),
-	});
-	const getCurrentFiscalYearDates = () => {
-		const today = new Date();
-		const fiscalStartMonth = 0;
-		let startYear = today.getFullYear();
-
-		if (today.getMonth() < fiscalStartMonth) {
-			startYear -= 1;
-		}
-
-		return {
-			startDate: new Date(startYear, fiscalStartMonth, 1),
-			endDate: new Date(startYear + 1, fiscalStartMonth - 1, 31),
-		};
-	};
-	const [fiscalDateRange] = useState(getCurrentFiscalYearDates());
-	const [selectedTab, setSelectedTab] = useState<string>("all");
-
-	const currentYear = useMemo(() => dateRange.startDate.getFullYear(), [dateRange.startDate]);
-
-	// Single source of truth for transactions
-	const { transactions, isLoading, error } = usePlaidTransactions(userId, {
-		startDate: fiscalDateRange.startDate,
-		endDate: fiscalDateRange.endDate,
-	});
-
-	const yearTransactions = useMemo(() => {
-		return transactions?.filter((tx) => new Date(tx.date).getFullYear() === currentYear) || [];
-	}, [transactions, currentYear]);
 
 	// Memoize the accounts query
 	const { data: banksData } = useQuery({
@@ -74,7 +50,23 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 		staleTime: 30000,
 	});
 
-	const { mutate: syncTransactions, isPending: isSyncing, isSuccess: isSyncSuccess, data: syncData } = useSyncTransactions(userId);
+	// Single source of truth for transactions - use dateRange from state
+	const { transactions, isLoading, error } = usePlaidTransactions(userId, {
+		startDate: dateRange.from,
+		endDate: dateRange.to,
+	});
+
+	// Debug logging
+	useEffect(() => {
+		console.log("TransactionReporting Debug:", {
+			userId,
+			dateRange,
+			transactionsCount: transactions?.length || 0,
+			isLoading,
+			error: error?.message,
+			banksDataLength: banksData?.data?.accounts?.length || 0,
+		});
+	}, [userId, dateRange, transactions, isLoading, error, banksData]);
 
 	const accounts = useMemo(
 		() =>
@@ -107,34 +99,49 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 	return (
 		<div className="flex flex-col gap-8">
 			{/* Controls */}
-			{/* Date Range Picker */}
-			<div className="flex items-center gap-4">
-				<Popover>
-					<PopoverTrigger asChild>
-						<Button variant="outline" className="flex items-center gap-2">
-							<CalendarIcon className="h-4 w-4" />
-							{format(dateRange.startDate, "MMM d, yyyy")} - {format(dateRange.endDate, "MMM d, yyyy")}
-						</Button>
-					</PopoverTrigger>
-					<PopoverContent className="w-auto p-0" align="start">
-						<Calendar
-							mode="range"
-							selected={{
-								from: dateRange.startDate,
-								to: dateRange.endDate,
-							}}
-							onSelect={(range) => {
-								if (range?.from && range?.to) {
-									setDateRange({
-										startDate: range.from,
-										endDate: range.to,
-									});
-								}
-							}}
-							initialFocus
-						/>
-					</PopoverContent>
-				</Popover>
+			<div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+				{/* Date Range Picker */}
+				<div className="flex flex-col gap-2">
+					<label className="text-sm font-medium text-gray-700 dark:text-gray-300">Date Range (for Year-to-Date deposits, select Jan 1 - today)</label>
+					<DateRangePicker
+						from={dateRange.from}
+						to={dateRange.to}
+						onSelect={(range) => {
+							if (range) {
+								setDateRange(range);
+							}
+						}}
+						className="w-auto"
+					/>
+				</div>
+
+				{/* Quick Date Buttons */}
+				<div className="flex gap-2">
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							const now = new Date();
+							setDateRange({
+								from: startOfYear(now),
+								to: now,
+							});
+						}}>
+						Year to Date
+					</Button>
+					<Button
+						variant="outline"
+						size="sm"
+						onClick={() => {
+							const now = new Date();
+							setDateRange({
+								from: startOfYear(now),
+								to: endOfYear(now),
+							});
+						}}>
+						Full Year
+					</Button>
+				</div>
 			</div>
 
 			<div className="flex flex-col md:flex-row gap-4 items-center justify-between">
@@ -163,7 +170,29 @@ const TransactionReporting = ({ userId }: TransactionReportingProps) => {
 					</TabsList>
 					<TabsContent value="all">
 						<div className="p-4">
-							<TransactionsTable transactions={transactions} />
+							{transactions && transactions.length > 0 ? (
+								<TransactionsTable transactions={transactions} />
+							) : (
+								<div className="text-center py-8 text-gray-500">
+									{isLoading ? (
+										"Loading transactions..."
+									) : error ? (
+										<div>
+											<p>Error loading transactions: {error.message}</p>
+											<p className="text-sm mt-2">Check console for more details</p>
+										</div>
+									) : (
+										<div>
+											<p>No transactions found for the selected date range.</p>
+											<p className="text-sm mt-2">Try adjusting your date range or make sure you have connected bank accounts.</p>
+											<p className="text-sm mt-1">
+												Accounts found: {accounts.length} | Date range: {dateRange.from?.toLocaleDateString()} -{" "}
+												{dateRange.to?.toLocaleDateString()}
+											</p>
+										</div>
+									)}
+								</div>
+							)}
 						</div>
 					</TabsContent>
 					{accounts.map((account: Account) => (

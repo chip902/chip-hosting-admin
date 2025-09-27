@@ -14,9 +14,7 @@ async function createFirstUser() {
     
     // Initialize Payload
     const payload = await getPayload({
-      config: config.default,
-      disableAdmin: true,
-      local: true,
+      config: config.default
     });
 
     console.log('Checking for existing users...');

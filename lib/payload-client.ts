@@ -1,5 +1,5 @@
 import { getPayload as getPayloadInstance } from 'payload';
-import config from '@/payload.config.mjs';
+import config from '@/payload.config';
 import mongoose from 'mongoose';
 
 // This ensures we're using the correct config file

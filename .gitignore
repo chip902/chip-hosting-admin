@@ -70,3 +70,4 @@ scripts/test-jarvis-connection.js
 .gitignore
 scripts/test-frontend-streaming.js
 scripts/debug-jarvis-connection.js
+dump-inserts.sql

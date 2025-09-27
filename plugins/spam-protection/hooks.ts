@@ -41,7 +41,7 @@ export const spamProtectionHook: CollectionBeforeValidateHook = async ({
   }
 
   // Rate limiting
-  const identifier = (req as any).anonymousId || req.ip || 'unknown';
+  const identifier = (req as any).anonymousId || (req as any).ip || 'unknown';
   const isRateLimited = checkRateLimit(identifier);
   
   if (isRateLimited) {
@@ -49,7 +49,21 @@ export const spamProtectionHook: CollectionBeforeValidateHook = async ({
   }
 
   // Store IP and user agent for security
-  data.ipAddress = req.ip || req.connection?.remoteAddress;
+  const forwardedForHeader = req.headers['x-forwarded-for'];
+  const forwardedFor = typeof forwardedForHeader === 'string'
+    ? forwardedForHeader.split(',')[0].trim()
+    : Array.isArray(forwardedForHeader)
+      ? forwardedForHeader[0]
+      : undefined;
+
+  const realIpHeader = req.headers['x-real-ip'];
+  const realIp = typeof realIpHeader === 'string'
+    ? realIpHeader
+    : Array.isArray(realIpHeader)
+      ? realIpHeader[0]
+      : undefined;
+
+  data.ipAddress = (req as any).ip || forwardedFor || realIp;
   data.userAgent = req.headers['user-agent'];
 
   // First-time commenters need approval (unless already marked as spam)

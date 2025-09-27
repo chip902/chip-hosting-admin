@@ -42,8 +42,8 @@ export const usePlaidTransactions = (userId: string, range?: DateRange & { bankI
 			const response = await axios.get("/api/transactions/get-transactions", {
 				params: {
 					userId,
-					startDate: range?.startDate?.toISOString().split("T")[0],
-					endDate: range?.endDate?.toISOString().split("T")[0],
+					startDate: effectiveRange.startDate?.toISOString().split("T")[0],
+					endDate: effectiveRange.endDate?.toISOString().split("T")[0],
 					bankIds: range?.bankIds?.join(","),
 				},
 			});

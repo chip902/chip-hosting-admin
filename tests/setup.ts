@@ -1,7 +1,7 @@
 // Jest setup for comment system tests
-
+import { jest } from '@jest/globals';
+import { beforeEach, afterEach } from 'node:test';
 // Mock environment variables
-process.env.NODE_ENV = 'test';
 process.env.RECAPTCHA_SECRET_KEY = 'test_secret_key';
 process.env.RECAPTCHA_THRESHOLD = '0.7';
 process.env.RATE_LIMIT_WINDOW = '3600000';
@@ -39,6 +39,6 @@ global.fetch = jest.fn() as jest.MockedFunction<typeof fetch>;
 
 // Mock reCAPTCHA global if needed
 (global as any).grecaptcha = {
-  execute: jest.fn().mockResolvedValue('mock_recaptcha_token'),
-  ready: jest.fn((callback) => callback()),
+  execute: jest.fn().mockResolvedValue("mocked_recaptcha_token" as never),
+  ready: jest.fn((callback: () => void) => callback()),
 };

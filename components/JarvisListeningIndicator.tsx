@@ -7,8 +7,10 @@ import { Mic, MicOff, Volume2, VolumeOff, Users, Brain, Zap } from "lucide-react
 import { useJarvis } from "@/app/hooks/useJarvis";
 import clsx from "clsx";
 
+type JarvisListeningMode = "wake_word" | "passive" | "meeting" | "hybrid";
+
 interface ListeningMode {
-  id: string;
+  id: JarvisListeningMode;
   name: string;
   description: string;
   icon: React.ReactNode;
@@ -25,11 +27,11 @@ export function JarvisListeningIndicator({ variant = "compact", className }: Jar
   const { isConnected, status, lastVoiceActivation } = useJarvis();
 
   // Mock data - in real implementation, this would come from the audio manager
-  const currentMode = "wake_word"; // This would be dynamic
+  const currentMode = (status?.health?.jarvis_status?.listening_mode ?? "wake_word") as JarvisListeningMode;
   const microphoneActive = true;
   const systemAudioActive = true;
-  const isPassiveMode = false;
-  const isActivelyLogging = isPassiveMode || currentMode === "meeting" || currentMode === "passive";
+  const isPassiveMode = currentMode === "passive";
+  const isActivelyLogging = isPassiveMode || currentMode === "meeting";
   const lastNoteTimestamp = Date.now() - 30000; // 30 seconds ago
 
   const listeningModes: ListeningMode[] = [

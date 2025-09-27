@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
 
 		const newBank = await prisma.bank.create({
 			data: {
-				userId: userId,
 				bankId: bankId,
 				accountId: accountId,
 				accessToken: accessToken,

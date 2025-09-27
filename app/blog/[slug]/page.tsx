@@ -68,14 +68,20 @@ interface Post {
   }
 }
 
-export default function BlogPost({ params }: { params: { slug: string } }) {
+export default function BlogPost({ params }: { params: Promise<{ slug: string }> }) {
+  const [resolvedParams, setResolvedParams] = useState<{ slug: string } | null>(null)
   const [post, setPost] = useState<Post | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    params.then(setResolvedParams)
+  }, [params])
+
+  useEffect(() => {
+    if (!resolvedParams) return
     const fetchPost = async () => {
       try {
-        const response = await fetch(`/api/posts?where[slug][equals]=${params.slug}&limit=1&depth=2`)
+        const response = await fetch(`/api/posts?where[slug][equals]=${resolvedParams.slug}&limit=1&depth=2`)
         if (response.ok) {
           const data = await response.json()
           const foundPost = data.docs?.[0]
@@ -96,9 +102,9 @@ export default function BlogPost({ params }: { params: { slug: string } }) {
     }
 
     fetchPost()
-  }, [params.slug])
+  }, [resolvedParams])
 
-  if (loading) {
+  if (loading || !resolvedParams) {
     return (
       <div className="min-h-screen bg-gray-50 py-12">
         <div className="max-w-4xl mx-auto px-4">

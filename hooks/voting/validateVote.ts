@@ -7,6 +7,86 @@ export interface VoteData {
   vote: 1 | -1;
 }
 
+interface VoterEntry {
+  userId: string;
+  vote: 1 | -1;
+  timestamp: string;
+}
+
+interface VoteTotals {
+  upvotes: number;
+  downvotes: number;
+  score: number;
+}
+
+interface NormalizedVoteState {
+  voters: VoterEntry[];
+  totals: VoteTotals;
+}
+
+const DEFAULT_VOTE_STATE: VoteTotals = {
+  upvotes: 0,
+  downvotes: 0,
+  score: 0,
+};
+
+function normalizeCommentVotingState(comment: unknown): NormalizedVoteState {
+  if (!comment || typeof comment !== 'object') {
+    return {
+      voters: [],
+      totals: DEFAULT_VOTE_STATE,
+    };
+  }
+
+  const cloned = JSON.parse(JSON.stringify(comment ?? {}));
+  const voters: VoterEntry[] = [];
+
+  if (Array.isArray(cloned.voters)) {
+    for (const entry of cloned.voters) {
+      if (!entry || typeof entry !== 'object') {
+        continue;
+      }
+
+      const userId = typeof entry.userId === 'string' ? entry.userId : undefined;
+      const voteValue = entry.vote === 1 || entry.vote === -1 ? entry.vote : undefined;
+      if (!userId || voteValue === undefined) {
+        continue;
+      }
+
+      const rawTimestamp = typeof entry.timestamp === 'string' ? entry.timestamp : undefined;
+      voters.push({
+        userId,
+        vote: voteValue,
+        timestamp: rawTimestamp ?? new Date().toISOString(),
+      });
+    }
+  }
+
+  const totalsSource = cloned.votes && typeof cloned.votes === 'object' ? cloned.votes : {};
+  const upvotes = typeof totalsSource.upvotes === 'number' && Number.isFinite(totalsSource.upvotes)
+    ? totalsSource.upvotes
+    : 0;
+  const downvotes = typeof totalsSource.downvotes === 'number' && Number.isFinite(totalsSource.downvotes)
+    ? totalsSource.downvotes
+    : 0;
+  const score = typeof totalsSource.score === 'number' && Number.isFinite(totalsSource.score)
+    ? totalsSource.score
+    : upvotes - downvotes;
+
+  return {
+    voters,
+    totals: {
+      upvotes,
+      downvotes,
+      score,
+    },
+  };
+}
+
+function recalculateScore(upvotes: number, downvotes: number): number {
+  return upvotes - downvotes;
+}
+
 export async function handleVote(
   payload: Payload,
   { commentId, userId, vote }: VoteData
@@ -26,61 +106,62 @@ export async function handleVote(
     throw new APIError('Comment not found', 404);
   }
 
-  // Check if user has already voted
-  const existingVoterIndex = comment.voters?.findIndex(
-    (voter: any) => voter.userId === userId
-  ) ?? -1;
-
-  let updateData: any = {};
+  const { voters, totals } = normalizeCommentVotingState(comment);
+  const existingVoterIndex = voters.findIndex((voter) => voter.userId === userId);
+  const updatedTotals: VoteTotals = {
+    upvotes: totals.upvotes,
+    downvotes: totals.downvotes,
+    score: totals.score,
+  };
+  const updatedVoters: VoterEntry[] = [...voters];
+  const timestamp = new Date().toISOString();
 
   if (existingVoterIndex >= 0) {
-    // User has already voted
-    const existingVote = comment.voters[existingVoterIndex];
+    const existingVote = voters[existingVoterIndex];
 
     if (existingVote.vote === vote) {
       throw new APIError('You have already cast this vote', 400);
     }
 
-    // Change vote: remove old vote, add new vote
-    const oldVote = existingVote.vote;
-    const newVoters = [...comment.voters];
-    newVoters[existingVoterIndex] = {
+    if (existingVote.vote === 1) {
+      updatedTotals.upvotes = Math.max(0, updatedTotals.upvotes - 1);
+    } else {
+      updatedTotals.downvotes = Math.max(0, updatedTotals.downvotes - 1);
+    }
+
+    if (vote === 1) {
+      updatedTotals.upvotes += 1;
+    } else {
+      updatedTotals.downvotes += 1;
+    }
+
+    updatedTotals.score = recalculateScore(updatedTotals.upvotes, updatedTotals.downvotes);
+
+    updatedVoters[existingVoterIndex] = {
       userId,
       vote,
-      timestamp: new Date(),
-    };
-
-    // Calculate new vote counts
-    const upvoteDiff = vote === 1 ? 1 : 0;
-    const downvoteDiff = vote === -1 ? 1 : 0;
-    const oldUpvoteDiff = oldVote === 1 ? -1 : 0;
-    const oldDownvoteDiff = oldVote === -1 ? -1 : 0;
-
-    updateData = {
-      voters: newVoters,
-      votes: {
-        upvotes: (comment.votes?.upvotes || 0) + upvoteDiff + oldUpvoteDiff,
-        downvotes: (comment.votes?.downvotes || 0) + downvoteDiff + oldDownvoteDiff,
-        score: (comment.votes?.score || 0) + (vote * 2), // Change is vote * 2 (e.g., -1 to +1 = +2)
-      },
+      timestamp,
     };
   } else {
-    // New vote
-    const newVoters = [...(comment.voters || []), {
+    if (vote === 1) {
+      updatedTotals.upvotes += 1;
+    } else {
+      updatedTotals.downvotes += 1;
+    }
+
+    updatedTotals.score = recalculateScore(updatedTotals.upvotes, updatedTotals.downvotes);
+
+    updatedVoters.push({
       userId,
       vote,
-      timestamp: new Date(),
-    }];
-
-    updateData = {
-      voters: newVoters,
-      votes: {
-        upvotes: (comment.votes?.upvotes || 0) + (vote === 1 ? 1 : 0),
-        downvotes: (comment.votes?.downvotes || 0) + (vote === -1 ? 1 : 0),
-        score: (comment.votes?.score || 0) + vote,
-      },
-    };
+      timestamp,
+    });
   }
+
+  const updateData: Record<string, unknown> = {
+    voters: updatedVoters,
+    votes: updatedTotals,
+  };
 
   // Update the comment with new vote data
   const updatedComment = await payload.update({
@@ -95,7 +176,7 @@ export async function handleVote(
     vote: {
       userId,
       vote,
-      timestamp: new Date(),
+      timestamp,
     },
   };
 }
@@ -115,24 +196,28 @@ export async function removeVote(
     throw new APIError('Comment not found', 404);
   }
 
-  const existingVoterIndex = comment.voters?.findIndex(
-    (voter: any) => voter.userId === userId
-  ) ?? -1;
+  const { voters, totals } = normalizeCommentVotingState(comment);
+  const existingVoterIndex = voters.findIndex((voter) => voter.userId === userId);
 
   if (existingVoterIndex < 0) {
     throw new APIError('No vote found to remove', 400);
   }
 
-  const existingVote = comment.voters[existingVoterIndex];
-  const newVoters = comment.voters.filter((_: any, index: number) => index !== existingVoterIndex);
+  const existingVote = voters[existingVoterIndex];
+  const newVoters = voters.filter((_, index) => index !== existingVoterIndex);
 
-  const updateData = {
+  const updatedTotals: VoteTotals = {
+    upvotes: existingVote.vote === 1 ? Math.max(0, totals.upvotes - 1) : totals.upvotes,
+    downvotes: existingVote.vote === -1 ? Math.max(0, totals.downvotes - 1) : totals.downvotes,
+    score: recalculateScore(
+      existingVote.vote === 1 ? Math.max(0, totals.upvotes - 1) : totals.upvotes,
+      existingVote.vote === -1 ? Math.max(0, totals.downvotes - 1) : totals.downvotes
+    ),
+  };
+
+  const updateData: Record<string, unknown> = {
     voters: newVoters,
-    votes: {
-      upvotes: (comment.votes?.upvotes || 0) - (existingVote.vote === 1 ? 1 : 0),
-      downvotes: (comment.votes?.downvotes || 0) - (existingVote.vote === -1 ? 1 : 0),
-      score: (comment.votes?.score || 0) - existingVote.vote,
-    },
+    votes: updatedTotals,
   };
 
   const updatedComment = await payload.update({
@@ -153,7 +238,7 @@ export async function getUserVote(
   payload: Payload,
   commentId: string,
   userId: string
-): Promise<{ vote: number | null; timestamp?: Date }> {
+): Promise<{ vote: number | null; timestamp?: string }> {
   const comment = await payload.findByID({
     collection: 'comments',
     id: commentId,
@@ -163,9 +248,8 @@ export async function getUserVote(
     throw new APIError('Comment not found', 404);
   }
 
-  const userVote = comment.voters?.find(
-    (voter: any) => voter.userId === userId
-  );
+  const { voters } = normalizeCommentVotingState(comment);
+  const userVote = voters.find((voter) => voter.userId === userId);
 
   return {
     vote: userVote?.vote || null,

@@ -54,6 +54,7 @@ export interface CalendarInfo {
   isDefaultCalendar?: boolean; // Microsoft
   color?: string;
   hexColor?: string;
+  selected?: boolean;
 }
 
 export interface SyncSource {

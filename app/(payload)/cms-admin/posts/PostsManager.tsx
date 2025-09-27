@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Trash2, Edit, Plus, Search, RefreshCw, FileText, Calendar, Eye, ExternalLink, Image, Tag, User } from 'lucide-react'
 import { toast } from 'sonner'
 import Link from 'next/link'
-import type { Post, Category, User as UserType, Media } from '../../../payload-types'
+import type { Post, Category, User as UserType, Media } from '@/payload-types'
 
 // Helper to extract text from rich text content while preserving all line breaks
 const extractTextFromRichText = (richText: any): string => {

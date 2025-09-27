@@ -3,6 +3,8 @@
 
 import { ReadyState } from 'react-use-websocket';
 
+export type JarvisListeningMode = 'wake_word' | 'passive' | 'meeting' | 'hybrid';
+
 // ============================================================================
 // Core JARVIS Types
 // ============================================================================
@@ -18,6 +20,7 @@ export interface JarvisStatusResponse {
       obsidian_connected: boolean;
       tts_available: boolean;
       capabilities: JarvisCapabilities;
+      listening_mode?: JarvisListeningMode;
     };
     status: 'healthy' | 'degraded' | 'offline';
     service_health: {

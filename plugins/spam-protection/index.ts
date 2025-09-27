@@ -2,15 +2,28 @@ import type { Plugin } from 'payload';
 import { spamProtectionHook } from './hooks';
 
 export const spamProtectionPlugin = (): Plugin => {
-  return {
-    name: 'spam-protection',
-    collections: {
-      comments: {
+  return (config) => {
+    const collections = config.collections?.map((collection) => {
+      if (collection.slug !== 'comments') {
+        return collection;
+      }
+
+      const hooks = collection.hooks ?? {};
+      const beforeValidate = hooks.beforeValidate ?? [];
+
+      return {
+        ...collection,
         hooks: {
-          beforeValidate: [spamProtectionHook],
+          ...hooks,
+          beforeValidate: [...beforeValidate, spamProtectionHook],
         },
-      },
-    },
+      };
+    });
+
+    return {
+      ...config,
+      collections,
+    };
   };
 };
 
