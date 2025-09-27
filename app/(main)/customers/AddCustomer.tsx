@@ -10,7 +10,7 @@ import { Form, FormControl, FormField, FormLabel, FormItem, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Spinner } from "@/components/ui/spinner";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Customer } from "@/prisma/app/generated/prisma/client";
+import type { Customer } from "@/types/prisma";
 import { useState } from "react";
 
 type CustomerSchema = z.infer<typeof customerSchema>;
